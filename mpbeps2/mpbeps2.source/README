@@ -1,0 +1,59 @@
+2D OpenMP/MPI Particle-in-Cell (PIC) BEPS2 codes
+by Viktor K. Decyk
+copyright 1994-2017, regents of the university of california
+
+These codes are part of a set of 2d PIC codes for educational and
+research use.  They are designed for Linux but will also compile for
+Mac OS X.  OpenMP and MPI are used for parallelization, but if MPI is
+not available, the codes can be compiled for OpenMP only.  The default
+compiler used is gfortran, but other compiler flags are commented out.
+
+A Software License for use of this code is in the document:
+License(CommercialReservation)
+
+The makefile is setup to use gcc and gfortran with Linux.  It should
+also work with MacOS X.
+
+There are 3 Fortran codes for electrostatic, electromagnetic, and darwin
+models, called mpbeps2, mpbbeps2, and mpdbeps2, respectively.  To
+compile all of them, execute:
+
+make
+
+To compile just one, execute:
+
+make program_name
+
+where program_name is either: mpbeps2, mpbbeps2, or mpdbeps2
+
+The command to execute a program with both MPI and OpenMP varies from
+one system to another.  One possible command is:
+
+mpiexec -np nproc -perhost n ./program_name
+
+where nproc is the number of processors to be used, and where n is the
+number of MPI nodes per host.
+
+By default, OpenMP will use the maximum number of processors it can find
+on the MPI node.  If the user wants to control the number of threads, a
+parameter nvpp can be set in the main program.  In addition, the
+environment variable OMP_NUM_THREADS may need to be set to the maximum
+number of threads per node expected.
+
+To compile all these codes without MPI, execute:
+
+make noMPI
+
+To compile just one, execute:
+
+make program_name
+
+where program_name is either: mbeps2, mbbeps2, or mdbeps2
+
+To execute, type the name of the executable:
+
+./program_name
+
+The Fortran version can be compiled to run with double precision by
+changing the Makefile (for gfortran, set the compiler options to:
+OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8)

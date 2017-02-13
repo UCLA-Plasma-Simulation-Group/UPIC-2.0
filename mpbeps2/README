@@ -1,0 +1,90 @@
+2D MPI/OpenMP Particle-in-Cell (PIC) BEPS2 codes
+by Viktor K. Decyk, UCLA
+copyright 1994-2017, regents of the university of california
+
+These codes are part of the UPIC 2.0.1 Framework.  The primary purpose
+of this framework is to provide trusted components for building and
+customizing parallel Particle-in-Cell codes for plasma simulation.
+The framework provides libraries as well as 3 different reference
+applications illustrating their use.  The libraries are designed to
+work with up to 3 levels of parallelization (using MPI for distributed
+memory, OpenMP for shared memory, local vectorization).  Currently only
+the first two are supported.  The reference applications are designed to
+provide basic functionality common to many PIC codes, and are intended
+to be customized and specialized by users for specific applications.
+Currently, only spectral field solvers are supported, but the particle
+methods are designed to be gneral.  In addition, other test codes will
+also be provided, illustrating the use of some specific component.  This
+is primarily intended to users who wish to incorporate some component
+into an already existing code. Currently, only one test code is
+provided.
+
+A Software License for use of this code is in the document:
+../Documents/License(CommercialReservation)
+
+A description of the design of these codes and its components is in the
+document:
+../Documents/BEPS2Design.pdf
+
+A description of the current capabilities of these codes and its
+components is in the document:
+../Documents/BEPS2Overview.pdf
+
+Details about the mathematical equations and units used in this code is
+given in the document:
+../Documents/UPICModels.pdf.
+
+There are 3 Fortran reference codes for electrostatic, electromagnetic,
+and darwin models, called mpbeps2, mpbbeps2, and mpdbeps2, respectively.
+They are designed for Linux but will also compile for Mac OS X.  OpenMP
+and MPI are used for parallelization, but if MPI is not available, the
+codes can be compiled for OpenMP only
+
+To compile all of them, execute:
+
+A number of Directories are being developed to provide test codes to
+illustrate components of these codes.  These are primarily intended for
+those who wish to incorporate only pieces of the code into their own
+codes.  The first one of these is the directory Periodic which
+shows how to solve for the potential, longitudinal electric field,
+vector potential and magnetic field using periodic boundary conditions.
+
+To compile all these codes in the current (mpbeps2) directory, execute:
+
+make
+
+To compile just one, execute:
+
+make program_name
+
+where program_name is either: mpbeps2, mpbbeps2, or mpdbeps2
+
+The command to execute a program with both MPI and OpenMP varies from
+one system to another.  One possible command is:
+
+mpiexec -np nproc -perhost n ./program_name
+
+where nproc is the number of processors to be used, and where n is the
+number of MPI nodes per host.
+
+By default, OpenMP will use the maximum number of processors it can find
+on the MPI node.  If the user wants to control the number of threads, a
+parameter nvpp can be set in the main program.  In addition, the
+environment variable OMP_NUM_THREADS may need to be set to the maximum
+number of threads per node expected.
+
+To compile all these codes without MPI, execute:
+
+make noMPI
+
+To compile just one, execute:
+
+make program_name
+
+where program_name is either: mbeps2, mbbeps2, or mdbeps2
+
+To execute, type the name of the executable:
+
+./program_name
+
+For more details about compilation, see mpbeps2.source/README

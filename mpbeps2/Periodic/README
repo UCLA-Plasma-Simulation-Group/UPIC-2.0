@@ -1,0 +1,64 @@
+2-1/2D Darwin Field MPI/OpenMP PIC test code
+by Viktor K. Decyk
+copyright 1994-2017, regents of the university of california
+
+This code is a unit test for the 2d periodic Darwin fields used in the
+mpbeps2 suite of PIC codes.  It is designed for Linux but will also
+compile for Mac OS X.  OpenMP and MPI are used for parallelization, but
+if MPI is not available, the codes can be compiled for OpenMP only.  The
+default compiler used is gfortran, but other compiler flags are
+commented out.
+
+No warranty for proper operation of this software is given or implied.
+Software or information may be copied, distributed, and used at own
+risk; it may not be distributed without this notice included verbatim
+with each file.  If use of these codes results in a publication, an
+acknowledgement is requested.
+
+A Software License for use of this code is in the document:
+License(CommercialReservation)
+
+The makefile is setup to use gcc and gfortran with Linux.  It should
+also work with MacOS X.
+
+The executable created is called mp_dfields2.
+
+To compile the program, execute:
+
+make
+
+The command to execute a program with both MPI and OpenMP varies from
+one system to another.  One possible command is:
+
+mpiexec -np nproc -perhost n ./mp_dfields2
+
+where nproc is the number of processors to be used, and where n is the
+number of MPI nodes per host.
+
+By default, OpenMP will use the maximum number of processors it can find
+on the MPI node.  If the user wants to control the number of threads, a
+parameter nvpp can be set in the main program.  In addition, the
+environment variable OMP_NUM_THREADS may need to be set to the maximum
+number of threads per node expected.
+
+To compile all this code without MPI, execute:
+
+make m_dfields2
+
+To execute, type the name of the executable:
+
+./m_dfields2
+
+The Fortran version can be compiled to run with double precision by
+changing the Makefile (for gfortran, set the compiler options to:
+OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8)
+
+There is a simple built-in graphics library available which is normally
+used for debugging.  It is shut off by default, but is available for
+X11 devices.
+
+To turn it on for Fortran, search for the string: Fortran Graphics in
+the Makefile, and comment out the symbol GOBJS and NGOBJS for No
+graphics and uncomment it either for X11. The X11 option requires that
+the library Ygl is installed and the symbol
+LGOPTS = -lYgl -L/usr/X11R6/lib -lX11.
