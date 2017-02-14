@@ -5,30 +5,32 @@
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpinit2.f
 ! mpdcomp2 determines spatial decomposition for uniform distribution
 !          calls PDNICOMP2L
-! mudistr2 calculates initial particle co-ordinates with uniform density
-!          for 2d or 2-1/2d code
-!          calls PUDISTR2
-! mvdistr2 calculates initial particle velocities with maxwellian
-!          velocity with drift for 2d code
-!          calls PVDISTR2
-! mvdistr2h calculates initial particle velocities with maxwellian
-!           velocity with drift for 2-1/2d code
-!           calls PVDISTR2H
-! mvrdistr2 calculates initial particle momentum with maxwell-juttner
-!           distribution with drift for 2d code
-!           calls PVRDISTR2
-! mvrdistr1h calculates initial particle momenta with maxwell-juttner
-!            distribution with drift for 2-1/2d code
-!            calls PVRDISTR2H
+! mpudistr2 calculates initial particle co-ordinates with uniform
+!           density
+!           for 2d or 2-1/2d code
+!           calls PUDISTR2
+! mpvdistr2 calculates initial particle velocities with maxwellian
+!           velocity with drift for 2d code
+!           calls PVDISTR2
+! mpvdistr2h calculates initial particle velocities with maxwellian
+!            velocity with drift for 2-1/2d code
+!            calls PVDISTR2H
+! mpvrdistr2 calculates initial particle momentum with maxwell-juttner
+!            distribution with drift for 2d code
+!            calls PVRDISTR2
+! mpvrdistr2h calculates initial particle momenta with maxwell-juttner
+!             distribution with drift for 2-1/2d code
+!             calls PVRDISTR2H
 ! mpdblkp2 finds the maximum number of particles in each tile
 !          calls PPDBLKP2L
-! wmvdistr2 generic procedure to initialize particle velocities in 2d
-!           calls mvdistr2 or mvrdistr2
-! wmvdistr2h generic procedure to initialize particle velocities in 2-1/2d
-!            calls mvdistr2h or mvrdistr2h
+! wmpvdistr2 generic procedure to initialize particle velocities in 2d
+!            calls mpvdistr2 or mpvrdistr2
+! wmpvdistr2h generic procedure to initialize particle velocities in
+!             2-1/2d
+!             calls mpvdistr2h or mpvrdistr2h
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 11, 2017
+! update: february 14, 2017
 !
       use libmpinit2_h
       implicit none
@@ -101,7 +103,7 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine mudistr2(part,edges,npp,npx,npy,nx,ny,kstrt,ipbc,irc)
+      subroutine mpudistr2(part,edges,npp,npx,npy,nx,ny,kstrt,ipbc,irc)
 ! calculates initial particle co-ordinates in 2d or 2-1/2d
 ! with uniform density
 ! irc = (0,1) = (no,yes) error condition exists
@@ -119,15 +121,15 @@
       call PUDISTR2(part,edges,npp,npx,npy,nx,ny,idimp,npmax,idps,ipbc, &
      &irc)
       if (irc > 0) then
-         if (kstrt==1) write (*,*) 'mudistr2:buffer overlow, irc=', irc
+         if (kstrt==1) write (*,*) 'mupdistr2:buffer overlow, irc=', irc
       else if (irc < 0) then
-         if (kstrt==1) write (*,*) 'mudistr2:particle number error'
+         if (kstrt==1) write (*,*) 'mpudistr2:particle number error'
       endif
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine mvdistr2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,irc&
-     &)
+      subroutine mpvdistr2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,  &
+     &irc)
 ! calculates initial particle velocities in 2d
 ! with maxwellian velocity with drift
 ! irc = (0,1) = (no,yes) error condition exists
@@ -145,14 +147,14 @@
      &irc)
       if (irc /= 0) then
          if (kstrt==1) then
-            write (*,*) 'mvdistr2:particle number error, irc=', irc
+            write (*,*) 'mpvdistr2:particle number error, irc=', irc
          endif
       endif
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine mvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy,&
-     &kstrt,irc)
+      subroutine mpvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy&
+     &,kstrt,irc)
 ! calculates initial particle velocities in 2-1/2d
 ! with maxwellian velocity with drift
 ! irc = (0,1) = (no,yes) error condition exists
@@ -170,14 +172,14 @@
      &npmax,irc)
       if (irc /= 0) then
          if (kstrt==1) then
-            write (*,*) 'mvdistr2h:particle number error, irc=', irc
+            write (*,*) 'mpvdistr2h:particle number error, irc=', irc
          endif
       endif
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine mvrdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,kstrt&
-     &,irc)
+      subroutine mpvrdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,    &
+     &kstrt,irc)
 ! calculates initial particle momenta in 2d
 ! with maxwell-juttner distribution with drift
 ! irc = (0,1) = (no,yes) error condition exists
@@ -195,14 +197,14 @@
      &,irc)
       if (irc /= 0) then
          if (kstrt==1) then
-            write (*,*) 'mvrdistr2:particle number error, irc=', irc
+            write (*,*) 'mpvrdistr2:particle number error, irc=', irc
          endif
       endif
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine mvrdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,&
-     &npy,kstrt,irc)
+      subroutine mpvrdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx&
+     &,npy,kstrt,irc)
 ! calculates initial particle momenta in 2-1/2d
 ! with maxwell-juttner distribution with drift
 ! irc = (0,1) = (no,yes) error condition exists
@@ -220,7 +222,7 @@
      &idimp,npmax,irc)
       if (irc /= 0) then
          if (kstrt==1) then
-            write (*,*) 'mvrdistr2h:particle number error, irc=', irc
+            write (*,*) 'mpvrdistr2h:particle number error, irc=', irc
          endif
       endif
       end subroutine
@@ -251,8 +253,8 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine wmvdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,kstrt&
-     &,relativity,irc)
+      subroutine wmpvdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,    &
+     &kstrt,relativity,irc)
 ! generic procedure to initialize particle velocities in 2d
       implicit none
       integer, intent(in) :: nps, npp, npx, npy, kstrt, relativity
@@ -261,17 +263,17 @@
       real, dimension(:,:), intent(inout) :: part
 ! maxwell-juttner distribution
       if (relativity==1) then
-         call mvrdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,kstrt,  &
+         call mpvrdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,kstrt,  &
      &irc)
 ! maxwellian distribution
       else
-         call mvdistr2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,irc)
+         call mpvdistr2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,irc)
       endif
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine wmvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,&
-     &npy,kstrt,relativity,irc)
+      subroutine wmpvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx&
+     &,npy,kstrt,relativity,irc)
 ! generic procedure to initialize particle velocities in 2-1/2d
       implicit none
       integer, intent(in) :: nps, npp, npx, npy, kstrt, relativity
@@ -280,11 +282,11 @@
       real, dimension(:,:), intent(inout) :: part
 ! maxwell-juttner distribution
       if (relativity==1) then
-         call mvrdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,npy&
-     &,kstrt,irc)
+         call mpvrdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,  &
+     &npy,kstrt,irc)
 ! maxwellian distribution
       else
-         call mvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy,   &
+         call mpvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy,   &
      &kstrt,irc)
       endif
       end subroutine

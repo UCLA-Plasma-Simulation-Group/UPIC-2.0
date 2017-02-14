@@ -34,6 +34,7 @@
 
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
+
 #LEGACY = -nofor_main
 
 # Makefile Intel compiler with Linux

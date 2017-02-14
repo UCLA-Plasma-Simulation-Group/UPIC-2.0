@@ -12,6 +12,8 @@
 !          real boundaries set, of equal size
 ! PUDISTR2 calculates initial particle co-ordinates with uniform density
 !          for 2d or 2-2/2d code
+! PLDISTR2 calculates initial particle co-ordinates with linear density
+!          profile for 2d or 2-1/2d code
 ! PVDISTR2 calculates initial particle velocities with maxwellian
 !          velocity with drift for 2d code
 ! PVDISTR2H calculates initial particle velocities with maxwellian
@@ -25,7 +27,7 @@
 ! randum uniform random number generator
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 11, 2017
+! update: february 14, 2017
 !-----------------------------------------------------------------------
       subroutine PDICOMP2L(edges,nyp,noff,nypmx,nypmn,ny,kstrt,nvp,idps)
 ! this subroutine determines spatial boundaries for uniform particle
@@ -397,8 +399,6 @@
      &ipbc,ierr)
 ! for 2d code, this subroutine calculates initial particle co-ordinates
 ! with uniform density for distributed data.
-! algorithm designed to assign the same random numbers to particle
-! velocities, independent of the number of processors
 ! input: all except part, ierr, output: part, npp, ierr
 ! part(1,n) = position x of particle n in partition
 ! part(2,n) = position y of particle n in partition
@@ -476,6 +476,134 @@
       return
       end
 !-----------------------------------------------------------------------
+      subroutine PLDISTR2(part,npp,anlx,anly,npx,npy,nx,ny,idimp,npmax, &
+     &kstrt,nvp,ipbc,ierr)
+! for 2d code, this subroutine calculates initial particle co-ordinates
+! with the following bi-linear density profile:
+! n(x,y) = n(x)*n(y), where n(x) = n0x*(1. + anlx*(x/nx - .5)) and 
+! n(y) = n0y*(1. + anly*(y/ny - .5)) and where
+! n0x = npx/(nx - 2*edgelx) and n0y = npy/(ny - 2*edgely)
+! for distributed data.
+! the algorithm defines a global index in the range 1:npx*npy, and
+! partitions this index uniformly among processors.  From the global
+! index, the 2d index j, k, of each particle is found, where
+! j is in the range 1:npx, and k is in the 1:npy.  The spatial location
+! x, y, of the particle corresponding to the index j, k is then found
+! by integrating the density profile.  particles are not necessarily in
+! the correct processor, and may need to be moved to another processor.
+! part(1,n) = position x of particle n in partition
+! part(2,n) = position y of particle n in partition
+! npp = number of particles in partition, updated in this procedure
+! anlx/anly = initial linear density weight in x/y direction
+! npx/npy = initial number of particles distributed in x/y direction
+! nx/ny = system length in x/y direction
+! idimp = size of phase space = 4
+! npmax = maximum number of particles in each partition
+! kstrt = starting data block number
+! nvp = number of real or virtual processors
+! ipbc = particle boundary condition = (0,1,2,3) =
+! (none,2d periodic,2d reflecting,mixed reflecting/periodic)
+! ierr = (0,1) = (no,yes) error condition exists
+! with spatial decomposition
+      implicit none
+      integer npp, npx, npy, nx, ny, idimp, npmax, kstrt, nvp, ipbc
+      integer ierr
+      real anlx, anly
+      real part
+      dimension part(idimp,npmax)
+! local data
+      integer nps, npt, nppv, nppvs, ks, j, k, n, noff
+      real edgelx, edgely, at1, at2, bt1, bt2, antx, anty, xt, yt
+      double precision dnpxy, dnoff, dnpx, dng
+      integer ierr1, iwork1
+      double precision sum1, work1
+      dimension ierr1(1), iwork1(1), sum1(1), work1(1)
+      ierr = 0
+      nps = npp
+! particle distribution constants
+      ks = kstrt - 1
+! nppv = number of particles per processor if uniformly distributed
+      dnpxy = dble(npx)*dble(npy)
+      nppv = int((dnpxy - 1.0d0)/dble(nvp)) + 1
+!     nppv = min(nppv,npmax)
+      dnoff = dble(nppv)*dble(ks)
+! nppvs = number of actual particles due to possible remainders
+      nppvs = min(nppv,max(0,int(dnpxy-dnoff)))
+      dnpx = dble(npx)
+! set boundary values
+      edgelx = 0.0
+      edgely = 0.0
+      at1 = real(nx)/real(npx)
+      at2 = real(ny)/real(npy)
+      if (ipbc.eq.2) then
+         edgelx = 1.0
+         edgely = 1.0
+         at1 = real(nx-2)/real(npx)
+         at2 = real(ny-2)/real(npy)
+      else if (ipbc.eq.3) then
+         edgelx = 1.0
+         at1 = real(nx-2)/real(npx)
+      endif
+      if (anlx.ne.0.0) then
+         antx = anlx/real(nx)
+         at1 = 2.0*antx*at1
+         bt1 = 1.0 - 0.5*antx*(real(nx) - 2.0*edgelx)
+      endif
+      if (anly.ne.0.0) then
+         anty = anly/real(ny)
+         at2 = 2.0*anty*at2
+         bt2 = 1.0 - 0.5*anty*(real(ny) - 2.0*edgely)
+      endif
+      noff = nps - 1
+! loop over particles assigned to this processor
+      do 10 n = 1, nppvs
+! dng = global particle index
+      dng = dble(n) + dnoff
+! j, k = 2d index of this particle
+      k = int((dng - 1.0d0)/dnpx)
+      j = int(dng - dnpx*dble(k))
+      k = k + 1
+! linear density in x
+      if (anlx.ne.0.0) then
+         xt = edgelx + (sqrt(bt1*bt1 + at1*(real(j) - 0.5)) - bt1)/antx
+! uniform density in x
+      else
+         xt = edgelx + at1*(real(j) - 0.5)
+      endif
+! linear density in y
+      if (anly.ne.0.0) then
+         yt = edgely + (sqrt(bt2*bt2 + at2*(real(k) - 0.5)) - bt2)/anty
+! uniform density in y
+      else
+         yt = edgely + at2*(real(k) - 0.5)
+      endif
+      npt = npp + 1
+      if (npt.le.npmax) then
+         part(1,n+noff) = xt
+         part(2,n+noff) = yt
+         npp = npt
+      else
+         ierr = 1
+      endif
+   10 continue
+! process errors
+! first check if buffer overflow occurred
+      if (ierr.eq.0) then
+         ierr1(1) = 0  
+      else
+         ierr1(1) = npt
+      endif
+      call PPIMAX(ierr1,iwork1,1)
+      ierr = ierr1(1)
+      if (ierr.gt.0) return
+! then check if not all particles were distributed
+      sum1(1) = dble(npp-nps)
+      call PPDSUM(sum1,work1,1)
+      dnpxy = sum1(1) - dnpxy
+      if (dnpxy.ne.0.0d0) ierr = -1
+      return
+      end
+!-----------------------------------------------------------------------
       subroutine PVDISTR2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,idimp,   &
      &npmax,ierr)
 ! for 2-1/2d code, this subroutine calculates initial particle
@@ -486,7 +614,7 @@
 ! part(3,n) = velocity vx of particle n in partition
 ! part(4,n) = velocity vy of particle n in partition
 ! nps = starting address of particles in partition
-! npp = number of particles in partition, updated in this procedure
+! npp = number of particles in partition
 ! vtx/vty = thermal velocity of particles in x/y direction
 ! vdx/vdy = drift velocity of particles in x/y direction
 ! npx/npy = initial number of particles distributed in x/y direction
@@ -573,7 +701,7 @@
 ! part(4,n) = velocity vy of particle n in partition
 ! part(5,n) = velocity vz of particle n in partition
 ! nps = starting address of particles in partition
-! npp = number of particles in partition, updated in this procedure
+! npp = number of particles in partition
 ! vtx/vty/vtz = thermal velocity of particles in x/y/z direction
 ! vdx/vdy/vdz = drift velocity of particles in x/y/z direction
 ! npx/npy = initial number of particles distributed in x/y direction
@@ -599,6 +727,7 @@
       ierr = 0
 ! determine offsets for particle number
 ! each random triplet is associated with a global particle index
+! 1:sum(npp-nps+1)
       dps = dble(npp-nps+1)
       dnpx = dble(npx)
       dpp(1) = dps
@@ -675,7 +804,7 @@
 ! part(3,n) = momentum px of particle n in partition
 ! part(4,n) = momentum py of particle n in partition
 ! nps = starting address of particles in partition
-! npp = number of particles in partition, updated in this procedure
+! npp = number of particles in partition
 ! vtx/vty = thermal velocity of particles in x/y direction
 ! vdx/vdy = drift momentum of particles in x/y direction
 ! ci = reciprocal of velocity of light
@@ -718,10 +847,11 @@
       pty = vty*ranorm()
       if ((dj.ge.dps).and.(dj.lt.dpp(1))) then
          pt2 = ptx*ptx + pty*pty
+         pt2 = sqrt(1.0 + pt2*ci4)
          npt = npt + 1
          if (npt.le.npp) then
-            part(3,npt) = ptx*sqrt(1.0 + pt2*ci4)
-            part(4,npt) = pty*sqrt(1.0 + pt2*ci4)
+            part(3,npt) = ptx*pt2
+            part(4,npt) = pty*pt2
          endif
       endif
    10 continue
@@ -771,12 +901,11 @@
 ! algorithm designed to assign the same random numbers to particle
 ! velocities, independent of the number of processors
 ! input: all except part, ierr, output: part, npp, ierr
-
 ! part(3,n) = momentum px of particle n in partition
 ! part(4,n) = momentum py of particle n in partition
 ! part(5,n) = momentum pz of particle n in partition
 ! nps = starting address of particles in partition
-! npp = number of particles in partition, updated in this procedure
+! npp = number of particles in partition
 ! vtx/vty/vtz = thermal velocity of particles in x/y/z direction
 ! vdx/vdy/vdz = drift momentum of particles in x/y/z direction
 ! ci = reciprocal of velocity of light
@@ -820,11 +949,12 @@
       ptz = vtz*ranorm()
       if ((dj.ge.dps).and.(dj.lt.dpp(1))) then
          pt2 = ptx*ptx + pty*pty + ptz*ptz
+         pt2 = sqrt(1.0 + pt2*ci4)
          npt = npt + 1
          if (npt.le.npp) then
-            part(3,npt) = ptx*sqrt(1.0 + pt2*ci4)
-            part(4,npt) = pty*sqrt(1.0 + pt2*ci4)
-            part(5,npt) = ptz*sqrt(1.0 + pt2*ci4)
+            part(3,npt) = ptx*pt2
+            part(4,npt) = pty*pt2
+            part(5,npt) = ptz*pt2
          endif
       endif
    10 continue

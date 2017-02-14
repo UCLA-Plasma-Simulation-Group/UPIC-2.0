@@ -48,7 +48,7 @@
 ! movion = (0,1) = (no,yes) move the ions
       integer :: movion = 1
 ! npxi/npyi = number of background ions distributed in x/y direction
-! npxib/npyib = number of beam ions distributed in x/y direction
+! npxbi/npybi = number of beam ions distributed in x/y direction
       integer :: npxi = 3072, npyi = 3072, npxbi = 0, npybi = 0
 ! qmi = charge on ion, in units of e
 ! rmass = ion/electron mass ratio
@@ -230,10 +230,12 @@
 ! background electrons
       if (npxy > 0.0d0) then
 ! calculates initial electron co-ordinates with uniform density
-         call mudistr2(part,edges,npp,npx,npy,nx,ny,kstrt,ipbc,irc)
+         call mpudistr2(part,edges,npp,npx,npy,nx,ny,kstrt,ipbc,ierr)
 ! initialize electron velocities or momenta
-         call wmvdistr2(part,nps,npp,vtx,vty,vx0,vy0,ci,npx,npy,kstrt,  &
-     &relativity,irc)
+         if (ierr==0) then
+            call wmpvdistr2(part,nps,npp,vtx,vty,vx0,vy0,ci,npx,npy,    &
+     &kstrt,relativity,ierr)
+         endif
 ! check for background electron initialization error
          if (ierr /= 0) then
             call PPEXIT()
@@ -244,10 +246,12 @@
       if (npxyb > 0.0d0) then
          nps = npp + 1
 ! calculates initial electron co-ordinates with uniform density
-         call mudistr2(part,edges,npp,npxb,npyb,nx,ny,kstrt,ipbc,irc)
+         call mpudistr2(part,edges,npp,npxb,npyb,nx,ny,kstrt,ipbc,ierr)
 ! initialize electron velocities or momenta
-         call wmvdistr2(part,nps,npp,vtdx,vtdy,vdx,vdy,ci,npxb,npyb,    &
-     &kstrt,relativity,irc)
+         if (ierr==0) then
+            call wmpvdistr2(part,nps,npp,vtdx,vtdy,vdx,vdy,ci,npxb,npyb,&
+     &kstrt,relativity,ierr)
+         endif
 ! check for beam electron initialization error
          if (ierr /= 0) then
             call PPEXIT()
@@ -287,11 +291,13 @@
 ! background ions
          if (npxyi > 0.0d0) then
 ! calculates initial ion co-ordinates with uniform density
-            call mudistr2(part,edges,nppi,npxi,npyi,nx,ny,kstrt,ipbc,irc&
-     &)
+            call mpudistr2(part,edges,nppi,npxi,npyi,nx,ny,kstrt,ipbc,  &
+     &ierr)
 ! initialize ion velocities or momenta
-            call wmvdistr2(part,nps,nppi,vtxi,vtyi,vxi0,vyi0,ci,npxi,   &
-     &npyi,kstrt,relativity,irc)
+            if (ierr==0) then
+               call wmpvdistr2(part,nps,nppi,vtxi,vtyi,vxi0,vyi0,ci,npxi&
+     &,npyi,kstrt,relativity,ierr)
+            endif
 ! check for background ion initialization error
             if (ierr /= 0) then
                call PPEXIT()
@@ -302,11 +308,13 @@
          if (npxybi > 0.0d0) then
             nps = nppi + 1
 ! calculates initial ion co-ordinates with uniform density
-            call mudistr2(part,edges,nppi,npxbi,npybi,nx,ny,kstrt,ipbc, &
-     &irc)
+            call mpudistr2(part,edges,nppi,npxbi,npybi,nx,ny,kstrt,ipbc,&
+     &ierr)
 ! initialize ion velocities or momenta
-            call wmvdistr2(part,nps,nppi,vtdxi,vtdyi,vdxi,vdyi,ci,npxbi,&
-     &npybi,kstrt,relativity,irc)
+            if (ierr==0) then
+               call wmpvdistr2(part,nps,nppi,vtdxi,vtdyi,vdxi,vdyi,ci,  &
+     &npxbi,npybi,kstrt,relativity,ierr)
+            endif
 ! check for beam ion initialization error
             if (ierr /= 0) then
                call PPEXIT()
