@@ -1,7 +1,7 @@
 # UPIC 2.0
-2D MPI/OpenMP and 3D OpenMP Particle-in-Cell (PIC) codes
-BEPS2 and BEPS3
-by Viktor K. Decyk, UCLA
+2D MPI/OpenMP and 3D OpenMP Particle-in-Cell (PIC) codes  
+BEPS2 and BEPS3  
+by Viktor K. Decyk, UCLA  
 Copyright 1994-2017, Regents of the University of California
 
 These codes are part of the UPIC 2.0.1 Framework.  The primary purpose
@@ -31,23 +31,23 @@ Please also feel free to send an email to this address if you would like assista
 
 Directions for compiling and executing the codes are available in the README files of each subfolder.
 
-A Software License for use of these codes are in the documents:
-mpbeps2/Documents/License(CommercialReservation)
+A Software License for use of these codes are in the documents:  
+mpbeps2/Documents/License(CommercialReservation)  
 mpbeps3/Documents/License(CommercialReservation)
 
 Descriptions of the design of these codes and their components are in the
-documents:
-mpbeps2/Documents/BEPS2Design.pdf
+documents:  
+mpbeps2/Documents/BEPS2Design.pdf  
 mpbeps3/Documents/BEPS3Design.pdf
 
 Description of the current capabilities of these codes and their
-components are in the documents:
-mpbeps2/Documents/BEPS2Overview.pdf
+components are in the documents:  
+mpbeps2/Documents/BEPS2Overview.pdf  
 mpbeps3/Documents/BEPS3Overview.pdf
 
 Details about the mathematical equations and units used in these codes are
-given in the documents:
-mpbeps2/Documents/UPICModels.pdf
+given in the documents:  
+mpbeps2/Documents/UPICModels.pdf  
 mpbeps3/Documents/UPICModels.pdf
 
 Please see the READMEs in each folder for further details.
