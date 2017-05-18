@@ -58,6 +58,8 @@
 !          calls MPPCURLF2
 ! mpavpot2 calculates 2-1/2d vector potential from magnetic field
 !          calls MPPAVPOT23
+! mcuave2 averages current in fourier space for 2-1/2d code
+!         calls MCUAVE23
 ! mpavrpot2 solves 2-1/2d poisson's equation for the radiative part of
 !           the vector potential
 !           calls MPPAVRPOT23
@@ -84,7 +86,7 @@
 !             calls PPWRVMODES2
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 12, 2017
+! update: april 21, 2017
 !
       use libmpfield2_h
       implicit none
@@ -640,6 +642,29 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
+      subroutine mcuave2(cuave,cunew,cuold,tfield,ny)
+! averages current in fourier space for 2-1/2d code
+      implicit none
+      integer, intent(in) :: ny
+      real, intent(inout) :: tfield
+      complex, dimension(:,:,:), intent(in) :: cunew, cuold
+      complex, dimension(:,:,:), intent(inout) :: cuave
+! local data
+      integer :: nyv, kxp
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      nyv = size(cuave,2); kxp = size(cuave,3)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call MCUAVE23(cuave,cunew,cuold,ny,kxp,nyv)
+! record time
+      call dtimer(dtime,itime,1)
+      tfield = tfield + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine mpavrpot2(axy,bxy,ffc,affp,ci,tfield,nx,ny,kstrt)
 ! solves 2-1/2d poisson's equation for the radiative part of the vector
 ! potential
@@ -744,6 +769,7 @@
       tfield = tfield + real(dtime)
       end subroutine
 !
+!-----------------------------------------------------------------------
       subroutine mpsmooth23(cu,cus,ffc,tfield,nx,ny,kstrt)
 ! provides a 2d vector smoothing function
       implicit none

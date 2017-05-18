@@ -21,10 +21,10 @@
 !
 ! bs/br = complex send/receive buffers for data transpose
       complex, dimension(:,:), allocatable :: bs, br
-      integer :: szbuf = 0
+      integer :: szbuf = -1
 ! ss = scratch array for WPPFFT2RMN
       complex, dimension(:,:), allocatable :: ss
-      integer :: szss = 0
+      integer :: szss = -1
       save
 !
       private :: ntpose, bs, br, ss, szbuf, szss
@@ -68,7 +68,7 @@
       nxhyd = size(mixup,1); nxyhd = size(sct,1)
 ! check if required size of buffers has increased
       if (szbuf < kxp*kyp) then
-         if (szbuf /= 0) deallocate(bs,br)
+         if (szbuf > 0) deallocate(bs,br)
 ! allocate new buffers
          allocate(bs(kxp,kyp),br(kxp,kyp))
          szbuf = kxp*kyp
@@ -106,7 +106,7 @@
       nxhyd = size(mixup,1); nxyhd = size(sct,1)
 ! check if required size of buffers has increased
       if (szbuf < ndim*kxp*kyp) then
-         if (szbuf /= 0) deallocate(bs,br)
+         if (szbuf > 0) deallocate(bs,br)
 ! allocate new buffers
          allocate(bs(ndim*kxp,kyp),br(ndim*kxp,kyp))
          szbuf = ndim*kxp*kyp
@@ -124,7 +124,7 @@
       case default
 ! check if required size of buffer has increased
          if (szss < ndim*nxvh*kypd) then
-            if (szss /= 0) deallocate(ss)
+            if (szss > 0) deallocate(ss)
 ! allocate new buffer
             allocate(ss(ndim*nxvh,kypd))
             szss = ndim*nxvh*kypd

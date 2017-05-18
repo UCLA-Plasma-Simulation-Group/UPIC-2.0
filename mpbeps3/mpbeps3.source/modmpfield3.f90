@@ -56,6 +56,8 @@
 !          calls MPPCURLF32
 ! mpavpot3 calculates 3d vector potential from magnetic field
 !          calls MPPAVPOT332
+! mcuave3 averages current in fourier space for 3d code
+!         calls MCUAVE33
 ! mpavrpot3 solves 3d poisson's equation for the radiative part of the
 !           vector potential
 !           calls MPPAVRPOT332
@@ -82,7 +84,7 @@
 !             calls PPWRVMODES32
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 10, 2017
+! update: april 26, 2017
 !
       use libmpfield3_h
       implicit none
@@ -636,6 +638,29 @@
       call dtimer(dtime,itime,-1)
 ! call low level procedure
       call MPPAVPOT332(bxyz,axyz,nx,ny,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp)
+! record time
+      call dtimer(dtime,itime,1)
+      tfield = tfield + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mcuave3(cuave,cunew,cuold,tfield,nz)
+! averages current in fourier space for 3d code
+      implicit none
+      integer, intent(in) :: nz
+      real, intent(inout) :: tfield
+      complex, dimension(:,:,:,:), intent(in) :: cunew, cuold
+      complex, dimension(:,:,:,:), intent(inout) :: cuave
+! local data
+      integer :: nzv, kxyp, kyzp
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      nzv = size(cuave,2); kxyp = size(cuave,3); kyzp = size(cuave,4)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call MCUAVE33(cuave,cunew,cuold,nz,kxyp,kyzp,nzv)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)

@@ -127,22 +127,22 @@ NGOBJS = nullgks1.o nullgks2.o nullpgks2.o nmodpgraf2.o
 
 # Linkage rules
 
-all : mp_dfields2 
+all : mp_pfields2 
 
-nompi : m_dfields2 
+nompi : m_pfields2 
 
-mp_dfields2 : mp_dfields2.o libmpfield2.o libmpfft2.o libmpgard2.o $(GOBJS) \
+mp_pfields2 : mp_pfields2.o libmpfield2.o libmpfft2.o libmpgard2.o $(GOBJS) \
               dtimer.o
-	$(MPIFC) $(OPTS90) $(LOPTS) $(LGOPTS) -o mp_dfields2 \
-    mp_dfields2.o libmpfield2.o libmpfft2.o libmpgard2.o modmpfield2.o \
+	$(MPIFC) $(OPTS90) $(LOPTS) $(LGOPTS) -o mp_pfields2 \
+    mp_pfields2.o libmpfield2.o libmpfft2.o libmpgard2.o modmpfield2.o \
     modmpfft2.o modmpgard2.o mpplib2.o mppmod2.o omplib.o omppflib2.o \
     libmpfield2_h.o libmpfft2_h.o libmpgard2_h.o $(GOBJS) dtimer.o
 
 #noMPI
-m_dfields2 : m_dfields2.o libmpfield2.o libmpfft2.o libmpgard2.o noMPI.o \
+m_pfields2 : m_pfields2.o libmpfield2.o libmpfft2.o libmpgard2.o noMPI.o \
              $(NGOBJS) dtimer.o
-	$(FC90) $(OPTS90) $(LOPTS) $(LGOPTS) -o m_dfields2 \
-    m_dfields2.o libmpfield2.o libmpfft2.o libmpgard2.o modmpfield2.o \
+	$(FC90) $(OPTS90) $(LOPTS) $(LGOPTS) -o m_pfields2 \
+    m_pfields2.o libmpfield2.o libmpfft2.o libmpgard2.o modmpfield2.o \
     modmpfft2.o modmpgard2.o nmpplib2.o nmppmod2.o omplib.o nomppflib2.o \
     libmpfield2_h.o libmpfft2_h.o libmpgard2_h.o noMPI.o $(NGOBJS) dtimer.o
 
@@ -207,59 +207,59 @@ modmpgard2.o : modmpgard2.f90 libmpgard2_h.o
 omppflib2.o : omppflib2.f90 modmpfft2.o modmpgard2.o mppmod2.o
 	$(FC90) $(OPTS90) -o omppflib2.o -c omppflib2.f90
 
-mp_dfields2.o : mp_dfields2.f90 modmpfield2.o mppmod2.o omplib.o omppflib2.o \
+mp_pfields2.o : mp_pfields2.f90 modmpfield2.o mppmod2.o omplib.o omppflib2.o \
                 modpgraf2.o
-	$(FC90) $(OPTS90) -o mp_dfields2.o -c mp_dfields2.f90
+	$(FC90) $(OPTS90) -o mp_pfields2.o -c mp_pfields2.f90
 
 #noMPI
-m_dfields2.o : mp_dfields2.f90 modmpfield2.o nmppmod2.o omplib.o nomppflib2.o \
+m_pfields2.o : mp_pfields2.f90 modmpfield2.o nmppmod2.o omplib.o nomppflib2.o \
                nmodpgraf2.o
-	$(FC90) $(OPTS90) -o m_dfields2.o -c mp_dfields2.f90
+	$(FC90) $(OPTS90) -o m_pfields2.o -c mp_pfields2.f90
 
 # Fortran Graphics
 
-#libt1.o : libt1.f90
-#	$(FC90) $(OPTS90) -o libt1.o -c libt1.f90
+libt1.o : gks2/libt1.f90
+	$(FC90) $(OPTS90) -o libt1.o -c gks2/libt1.f90
 
-#plot10.o : plot10.f
-#	$(FC90) $(OPTS90) -o plot10.o -c plot10.f
+plot10.o : gks2/plot10.f
+	$(FC90) $(OPTS90) -o plot10.o -c gks2/plot10.f
 
-#libplt10.o : libplt10.f
-#	$(FC90) $(OPTS90) -o libplt10.o -c libplt10.f
+libplt10.o : gks2/libplt10.f
+	$(FC90) $(OPTS90) -o libplt10.o -c gks2/libplt10.f
 	
-libygl.o : libygl.f
-	$(FC90) $(OPTS90) -o libygl.o -c libygl.f
+libygl.o : gks2/libygl.f
+	$(FC90) $(OPTS90) -o libygl.o -c gks2/libygl.f
 
-libgks1.o : libgks1.f
-	$(FC90) $(OPTS90) -o libgks1.o -c libgks1.f
+libgks1.o : gks2/libgks1.f
+	$(FC90) $(OPTS90) -o libgks1.o -c gks2/libgks1.f
 
-nullgks1.o : nullgks1.f
-	$(FC90) $(OPTS90) -o nullgks1.o -c nullgks1.f
+nullgks1.o : gks2/nullgks1.f
+	$(FC90) $(OPTS90) -o nullgks1.o -c gks2/nullgks1.f
 
-libgks2.o : libgks2.f
-	$(FC90) $(OPTS90) -o libgks2.o -c libgks2.f
+libgks2.o : gks2/libgks2.f
+	$(FC90) $(OPTS90) -o libgks2.o -c gks2/libgks2.f
 
-nullgks2.o : nullgks2.f
-	$(FC90) $(OPTS90) -o nullgks2.o -c nullgks2.f
+nullgks2.o : gks2/nullgks2.f
+	$(FC90) $(OPTS90) -o nullgks2.o -c gks2/nullgks2.f
 
-plibgks2.o : plibgks2.f90 mpplib2.o
-	$(FC90) $(OPTS90) -o plibgks2.o -c plibgks2.f90
+plibgks2.o : gks2/plibgks2.f90 mpplib2.o
+	$(FC90) $(OPTS90) -o plibgks2.o -c gks2/plibgks2.f90
 
-nullpgks2.o : nullpgks2.f90
-	$(FC90) $(OPTS90) -o nullpgks2.o -c nullpgks2.f90
+nullpgks2.o : gks2/nullpgks2.f90
+	$(FC90) $(OPTS90) -o nullpgks2.o -c gks2/nullpgks2.f90
 
-modpgraf2.o : modpgraf2.f90 plibgks2.o
-	$(FC90) $(OPTS90) -o modpgraf2.o -c modpgraf2.f90
+modpgraf2.o : gks2/modpgraf2.f90 plibgks2.o
+	$(FC90) $(OPTS90) -o modpgraf2.o -c gks2/modpgraf2.f90
 
 #noMPI
-nplibgks2.o : plibgks2.f90 nmpplib2.o
-	$(FC90) $(OPTS90) -o nplibgks2.o -c plibgks2.f90
+nplibgks2.o : gks2/plibgks2.f90 nmpplib2.o
+	$(FC90) $(OPTS90) -o nplibgks2.o -c gks2/plibgks2.f90
 
-nmodpgraf2.o : modpgraf2.f90 nplibgks2.o
-	$(FC90) $(OPTS90) -o nmodpgraf2.o -c modpgraf2.f90
+nmodpgraf2.o : gks2/modpgraf2.f90 nplibgks2.o
+	$(FC90) $(OPTS90) -o nmodpgraf2.o -c gks2/modpgraf2.f90
 
 clean :
 	rm -f *.o *.mod
 
 clobber: clean
-	rm -f mp_dfields2 m_dfields2
+	rm -f mp_pfields2 m_pfields2

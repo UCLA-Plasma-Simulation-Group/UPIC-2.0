@@ -17,7 +17,7 @@
 ! MPPSWAPC2N swaps components for multiple ffts
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: january 20, 2016
+! update: march 23, 2017
 !-----------------------------------------------------------------------
       subroutine WPFFT2RINIT(mixup,sct,indx,indy,nxhyd,nxyhd)
 ! this subroutine calculates tables needed by a two dimensional
@@ -372,7 +372,7 @@
 ! f(j,k) = mode j-1,kk-1, where kk = k + kyp*(kstrt - 1)
 ! 1 <= j <= nx/2 and 1 <= kk <= ny, except for
 ! f(1,k) = mode nx/2,kk-1, where ny/2+2 <= kk <= ny, and
-! imaginary part of f(1,1) = real part of mode nx/2,0 on mode kstrt=0
+! imaginary part of f(1,1) = real part of mode nx/2,0 on mode kstrt=1
 ! imaginary part of f(1,1) = real part of mode nx/2,ny/2
 ! on mode kstrt=(ny/2)/kyp
 ! written by viktor k. decyk, ucla
@@ -538,7 +538,7 @@
 ! g(k,1) = mode nx/2,k-1, where ny/2+2 <= k <= ny, and
 ! imaginary part of g(1,1) = real part of mode nx/2,0 and
 ! imaginary part of g(ny/2+1,1) = real part of mode nx/2,ny/2
-! on node kstrt=0
+! on node kstrt=1
 ! written by viktor k. decyk, ucla
 ! parallel, RISC optimized version
       implicit none
@@ -689,7 +689,7 @@
 ! 1 <= j <= nx/2 and 1 <= kk <= ny, except for
 ! f(1:2,1,k) = mode nx/2,kk-1, where ny/2+2 <= kk <= ny, and
 ! imaginary part of f(1:2,1,1) = real part of mode nx/2,0
-! on mode kstrt=0
+! on mode kstrt=1
 ! imaginary part of f(1:2,1,1) = real part of mode nx/2,ny/2
 ! on mode kstrt=(ny/2)/kyp
 ! written by viktor k. decyk, ucla
@@ -886,7 +886,7 @@
 ! g(1:2,k,1) = mode nx/2,k-1, where ny/2+2 <= k <= ny, and
 ! imaginary part of g(1:2,1,1) = real part of mode nx/2,0 and
 ! imaginary part of g(1:2,ny/2+1,1) = real part of mode nx/2,ny/2
-! on node kstrt=0
+! on node kstrt=1
 ! written by viktor k. decyk, ucla
 ! parallel, RISC optimized version
       implicit none
@@ -1054,7 +1054,7 @@
 ! 1 <= j <= nx/2 and 1 <= kk <= ny, except for
 ! f(1:3,1,k) = mode nx/2,kk-1, where ny/2+2 <= kk <= ny, and
 ! imaginary part of f(1:3,1,1) = real part of mode nx/2,0
-! on mode kstrt=0
+! on mode kstrt=1
 ! imaginary part of f(1:3,1,1) = real part of mode nx/2,ny/2
 ! on mode kstrt=(ny/2)/kyp
 ! written by viktor k. decyk, ucla
@@ -1267,7 +1267,7 @@
 ! g(1:3,k,1) = mode nx/2,k-1, where ny/2+2 <= k <= ny, and
 ! imaginary part of g(1:3,1,1) = real part of mode nx/2,0 and
 ! imaginary part of g(1:3,ny/2+1,1) = real part of mode nx/2,ny/2
-! on node kstrt=0
+! on node kstrt=1
 ! written by viktor k. decyk, ucla
 ! parallel, RISC optimized version
       implicit none
@@ -1449,7 +1449,7 @@
 ! 1 <= j <= nx/2 and 1 <= kk <= ny, except for
 ! f(1:N,1,k) = mode nx/2,kk-1, where ny/2+2 <= kk <= ny, and
 ! imaginary part of f(1:N,1,1) = real part of mode nx/2,0
-! on mode kstrt=0
+! on mode kstrt=1
 ! imaginary part of f(1:N,1,1) = real part of mode nx/2,ny/2
 ! on mode kstrt=(ny/2)/kyp
 ! written by viktor k. decyk, ucla
@@ -1635,7 +1635,7 @@
 ! g(1:N,k,1) = mode nx/2,k-1, where ny/2+2 <= k <= ny, and
 ! imaginary part of g(1:N,1,1) = real part of mode nx/2,0 and
 ! imaginary part of g(1:N,ny/2+1,1) = real part of mode nx/2,ny/2
-! on node kstrt=0
+! on node kstrt=1
 ! written by viktor k. decyk, ucla
 ! parallel, RISC optimized version
       implicit none

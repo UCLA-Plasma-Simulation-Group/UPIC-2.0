@@ -23,11 +23,24 @@
 !               interpolation and periodic particle boundary conditions.
 !               also determines list of particles which are leaving each
 !               tile
+! PPGPPUSH32ZF update particle co-ordinate for particles with fixed
+!              velocities
+! PPGPPUSHF32ZF update particle co-ordinate for particles with fixed
+!               velocities with periodic particle boundary conditions.
+!               also determines list of particles which are leaving each
+!               tile
+! PPGRPPUSH32ZF update particle co-ordinates for particles with fixed
+!               velocities, for 3d code, and relativistic particles.
+! PPGRPPUSHF32ZF update particle co-ordinates for particles with fixed
+!                velocities with periodic particle boundary conditions,
+!                for 3d code, and relativistic particles.  also
+!                determines list of particles which are leaving each
+!                tile
 ! PPGPPOST32L calculates particle charge density using linear
 !             interpolation
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: january 28, 2017
+! update: may 16, 2017
 !-----------------------------------------------------------------------
       subroutine PPPMOVIN3L(part,ppart,kpic,npp,noff,nppmx,idimp,npmax, &
      &mx,my,mz,mx1,myp1,mxyzp1,idds,irc)
@@ -1115,7 +1128,7 @@
 ! ntmax = size of hole array for particles leaving tiles
 ! idds = dimensionality of domain decomposition
 ! irc = maximum overflow, returned only if error occurs, when irc > 0
-! irc = maximum overflow, returned only if error occurs, when irc > 0
+!       returns new ntmax required
 ! optimized version
       implicit none
       integer idimp, nppmx, nx, ny, nz, mx, my, mz, nxv, nypmx, nzpmx
@@ -1325,6 +1338,639 @@
          do 70 l = 1, mxyzp1
          ih = max(ih,ihole(1,1,l))
    70    continue
+         irc = ih
+      endif
+! normalize kinetic energy
+      ek = ek + sum2
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PPGPPUSH32ZF(ppart,kpic,dt,ek,idimp,nppmx,nx,ny,nz,    &
+     &mxyzp1,ipbc)
+! for 3d code, this subroutine updates particle co-ordinates for
+! particles with fixed velocities, with various boundary conditions.
+! for distributed data, with 2D spatial decomposition
+! OpenMP version using guard cells
+! data read in tiles
+! particles stored segmented array
+! 13 flops/particle, 6 loads, 3 stores
+! input: all, output: part, ek
+! equations used are:
+! x(t+dt) = x(t) + vx(t+dt/2)*dt, y(t+dt) = y(t) + vy(t+dt/2)*dt,
+! z(t+dt) = z(t) + vz(t+dt/2)*dt
+! ppart(1,n,m) = position x of particle n in partition in tile m
+! ppart(2,n,m) = position y of particle n in partition in tile m
+! ppart(3,n,m) = position z of particle n in partition in tile m
+! ppart(4,n,m) = velocity vx of particle n in partition in tile m
+! ppart(5,n,m) = velocity vy of particle n in partition in tile m
+! ppart(6,n,m) = velocity vz of particle n in partition in tile m
+! kpic = number of particles per tile
+! dt = time interval between successive calculations
+! kinetic energy/mass at time t is also calculated, using
+! ek = .5*sum(vx(t-dt/2)**2+(vy(t-dt/2)**2+(vz(t-dt/2)**2)
+! idimp = size of phase space = 6
+! nppmx = maximum number of particles in tile
+! nx/ny/nz = system length in x/y/z direction
+! mxyzp1 = mx1*myp1*mzp1,
+! where mx1 = (system length in x direction - 1)/mx + 1
+! where myp1 = (partition length in y direction - 1)/my + 1
+! where mzp1 = (partition length in z direction - 1)/mz + 1
+! ipbc = particle boundary condition = (0,1,2,3) =
+! (none,3d periodic,3d reflecting,mixed 2d reflecting/1d periodic)
+      implicit none
+      integer idimp, nppmx, nx, ny, nz, mxyzp1, ipbc
+      real dt, ek
+      real ppart
+      integer kpic
+      dimension ppart(idimp,nppmx,mxyzp1)
+      dimension kpic(mxyzp1)
+! local data
+      integer nppp
+      integer j, l
+      real edgelx, edgely, edgelz, edgerx, edgery, edgerz, dx, dy, dz
+      double precision sum1, sum2
+      sum2 = 0.0d0
+! set boundary values
+      edgelx = 0.0
+      edgely = 0.0
+      edgelz = 0.0
+      edgerx = real(nx)
+      edgery = real(ny)
+      edgerz = real(nz)
+      if (ipbc.eq.2) then
+         edgelx = 1.0
+         edgely = 1.0
+         edgelz = 1.0
+         edgerx = real(nx-1)
+         edgery = real(ny-1)
+         edgerz = real(nz-1)
+      else if (ipbc.eq.3) then
+         edgelx = 1.0
+         edgely = 1.0
+         edgerx = real(nx-1)
+         edgery = real(ny-1)
+      endif
+! loop over tiles
+!$OMP PARALLEL DO PRIVATE(j,l,nppp,dx,dy,dz,sum1) REDUCTION(+:sum2)
+      do 20 l = 1, mxyzp1
+      nppp = kpic(l)
+      sum1 = 0.0d0
+! loop over particles in tile
+      do 10 j = 1, nppp
+! velocity
+      dx = ppart(4,j,l)
+      dy = ppart(5,j,l)
+      dz = ppart(6,j,l)
+! average kinetic energy
+      sum1 = sum1 + (dx*dx + dy*dy + dz*dz)
+! new position
+      dx = ppart(1,j,l) + dx*dt
+      dy = ppart(2,j,l) + dy*dt
+      dz = ppart(3,j,l) + dz*dt
+! reflecting boundary conditions
+      if (ipbc.eq.2) then
+         if ((dx.lt.edgelx).or.(dx.ge.edgerx)) then
+            dx = ppart(1,j,l)
+            ppart(4,j,l) = -ppart(4,j,l)
+         endif
+         if ((dy.lt.edgely).or.(dy.ge.edgery)) then
+            dy = ppart(2,j,l)
+            ppart(5,j,l) = -ppart(5,j,l)
+         endif
+         if ((dz.lt.edgelz).or.(dz.ge.edgerz)) then
+            dz = ppart(3,j,l)
+            ppart(6,j,l) = -ppart(6,j,l)
+         endif
+! mixed reflecting/periodic boundary conditions
+      else if (ipbc.eq.3) then
+         if ((dx.lt.edgelx).or.(dx.ge.edgerx)) then
+            dx = ppart(1,j,l)
+            ppart(4,j,l) = -ppart(4,j,l)
+         endif
+         if ((dy.lt.edgely).or.(dy.ge.edgery)) then
+            dy = ppart(2,j,l)
+            ppart(5,j,l) = -ppart(5,j,l)
+         endif
+      endif
+! set new position
+      ppart(1,j,l) = dx
+      ppart(2,j,l) = dy
+      ppart(3,j,l) = dz
+   10 continue
+      sum2 = sum2 + sum1
+   20 continue
+!$OMP END PARALLEL DO
+! normalize kinetic energy
+      ek = ek + 0.5*sum2
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PPGPPUSHF32ZF(ppart,kpic,ncl,ihole,noff,nyzp,dt,ek,    &
+     &idimp,nppmx,nx,ny,nz,mx,my,mz,mx1,myp1,mxyzp1,ntmax,idds,irc)
+! for 3d code, this subroutine updates particle co-ordinates for
+! particles with fixed velocities, with periodic boundary conditions.
+! also determines list of particles which are leaving this tile
+! OpenMP version using guard cells
+! for distributed data, with 2D spatial decomposition
+! data read in tiles
+! particles stored segmented array
+! 13 flops/particle, 6 loads, 3 stores
+! input: all except ncl, ihole, irc, output: part, ncl, ihole, ek, irc
+! equations used are:
+! x(t+dt) = x(t) + vx(t+dt/2)*dt, y(t+dt) = y(t) + vy(t+dt/2)*dt,
+! z(t+dt) = z(t) + vz(t+dt/2)*dt
+! ppart(1,n,m) = position x of particle n in partition in tile m
+! ppart(2,n,m) = position y of particle n in partition in tile m
+! ppart(3,n,m) = position z of particle n in partition in tile m
+! ppart(4,n,m) = velocity vx of particle n in partition in tile m
+! ppart(5,n,m) = velocity vy of particle n in partition in tile m
+! ppart(6,n,m) = velocity vz of particle n in partition in tile m
+! kpic(l) = number of particles in tile l
+! ncl(i,l) = number of particles going to destination i, tile l
+! ihole(1,:,l) = location of hole in array left by departing particle
+! ihole(2,:,l) = direction destination of particle leaving hole
+! all for tile l
+! ihole(1,1,l) = ih, number of holes left (error, if negative)
+! noff(1) = lowermost global gridpoint in y in particle partition
+! noff(2) = backmost global gridpoint in z in particle partition
+! nyzp(1:2) = number of primary (complete) gridpoints in y/z
+! dt = time interval between successive calculations
+! kinetic energy/mass at time t is also calculated, using
+! ek = .5*sum(vx(t-dt/2)**2+(vy(t-dt/2)**2+(vz(t-dt/2)**2)
+! idimp = size of phase space = 6
+! nppmx = maximum number of particles in tile
+! nx/ny/nz = system length in x/y/z direction
+! mx/my/mz = number of grids in sorting cell in x/y/z
+! mx1 = (system length in x direction - 1)/mx + 1
+! myp1 = (partition length in y direction - 1)/my + 1
+! mxyzp1 = mx1*myp1*mzp1,
+! where mzp1 = (partition length in z direction - 1)/mz + 1
+! ntmax = size of hole array for particles leaving tiles
+! idds = dimensionality of domain decomposition
+! irc = maximum overflow, returned only if error occurs, when irc > 0
+!       returns new ntmax required
+! optimized version
+      implicit none
+      integer idimp, nppmx, nx, ny, nz, mx, my, mz, mx1, myp1, mxyzp1
+      integer ntmax, idds, irc
+      real dt, ek
+      real ppart
+      integer kpic, ncl, ihole, noff, nyzp
+      dimension ppart(idimp,nppmx,mxyzp1)
+      dimension kpic(mxyzp1), ncl(26,mxyzp1), ihole(2,ntmax+1,mxyzp1)
+      dimension noff(idds), nyzp(idds)
+! local data
+      integer mxyp1, noffp, moffp, loffp, nppp
+      integer j, k, l, ih, nh, nn, mm, ll
+      real dx, dy, dz
+      real anx, any, anz, edgelx, edgely, edgelz, edgerx, edgery, edgerz
+      double precision sum1, sum2
+      mxyp1 = mx1*myp1
+      anx = real(nx)
+      any = real(ny)
+      anz = real(nz)
+      sum2 = 0.0d0
+! loop over tiles
+!$OMP PARALLEL DO
+!$OMP& PRIVATE(j,k,l,noffp,moffp,loffp,nppp,ih,nh,nn,mm,ll,dx,dy,dz,    
+!$OMP& edgelx,edgely,edgelz,edgerx,edgery,edgerz,sum1)
+!$OMP& REDUCTION(+:sum2)
+      do 30 l = 1, mxyzp1
+      loffp = (l - 1)/mxyp1
+      k = l - mxyp1*loffp
+      loffp = mz*loffp
+      noffp = (k - 1)/mx1
+      moffp = my*noffp
+      noffp = mx*(k - mx1*noffp - 1)
+      nppp = kpic(l)
+      nn = min(mx,nx-noffp)
+      mm = min(my,nyzp(1)-moffp)
+      ll = min(mz,nyzp(2)-loffp)
+      edgelx = noffp
+      edgerx = noffp + nn
+      edgely = noff(1) + moffp
+      edgery = noff(1) + moffp + mm
+      edgelz = noff(2) + loffp
+      edgerz = noff(2) + loffp + ll
+      ih = 0
+      nh = 0
+! clear counters
+      do 10 j = 1, 26
+      ncl(j,l) = 0
+   10 continue
+      sum1 = 0.0d0
+! loop over particles in tile
+      do 20 j = 1, nppp
+! velocity
+      dx = ppart(4,j,l)
+      dy = ppart(5,j,l)
+      dz = ppart(6,j,l)
+! average kinetic energy
+      sum1 = sum1 + (dx*dx + dy*dy+ dz*dz)
+! new position
+      dx = ppart(1,j,l) + dx*dt
+      dy = ppart(2,j,l) + dy*dt
+      dz = ppart(3,j,l) + dz*dt
+! set new position
+      ppart(1,j,l) = dx
+      ppart(2,j,l) = dy
+      ppart(3,j,l) = dz
+! find particles going out of bounds
+      mm = 0
+! count how many particles are going in each direction in ncl
+! save their address and destination in ihole
+! check for roundoff error
+! mm = direction particle is going
+      if (dx.ge.edgerx) then
+         mm = 2
+      else if (dx.lt.edgelx) then
+         mm = 1
+         if (dx.lt.0.0) then
+            dx = dx + anx
+            if (dx.ge.anx) then
+               ppart(1,j,l) = 0.0
+               mm = 0
+            endif
+         endif
+      endif
+      if (dy.ge.edgery) then
+         mm = mm + 6
+      else if (dy.lt.edgely) then
+         mm = mm + 3
+         if (dy.lt.0.0) then
+            dy = dy + any
+            if (dy.ge.any) then
+               ppart(2,j,l) = 0.0
+               mm = mm - 3
+            endif
+         endif
+      endif
+      if (dz.ge.edgerz) then
+         mm = mm + 18
+      else if (dz.lt.edgelz) then
+         mm = mm + 9
+         if (dz.lt.0.0) then
+            dz = dz + anz
+            if (dz.ge.anz) then
+               ppart(3,j,l) = 0.0
+               mm = mm - 9
+            endif
+         endif
+      endif
+! increment counters
+      if (mm.gt.0) then
+         ncl(mm,l) = ncl(mm,l) + 1
+         ih = ih + 1
+         if (ih.le.ntmax) then
+            ihole(1,ih+1,l) = j
+            ihole(2,ih+1,l) = mm
+         else
+            nh = 1
+         endif
+      endif
+   20 continue
+      sum2 = sum2 + sum1
+! set error and end of file flag
+      if (nh.gt.0) irc = 1
+      ihole(1,1,l) = ih
+   30 continue
+!$OMP END PARALLEL DO
+! ihole overflow
+      if (irc.gt.0) then
+         ih = 0
+         do 40 l = 1, mxyzp1
+         ih = max(ih,ihole(1,1,l))
+   40    continue
+         irc = ih
+      endif
+! normalize kinetic energy
+      ek = ek + 0.5*sum2
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PPGRPPUSH32ZF(ppart,kpic,dt,ci,ek,idimp,nppmx,nx,ny,nz,&
+     &mxyzp1,ipbc)
+! for 3d code, this subroutine updates particle co-ordinates for
+! particles with fixed velocities, with various boundary conditions.
+! with various boundary conditions.
+! with 2D spatial decomposition
+! OpenMP version using guard cells,
+! for distributed data with 2D spatial decomposition
+! data read in tiles
+! particles stored segmented array
+! 16 flops/particle, 1 divide, 1 sqrt, 6 loads, 3 stores
+! input: all, output: part, ek
+! equations used are:
+! x(t+dt) = x(t) + px(t+dt/2)*dtg
+! y(t+dt) = y(t) + py(t+dt/2)*dtg
+! z(t+dt) = z(t) + pz(t+dt/2)*dtg, where
+! dtg = dtc/sqrt(1.+(px(t+dt/2)*px(t+dt/2)+py(t+dt/2)*py(t+dt/2)+
+! pz(t+dt/2)*pz(t+dt/2))*ci*ci)
+! ppart(1,n,m) = position x of particle n in partition in tile m
+! ppart(2,n,m) = position y of particle n in partition in tile m
+! ppart(3,n,m) = position z of particle n in partition in tile m
+! ppart(4,n,m) = momentum px of particle n in partition in tile m
+! ppart(5,n,m) = momentum py of particle n in partition in tile m
+! ppart(6,n,m) = momentum pz of particle n in partition in tile m
+! kpic = number of particles per tile
+! dt = time interval between successive calculations
+! ci = reciprical of velocity of light
+! kinetic energy/mass at time t is also calculated, using
+! ek = sum(px(t-dt/2)**2 + py(t-dt/2)**2 + pz(t-dt/2))**2/(1. + gamma)
+! where gamma = sqrt(1.+(px(t)*px(t)+py(t)*py(t)+pz(t)*pz(t))*ci*ci)
+! idimp = size of phase space = 6
+! nppmx = maximum number of particles in tile
+! nx/ny/nz = system length in x/y/z direction
+! mxyzp1 = mx1*myp1*mzp1,
+! where mx1 = (system length in x direction - 1)/mx + 1
+! where myp1 = (partition length in y direction - 1)/my + 1
+! where mzp1 = (partition length in z direction - 1)/mz + 1
+! ipbc = particle boundary condition = (0,1,2,3) =
+! (none,3d periodic,3d reflecting,mixed 2d reflecting/1d periodic)
+      implicit none
+      integer idimp, nppmx, nx, ny, nz, mxyzp1, ipbc
+      real dt, ci, ek
+      real ppart
+      integer kpic
+      dimension ppart(idimp,nppmx,mxyzp1)
+      dimension kpic(mxyzp1)
+! local data
+      integer nppp
+      integer j, l
+      real ci2, edgelx, edgely, edgelz, edgerx, edgery, edgerz
+      real dx, dy, dz, p2, gam, dtg
+      double precision sum1, sum2
+      ci2 = ci*ci
+      sum2 = 0.0d0
+! set boundary values
+      edgelx = 0.0
+      edgely = 0.0
+      edgelz = 0.0
+      edgerx = real(nx)
+      edgery = real(ny)
+      edgerz = real(nz)
+      if (ipbc.eq.2) then
+         edgelx = 1.0
+         edgely = 1.0
+         edgelz = 1.0
+         edgerx = real(nx-1)
+         edgery = real(ny-1)
+         edgerz = real(nz-1)
+      else if (ipbc.eq.3) then
+         edgelx = 1.0
+         edgely = 1.0
+         edgerx = real(nx-1)
+         edgery = real(ny-1)
+      endif
+! loop over tiles
+!$OMP PARALLEL DO PRIVATE(j,l,nppp,dx,dy,dz,p2,gam,dtg,sum1)
+!$OMP& REDUCTION(+:sum2)
+      do 20 l = 1, mxyzp1
+      nppp = kpic(l)
+      sum1 = 0.0d0
+! loop over particles in tile
+      do 10 j = 1, nppp
+! momentum
+      dx = ppart(4,j,l)
+      dy = ppart(5,j,l)
+      dz = ppart(6,j,l)
+! average kinetic energy
+      p2 = dx*dx + dy*dy + dz*dz
+      gam = sqrt(1.0 + p2*ci2)
+      sum1 = sum1 + p2/(1.0 + gam)
+! update inverse gamma
+      dtg = dt/gam
+! new position
+      dx = ppart(1,j,l) + dx*dtg
+      dy = ppart(2,j,l) + dy*dtg
+      dz = ppart(3,j,l) + dz*dtg
+! reflecting boundary conditions
+      if (ipbc.eq.2) then
+         if ((dx.lt.edgelx).or.(dx.ge.edgerx)) then
+            dx = ppart(1,j,l)
+            ppart(4,j,l) = -ppart(4,j,l)
+         endif
+         if ((dy.lt.edgely).or.(dy.ge.edgery)) then
+            dy = ppart(2,j,l)
+            ppart(5,j,l) = -ppart(5,j,l)
+         endif
+         if ((dz.lt.edgelz).or.(dz.ge.edgerz)) then
+            dz = ppart(3,j,l)
+            ppart(6,j,l) = -ppart(6,j,l)
+         endif
+! mixed reflecting/periodic boundary conditions
+      else if (ipbc.eq.3) then
+         if ((dx.lt.edgelx).or.(dx.ge.edgerx)) then
+            dx = ppart(1,j,l)
+            ppart(4,j,l) = -ppart(4,j,l)
+         endif
+         if ((dy.lt.edgely).or.(dy.ge.edgery)) then
+            dy = ppart(2,j,l)
+            ppart(5,j,l) = -ppart(5,j,l)
+         endif
+      endif
+! set new position
+      ppart(1,j,l) = dx
+      ppart(2,j,l) = dy
+      ppart(3,j,l) = dz
+   10 continue
+      sum2 = sum2 + sum1
+   20 continue
+!$OMP END PARALLEL DO
+! normalize kinetic energy
+      ek = ek + sum2
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PPGRPPUSHF32ZF(ppart,kpic,ncl,ihole,noff,nyzp,dt,ci,ek,&
+     &idimp,nppmx,nx,ny,nz,mx,my,mz,mx1,myp1,mxyzp1,ntmax,idds,irc)
+! for 3d code, this subroutine updates particle co-ordinates for
+! relativistic particles with fixed velocities, with periodic boundary
+! conditions.
+! also determines list of particles which are leaving this tile
+! OpenMP version using guard cells,
+! for distributed data with 2D spatial decomposition
+! data read in tiles
+! particles stored segmented array
+! 16 flops/particle, 1 divide, 1 sqrt, 6 loads, 3 stores
+! input: all except ncl, ihole, irc, output: part, ncl, ihole, ek, irc
+! equations used are: 
+! x(t+dt) = x(t) + px(t+dt/2)*dtg
+! y(t+dt) = y(t) + py(t+dt/2)*dtg
+! z(t+dt) = z(t) + pz(t+dt/2)*dtg, where
+! dtg = dtc/sqrt(1.+(px(t+dt/2)*px(t+dt/2)+py(t+dt/2)*py(t+dt/2)+
+! pz(t+dt/2)*pz(t+dt/2))*ci*ci)
+! ppart(1,n,m) = position x of particle n in partition in tile m
+! ppart(2,n,m) = position y of particle n in partition in tile m
+! ppart(3,n,m) = position z of particle n in partition in tile m
+! ppart(4,n,m) = momentum px of particle n in partition in tile m
+! ppart(5,n,m) = momentum py of particle n in partition in tile m
+! ppart(6,n,m) = momentum pz of particle n in partition in tile m
+! kpic(l) = number of particles in tile l
+! ncl(i,l) = number of particles going to destination i, tile l
+! ihole(1,:,l) = location of hole in array left by departing particle
+! ihole(2,:,l) = direction destination of particle leaving hole
+! all for tile l
+! ihole(1,1,l) = ih, number of holes left (error, if negative)
+! noff(1) = lowermost global gridpoint in y in particle partition
+! noff(2) = backmost global gridpoint in z in particle partition
+! nyzp(1:2) = number of primary (complete) gridpoints in y/z
+! dt = time interval between successive calculations
+! ci = reciprical of velocity of light
+! kinetic energy/mass at time t is also calculated, using
+! ek = sum(px(t-dt/2)**2 + py(t-dt/2)**2 + pz(t-dt/2))**2/(1. + gamma)
+! where gamma = sqrt(1.+(px(t)*px(t)+py(t)*py(t)+pz(t)*pz(t))*ci*ci)
+! idimp = size of phase space = 6
+! nppmx = maximum number of particles in tile
+! nx/ny/nz = system length in x/y/z direction
+! mx/my/mz = number of grids in sorting cell in x/y/z
+! mx1 = (system length in x direction - 1)/mx + 1
+! myp1 = (partition length in y direction - 1)/my + 1
+! mxyzp1 = mx1*myp1*mzp1,
+! where mzp1 = (partition length in z direction - 1)/mz + 1
+! ntmax = size of hole array for particles leaving tiles
+! idds = dimensionality of domain decomposition
+! irc = maximum overflow, returned only if error occurs, when irc > 0
+!       returns new ntmax required
+! optimized version
+      implicit none
+      integer idimp, nppmx, nx, ny, nz, mx, my, mz, mx1, myp1, mxyzp1
+      integer ntmax, idds, irc
+      real dt, ci, ek
+      real ppart
+      integer kpic, ncl, ihole, noff, nyzp
+      dimension ppart(idimp,nppmx,mxyzp1)
+      dimension kpic(mxyzp1), ncl(26,mxyzp1), ihole(2,ntmax+1,mxyzp1)
+      dimension noff(idds), nyzp(idds)
+! local data
+      integer MXV, MYV, MZV
+      parameter(MXV=17,MYV=17,MZV=17)
+      integer mxyp1, noffp, moffp, loffp, nppp
+      integer j, k, l, ih, nh, nn, mm, ll
+      real dx, dy, dz, ci2, p2, gam, dtg
+      real anx, any, anz, edgelx, edgely, edgelz, edgerx, edgery, edgerz
+      double precision sum1, sum2
+      mxyp1 = mx1*myp1
+      ci2 = ci*ci
+      anx = real(nx)
+      any = real(ny)
+      anz = real(nz)
+      sum2 = 0.0d0
+! loop over tiles
+!$OMP PARALLEL DO
+!$OMP& PRIVATE(j,k,l,noffp,moffp,loffp,nppp,ih, nh, nn,mm,ll,dx,dy,dz,  
+!$OMP& p2,gam,dtg,edgelx,edgely,edgelz,edgerx,edgery,edgerz,sum1)
+!$OMP& REDUCTION(+:sum2)
+      do 30 l = 1, mxyzp1
+      loffp = (l - 1)/mxyp1
+      k = l - mxyp1*loffp
+      loffp = mz*loffp
+      noffp = (k - 1)/mx1
+      moffp = my*noffp
+      noffp = mx*(k - mx1*noffp - 1)
+      nppp = kpic(l)
+      nn = min(mx,nx-noffp)
+      mm = min(my,nyzp(1)-moffp)
+      ll = min(mz,nyzp(2)-loffp)
+      edgelx = noffp
+      edgerx = noffp + nn
+      edgely = noff(1) + moffp
+      edgery = noff(1) + moffp + mm
+      edgelz = noff(2) + loffp
+      edgerz = noff(2) + loffp + ll
+      ih = 0
+      nh = 0
+! clear counters
+      do 10 j = 1, 26
+      ncl(j,l) = 0
+   10 continue
+      sum1 = 0.0d0
+! loop over particles in tile
+      do 20 j = 1, nppp
+! momentum
+      dx = ppart(4,j,l)
+      dy = ppart(5,j,l)
+      dz = ppart(6,j,l)
+! average kinetic energy
+      p2 = dx*dx + dy*dy + dz*dz
+      gam = sqrt(1.0 + p2*ci2)
+      sum1 = sum1 + p2/(1.0 + gam)
+! update inverse gamma
+      dtg = dt/gam
+! new position
+      dx = ppart(1,j,l) + dx*dtg
+      dy = ppart(2,j,l) + dy*dtg
+      dz = ppart(3,j,l) + dz*dtg
+! set new position
+      ppart(1,j,l) = dx
+      ppart(2,j,l) = dy
+      ppart(3,j,l) = dz
+! find particles going out of bounds
+      mm = 0
+! count how many particles are going in each direction in ncl
+! save their address and destination in ihole
+! check for roundoff error
+! mm = direction particle is going
+      if (dx.ge.edgerx) then
+         mm = 2
+      else if (dx.lt.edgelx) then
+         mm = 1
+         if (dx.lt.0.0) then
+            dx = dx + anx
+            if (dx.ge.anx) then
+               ppart(1,j,l) = 0.0
+               mm = 0
+            endif
+         endif
+      endif
+      if (dy.ge.edgery) then
+         mm = mm + 6
+      else if (dy.lt.edgely) then
+         mm = mm + 3
+         if (dy.lt.0.0) then
+            dy = dy + any
+            if (dy.ge.any) then
+               ppart(2,j,l) = 0.0
+               mm = mm - 3
+            endif
+         endif
+      endif
+      if (dz.ge.edgerz) then
+         mm = mm + 18
+      else if (dz.lt.edgelz) then
+         mm = mm + 9
+         if (dz.lt.0.0) then
+            dz = dz + anz
+            if (dz.ge.anz) then
+               ppart(3,j,l) = 0.0
+               mm = mm - 9
+            endif
+         endif
+      endif
+! increment counters
+      if (mm.gt.0) then
+         ncl(mm,l) = ncl(mm,l) + 1
+         ih = ih + 1
+         if (ih.le.ntmax) then
+            ihole(1,ih+1,l) = j
+            ihole(2,ih+1,l) = mm
+         else
+            nh = 1
+         endif
+      endif
+   20 continue
+      sum2 = sum2 + sum1
+! set error and end of file flag
+      if (nh.gt.0) irc = 1
+      ihole(1,1,l) = ih
+   30 continue
+!$OMP END PARALLEL DO
+! ihole overflow
+      if (irc.gt.0) then
+         ih = 0
+         do 40 l = 1, mxyzp1
+         ih = max(ih,ihole(1,1,l))
+   40    continue
          irc = ih
       endif
 ! normalize kinetic energy

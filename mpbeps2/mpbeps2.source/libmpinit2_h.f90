@@ -36,10 +36,52 @@
       end interface
 !
       interface
-         subroutine PVDISTR2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,idimp,&
-     &npmax,ierr)
+         subroutine PLDISTR2(part,npp,anlx,anly,npx,npy,nx,ny,kstrt,nvp,&
+     &idimp,npmax,ipbc,ierr)
          implicit none
-         integer, intent(in) :: nps, npp, npx, npy, idimp, npmax
+         integer, intent(in) :: npx, npy, nx, ny, kstrt, nvp
+         integer, intent(in) :: idimp, npmax, ipbc
+         integer, intent(inout) :: npp, ierr
+         real, intent(in) :: anlx, anly
+         real, dimension(idimp,npmax), intent(inout) :: part
+         end subroutine
+      end interface
+!
+      interface
+         subroutine PFDISTR2(part,npp,fnx,argx1,argx2,argx3,fny,argy1,  &
+     &argy2,argy3,npx,npy,nx,ny,kstrt,nvp,idimp,npmax,ipbc,ierr)
+         implicit none
+         integer, intent(in) :: npx, npy, nx, ny, kstrt, nvp
+         integer, intent(in) :: idimp, npmax, ipbc
+         integer, intent(inout) :: npp, ierr
+         double precision, intent(in) :: argx1, argx2, argx3
+         double precision, intent(in) :: argy1, argy2, argy3
+         real, dimension(idimp,npmax), intent(inout) :: part
+         interface
+            function fnx(argx1,argx2,argx3,intg)
+            implicit none
+            integer, intent(in) :: intg
+            double precision, intent(in) :: argx1, argx2, argx3
+            double precision :: fnx
+            end function
+         end interface
+         interface
+            function fny(argy1,argy2,argy3,intg)
+            implicit none
+            integer, intent(in) :: intg
+            double precision, intent(in) :: argy1, argy2, argy3
+            double precision :: fny
+            end function
+         end interface
+         end subroutine
+      end interface
+!
+      interface
+         subroutine PVDISTR2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,&
+     &nvp,idimp,npmax,ierr)
+         implicit none
+         integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp
+         integer, intent(in) :: idimp, npmax
          integer, intent(inout) :: ierr
          real, intent(in) :: vtx, vty, vdx, vdy
          real, dimension(idimp,npmax), intent(inout) :: part
@@ -48,9 +90,10 @@
 !
       interface
          subroutine PVDISTR2H(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx, &
-     &npy,idimp,npmax,ierr)
+     &npy,kstrt,nvp,idimp,npmax,ierr)
          implicit none
-         integer, intent(in) :: nps, npp, npx, npy, idimp, npmax
+         integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp
+         integer, intent(in) :: idimp, npmax
          integer, intent(inout) :: ierr
          real, intent(in) :: vtx, vty, vtz, vdx, vdy, vdz
          real, dimension(idimp,npmax), intent(inout) :: part
@@ -59,9 +102,10 @@
 !
       interface
          subroutine PVRDISTR2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,  &
-     &idimp,npmax,ierr)
+     &kstrt,nvp,idimp,npmax,ierr)
          implicit none
-         integer, intent(in) :: nps, npp, npx, npy, idimp, npmax
+         integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp
+         integer, intent(in) :: idimp, npmax
          integer, intent(inout) :: ierr
          real, intent(in) :: vtx, vty, vdx, vdy, ci
          real, dimension(idimp,npmax), intent(inout) :: part
@@ -70,9 +114,10 @@
 !
       interface
          subroutine PVRDISTR2H(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci, &
-     &npx,npy,idimp,npmax,ierr)
+     &npx,npy,kstrt,nvp,idimp,npmax,ierr)
          implicit none
-         integer, intent(in) :: nps, npp, npx, npy, idimp, npmax
+         integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp
+         integer, intent(in) :: idimp, npmax
          integer, intent(inout) :: ierr
          real, intent(in) :: vtx, vty, vtz, vdx, vdy, vdz, ci
          real, dimension(idimp,npmax), intent(inout) :: part
@@ -92,6 +137,36 @@
       end interface
 !
       interface
+         subroutine PFEDGES2(edges,nyp,noff,fny,argy1,argy2,argy3,nypmx,&
+     &nypmn,ny,kstrt,nvp,idps,ipbc)
+         implicit none
+         integer, intent(in) :: ny, kstrt, nvp, idps, ipbc
+         integer, intent(inout) :: nyp, noff, nypmx, nypmn
+         double precision, intent(in) :: argy1, argy2, argy3
+         real, dimension(idps), intent(inout) :: edges
+         interface
+            function fny(argy1,argy2,argy3,intg)
+            implicit none
+            integer, intent(in) :: intg
+            double precision, intent(in) :: argy1, argy2, argy3
+            double precision :: fny
+            end function
+         end interface
+         end subroutine
+      end interface
+!
+      interface
+         subroutine PFHOLES2(part,edges,npp,ihole,idimp,npmax,idps,ntmax&
+     &)
+         implicit none
+         integer, intent(in) :: npp, idimp, npmax, idps, ntmax
+         real, dimension(idimp,npmax), intent(in) :: part
+         real, dimension(idps), intent(in) :: edges
+         integer, dimension(ntmax+1), intent(inout) :: ihole
+         end subroutine
+      end interface
+!
+      interface
          function ranorm()
          implicit none
          double precision :: ranorm
@@ -102,6 +177,60 @@
          function randum()
          implicit none
          double precision :: randum
+         end function
+      end interface
+!
+      interface
+         function DLDISTR1(x,anlx,anxi,shift,intg)
+         implicit none
+         integer, intent(in) :: intg
+         double precision, intent(in) :: x, anlx, anxi, shift
+         double precision :: DLDISTR1
+         end function
+      end interface
+!
+      interface
+         function DSDISTR1(x,ans,dkx,phase,intg)
+         implicit none
+         integer, intent(in) :: intg
+         double precision, intent(in) :: x, ans, dkx, phase
+         double precision :: DSDISTR1
+         end function
+      end interface
+!
+      interface
+         function DGDISTR1(x,ang,wi,x0,intg)
+         implicit none
+         integer, intent(in) :: intg
+         double precision, intent(in) :: x, ang, wi, x0
+         double precision :: DGDISTR1
+         end function
+      end interface
+!
+      interface
+         function DHDISTR1(x,anh,wi,x0,intg)
+         implicit none
+         integer, intent(in) :: intg
+         double precision, intent(in) :: x, anh, wi, x0
+         double precision :: DHDISTR1
+         end function
+      end interface
+!
+      interface
+         function DEDISTR1(x,ane,wi,x0,intg)
+         implicit none
+         integer, intent(in) :: intg
+         double precision, intent(in) :: x, ane, wi, x0
+         double precision :: DEDISTR1
+         end function
+      end interface
+!
+      interface
+         function DGDISTR0(x,ang,wi,x0,intg)
+         implicit none
+         integer, intent(in) :: intg
+         double precision, intent(in) :: x, ang, wi, x0
+         double precision :: DGDISTR0
          end function
       end interface
 !

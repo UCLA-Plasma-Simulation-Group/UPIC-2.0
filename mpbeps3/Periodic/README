@@ -2,8 +2,8 @@
 by Viktor K. Decyk
 copyright 1994-2017, regents of the university of california
 
-This code is a unit test for the 3d periodic Darwin fields used in the
-mpbeps3 suite of PIC codes.  It is designed for Linux but will also
+This code is a test program for the 3d periodic Darwin fields used in
+the mpbeps3 suite of PIC codes.  It is designed for Linux but will also
 compile for Mac OS X.  OpenMP and MPI are used for parallelization, but
 if MPI is not available, the codes can be compiled for OpenMP only.  The
 default compiler used is gfortran, but other compiler flags are
@@ -21,7 +21,7 @@ License(CommercialReservation)
 The makefile is setup to use gcc and gfortran with Linux.  It should
 also work with MacOS X.
 
-The executable created is called mp_dfields3.
+The executable created is called mp_pfields3.
 
 To compile the program, execute:
 
@@ -30,7 +30,7 @@ make
 The command to execute a program with both MPI and OpenMP varies from
 one system to another.  One possible command is:
 
-mpiexec -np nproc -perhost n ./mp_dfields3
+mpiexec -np nproc -perhost n ./mp_pfields3
 
 where nproc is the number of processors to be used, and where n is the
 number of MPI nodes per host.
@@ -43,11 +43,11 @@ number of threads per node expected.
 
 To compile all this code without MPI, execute:
 
-make m_dfields3
+make m_pfields3
 
 To execute, type the name of the executable:
 
-./m_dfields3
+./m_pfields3
 
 The Fortran version can be compiled to run with double precision by
 changing the Makefile (for gfortran, set the compiler options to:

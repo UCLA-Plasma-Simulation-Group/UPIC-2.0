@@ -3,7 +3,7 @@
 ! Solves for Potential, Longitudinal Electric Field, Vector Potential,
 ! and Magnetic Field without smoothing
 ! written by Viktor K. Decyk, UCLA
-      program mp_dfields2
+      program mp_pfields2
       use modmpfield2
       use mppmod2
       use omplib
@@ -118,6 +118,7 @@
       else
          edges(2) = real(int(real(ny/nvp)*real(kstrt)))
       endif
+! parameters describing non-uniform partitions
 ! noff = lowermost global gridpoint in partition
 ! nyp = number of primary gridpoints in partition
       noff = int(edges(1))
@@ -128,10 +129,13 @@
       nypmx = msg(1) + 1
 !
 ! initialize additional scalars for MPI code
+! parameters describing uniform partitions
 ! kxp = number of complex grids in each field partition in x direction
       kxp = (nxh - 1)/nvp + 1
 ! kyp = number of complex grids in each field partition in y direction
       kyp = (ny - 1)/nvp + 1
+! nterf = number of shifts required by field manager (0=search)
+      nterf = 0
 !
 ! allocate and initialize data for standard code
       allocate(qe(nxe,nypmx),pot(nxe,nypmx),fxyze(ndim,nxe,nypmx))
@@ -195,21 +199,21 @@
 ! deposit point current (1,-1,0.5) at global location x = nx/4, y = ny/4
       cue = 0.0
       k = ny/4 - noff
+! deposit to correct local node
       if ((k.ge.1).and.(k.le.nyp)) then
          cue(1,nx/4,k) = 1.0
          cue(2,nx/4,k) = -1.0
          cue(3,nx/4,k) = 0.5
       endif
 !
-! transform current to fourier space with OpenMP:
+! transform current to fourier space:
 ! updates cut, nterf, and irc, modifies cue
 ! moves data in non-uniform partition to uniform partition
       isign = -1
       call wmpfft2rn(cue,cut,noff,nyp,isign,mixup,sct,tfft,tfmov,indx,  &
      &indy,kstrt,nvp,kyp,ny,nterf,irc)
 !
-! take transverse part of current with OpenMP:
-! updates cut
+! take transverse part of current: updates cut
       call mpcuperp2(cut,tfield,nx,ny,kstrt)
 !
 ! solves 2d poisson's equation for darwin vector potential

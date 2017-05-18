@@ -1,0 +1,18 @@
+ &input2
+ IDRUN = 16
+ INDX =   8, INDY =   8, NPX =  1536, NPY =  1536
+ NTW = 1
+ NTP = 5, MODESXP = 41, MODESYP = 41, NPREC = 0
+ TEND =  40000.000, DT =   0.200
+ VTX =   1.000, VTY =   1.000
+ VX0 =   0.000, VY0 =   0.000
+ NPLOT = 4
+ MOVION = 1
+ /
+ &ions2
+ NPXI =  1536, NPYI =  1536
+ NTDI = 5, MODESXDI = 41, MODESYDI = 42, NDIREC = 0
+ RMASS = 100.0
+ RTEMPXI =   10.000, RTEMPYI =   10.000
+ VXI0 =   0.000, VYI0 =   0.000
+ /

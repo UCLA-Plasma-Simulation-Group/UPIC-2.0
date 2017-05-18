@@ -1,0 +1,35 @@
+ number of cpus found =            2
+ maximum number of threads =            2
+ using            2  thread(s)
+ program mpbbeps3
+ Initial Total Field, Kinetic and Total Energies:
+ 0.8721444E+03 0.8494452E+08 0.8494038E+08 0.1698858E+09
+ Initial Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.0000000E+00 0.8050034E+01 0.8640944E+03
+ 
+ ntime, relativity =          285           1
+ MPI nodes nvpy, nvpz =            2           3
+ Final Total Field, Kinetic and Total Energies:
+ 0.2226423E+05 0.8493110E+08 0.8493260E+08 0.1698860E+09
+ Final Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.2138801E+05 0.3193281E+02 0.8442888E+03
+ 
+ initialization time =    16.68182    
+ deposit time =    41.45889    
+ current deposit time =    120.8405    
+ total deposit time =    162.2994    
+ guard time =    4.309443    
+ solver time =    3.947308    
+ field move time =   0.4385177    
+ fft and transpose time =    23.11582       13.51003    
+ push time =    222.5092    
+ particle move time =    2.409095    
+ sort time =    2.565711    
+ total solver time =    31.81109    
+ total particle time =    389.7833    
+ total and additional time =    421.5944      1.7456055E-02
+ 
+ Push Time (nsec) =    6.894128    
+ Deposit Time (nsec) =    5.028614    
+ Sort Time (nsec) =   0.1541373    
+ Total Particle Time (nsec) =    12.07688 

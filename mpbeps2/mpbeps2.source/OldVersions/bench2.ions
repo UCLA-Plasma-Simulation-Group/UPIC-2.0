@@ -1,0 +1,29 @@
+ number of cpus found =            2
+ maximum number of threads =            2
+ using            2  thread(s)
+ program mpbeps2
+ Initial Field, Kinetic and Total Energies:
+ 0.0000000E+00 0.9439148E+07 0.9435308E+07 0.1887446E+08
+ 
+ ntime, relativity =          100           0
+ MPI nodes nvp =            6
+ Final Field, Kinetic and Total Energies:
+ 0.9936134E+04 0.9432296E+07 0.9432291E+07 0.1887452E+08
+ 
+ initialization time =    1.885315    
+ deposit time =    1.354407    
+ guard time =   3.5023995E-02
+ solver time =   1.3428008E-02
+ field move time =   5.7549970E-03
+ fft and transpose time =   0.1671470      5.8208466E-02
+ push time =    3.397320    
+ particle move time =   2.8690981E-02
+ sort time =   7.0020996E-02
+ total solver time =   0.2213540    
+ total particle time =    4.850438    
+ total and additional time =    5.071792      2.2978783E-03
+ 
+ Push Time (nsec) =    1.799965    
+ Deposit Time (nsec) =   0.7175906    
+ Sort Time (nsec) =   5.2299488E-02
+ Total Particle Time (nsec) =    2.569855  

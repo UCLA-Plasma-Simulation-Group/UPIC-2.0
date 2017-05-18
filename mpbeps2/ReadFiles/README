@@ -1,0 +1,59 @@
+2D MPI/OpenMP PIC Periodic Field file readers
+by Viktor K. Decyk
+copyright 1994-2017, regents of the university of california
+
+This code is a sample program which illustrate how to read periodic
+fields which have been written using simple Fortran IO by the mpbeps2
+suite of PIC codes.  It is designed for Linux but will also compile for
+Mac OS X.  The default compiler used is gfortran, but other compiler
+flags are commented out.
+
+No warranty for proper operation of this software is given or implied.
+Software or information may be copied, distributed, and used at own
+risk; it may not be distributed without this notice included verbatim
+with each file.  If use of these codes results in a publication, an
+acknowledgement is requested.
+
+The makefile is setup to use gfortran with Linux.  It should also work
+with MacOS X.
+
+The executables created are called preadf2 and pvreadf2.
+
+To compile the programs, execute:
+
+make
+
+To compile just one, execute:
+
+make program_name
+
+where program_name is either: preadf2 or pvreadf2
+
+To execute, type the name of the executable:
+
+./program_name
+
+The Fortran version can be compiled to run with double precision by
+changing the Makefile (for gfortran, set the compiler options to:
+OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8).  This is necessary if
+if the code which wrote the data was compiled with double precision.
+
+There is a simple built-in graphics library available which is normally
+used for debugging.  It is shut off by default, but is available for
+either Textronix, Postscript printers or X11 devices.
+
+To turn it on for Fortran, search for the string: Fortran Graphics in
+the Makefile, and comment out the symbol GOBJS for No graphics and
+uncomment it either for Tektronix, Postscript or X1. The X11 option
+requires that the library Ygl is installed and the symbol
+LGOPTS = -lYgl -L/usr/X11R6/lib -lX11.
+
+To run with Tektronix, open the window xterm -t before executing the
+codes.
+
+The Postscript printer generator produces a file called pgraph.ps, which
+can be viewed with post-script viewers or converters.  The output file
+can be very large, but it can be converted to pdf with substantial
+compression.  For example, on the Macintosh, the program Preview will
+convert and compress the large Postscript files to pdf and allow one to
+easily move through this file.

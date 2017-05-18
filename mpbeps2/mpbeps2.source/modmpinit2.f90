@@ -6,9 +6,11 @@
 ! mpdcomp2 determines spatial decomposition for uniform distribution
 !          calls PDNICOMP2L
 ! mpudistr2 calculates initial particle co-ordinates with uniform
-!           density
-!           for 2d or 2-1/2d code
+!           density for 2d  code
 !           calls PUDISTR2
+! mfdistr2 calculates initial particle co-ordinates with various density
+!          profiles for 2d code
+!          calls PLDISTR2 or PFDISTR2
 ! mpvdistr2 calculates initial particle velocities with maxwellian
 !           velocity with drift for 2d code
 !           calls PVDISTR2
@@ -23,6 +25,11 @@
 !             calls PVRDISTR2H
 ! mpdblkp2 finds the maximum number of particles in each tile
 !          calls PPDBLKP2L
+! mpfedges2 finds new 1d partitions from initial analytic distribution
+!           function
+!           calls PFEDGES2
+! mpfholes2 determines list of particles leaving this processor
+!           calls PFHOLES2
 ! wmpvdistr2 generic procedure to initialize particle velocities in 2d
 !            calls mpvdistr2 or mpvrdistr2
 ! wmpvdistr2h generic procedure to initialize particle velocities in
@@ -30,7 +37,7 @@
 !             calls mpvdistr2h or mpvrdistr2h
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 14, 2017
+! update: may 15, 2017
 !
       use libmpinit2_h
       implicit none
@@ -121,20 +128,100 @@
       call PUDISTR2(part,edges,npp,npx,npy,nx,ny,idimp,npmax,idps,ipbc, &
      &irc)
       if (irc > 0) then
-         if (kstrt==1) write (*,*) 'mupdistr2:buffer overlow, irc=', irc
+         if (kstrt==1) write (*,*) 'mupdistr2:buffer overflow, irc=',irc
       else if (irc < 0) then
          if (kstrt==1) write (*,*) 'mpudistr2:particle number error'
       endif
       end subroutine
 !
 !-----------------------------------------------------------------------
+      subroutine mpfdistr2(part,npp,ampx,scalex,shiftx,ampy,scaley,     &
+     &shifty,npx,npy,nx,ny,kstrt,nvp,ipbc,ndpro,irc)
+! calculates initial particle co-ordinates in 2d
+! with various density profiles
+! ndprof = profile type (uniform=0,linear=1,sinusoidal=2,gaussian=3,
+!                        hyperbolic secant squared=4,exponential=5)
+! ampdx/ampdy = amplitude of density compared to uniform in x/y
+! scaledx/scaledy = scale length for spatial coordinate in x/y
+! shiftdx/shiftdy = shift of spatial coordinate in x/y
+! irc = (0,N) = (no,yes) error condition exists
+      implicit none
+      integer, intent(in) :: npx, npy, nx, ny, kstrt, nvp, ipbc, ndpro
+      integer, intent(inout) :: npp, irc
+      real, intent(in) :: ampx, scalex, shiftx, ampy, scaley, shifty
+      real, dimension(:,:), intent(inout) :: part
+! local data
+      integer :: idimp, npmax, ierr
+      real :: zero
+      double precision :: dmpx, sxi, dshiftx, dmpy, syi, dshifty
+      double precision, external :: DSDISTR1, DGDISTR1, DHDISTR1
+      double precision, external :: DEDISTR1
+      idimp = size(part,1); npmax = size(part,2)
+      irc = 0
+      ierr = 0
+      dmpx = dble(ampx)
+      sxi = 0.0d0
+      if (scalex /= 0.0) sxi = 1.0d0/dble(scalex)
+      dshiftx = dble(shiftx)
+      dmpy = dble(ampy)
+      syi = 0.0d0
+      if (scaley /= 0.0) syi = 1.0d0/dble(scaley)
+      dshifty = dble(shifty)
+      zero = 0.0
+! call low level procedure
+      select case(ndpro)
+! uniform density
+      case (0)
+         call PLDISTR2(part,npp,zero,zero,npx,npy,nx,ny,kstrt,nvp,idimp,&
+     &npmax,ipbc,ierr)
+! linear density
+      case (1)
+         if ((ampx.le.2.0).and.(ampy.le.2.0)) then
+            call PLDISTR2(part,npp,ampx,ampy,npx,npy,nx,ny,kstrt,nvp,   &
+     &idimp,npmax,ipbc,ierr)
+         else
+            ierr = -4
+         endif
+! sinusoidal density
+      case (2)
+         if ((ampx.le.1.0).and.(ampy.le.1.0)) then
+            call PFDISTR2(part,npp,DSDISTR1,dmpx,sxi,dshiftx,DSDISTR1,  &
+     &dmpy,syi,dshifty,npx,npy,nx,ny,kstrt,nvp,idimp,npmax,ipbc,ierr)
+         else
+            ierr = -5
+         endif
+! gaussian density
+      case (3)
+         call PFDISTR2(part,npp,DGDISTR1,dmpx,sxi,dshiftx,DGDISTR1,dmpy,&
+     &syi,dshifty,npx,npy,nx,ny,kstrt,nvp,idimp,npmax,ipbc,ierr)
+! hyperbolic secant squared density
+      case (4)
+         call PFDISTR2(part,npp,DHDISTR1,dmpx,sxi,dshiftx,DHDISTR1,dmpy,&
+     &syi,dshifty,npx,npy,nx,ny,kstrt,nvp,idimp,npmax,ipbc,ierr)
+! exponential density
+      case (5)
+         call PFDISTR2(part,npp,DEDISTR1,dmpx,sxi,dshiftx,DEDISTR1,dmpy,&
+     &syi,dshifty,npx,npy,nx,ny,kstrt,nvp,idimp,npmax,ipbc,ierr)
+      case default
+         ierr = -3
+      end select
+! check error
+      if (ierr /= 0) then
+         if (kstrt==1) then
+            write (*,*) 'mpfdistr2 error: ndpro, ierr=', ndpro, ierr
+         endif
+         irc = ierr
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine mpvdistr2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,  &
-     &irc)
+     &nvp,irc)
 ! calculates initial particle velocities in 2d
 ! with maxwellian velocity with drift
 ! irc = (0,1) = (no,yes) error condition exists
       implicit none
-      integer, intent(in) :: nps, npp, npx, npy, kstrt
+      integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp
       integer, intent(inout) :: irc
       real, intent(in) :: vtx, vty, vdx, vdy
       real, dimension(:,:), intent(inout) :: part
@@ -143,8 +230,8 @@
 ! extract dimensions
       idimp = size(part,1); npmax = size(part,2)
 ! call low level procedure
-      call PVDISTR2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,idimp,npmax,   &
-     &irc)
+      call PVDISTR2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,nvp,idimp&
+     &,npmax,irc)
       if (irc /= 0) then
          if (kstrt==1) then
             write (*,*) 'mpvdistr2:particle number error, irc=', irc
@@ -154,12 +241,12 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy&
-     &,kstrt,irc)
+     &,kstrt,nvp,irc)
 ! calculates initial particle velocities in 2-1/2d
 ! with maxwellian velocity with drift
 ! irc = (0,1) = (no,yes) error condition exists
       implicit none
-      integer, intent(in) :: nps, npp, npx, npy, kstrt
+      integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp
       integer, intent(inout) :: irc
       real, intent(in) :: vtx, vty, vtz, vdx, vdy, vdz
       real, dimension(:,:), intent(inout) :: part
@@ -168,8 +255,8 @@
 ! extract dimensions
       idimp = size(part,1); npmax = size(part,2)
 ! call low level procedure
-      call PVDISTR2H(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy,idimp,&
-     &npmax,irc)
+      call PVDISTR2H(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy,kstrt,&
+     &nvp,idimp,npmax,irc)
       if (irc /= 0) then
          if (kstrt==1) then
             write (*,*) 'mpvdistr2h:particle number error, irc=', irc
@@ -179,12 +266,12 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpvrdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,    &
-     &kstrt,irc)
+     &kstrt,nvp,irc)
 ! calculates initial particle momenta in 2d
 ! with maxwell-juttner distribution with drift
 ! irc = (0,1) = (no,yes) error condition exists
       implicit none
-      integer, intent(in) :: nps, npp, npx, npy, kstrt
+      integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp
       integer, intent(inout) :: irc
       real, intent(in) :: vtx, vty, vdx, vdy, ci
       real, dimension(:,:), intent(inout) :: part
@@ -193,8 +280,8 @@
 ! extract dimensions
       idimp = size(part,1); npmax = size(part,2)
 ! call low level procedure
-      call PVRDISTR2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,idimp,npmax&
-     &,irc)
+      call PVRDISTR2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,kstrt,nvp, &
+     &idimp,npmax,irc)
       if (irc /= 0) then
          if (kstrt==1) then
             write (*,*) 'mpvrdistr2:particle number error, irc=', irc
@@ -204,12 +291,12 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpvrdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx&
-     &,npy,kstrt,irc)
+     &,npy,kstrt,nvp,irc)
 ! calculates initial particle momenta in 2-1/2d
 ! with maxwell-juttner distribution with drift
 ! irc = (0,1) = (no,yes) error condition exists
       implicit none
-      integer, intent(in) :: nps, npp, npx, npy, kstrt
+      integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp
       integer, intent(inout) :: irc
       real, intent(in) :: vtx, vty, vtz, vdx, vdy, vdz, ci
       real, dimension(:,:), intent(inout) :: part
@@ -219,7 +306,7 @@
       idimp = size(part,1); npmax = size(part,2)
 ! call low level procedure
       call PVRDISTR2H(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,npy,  &
-     &idimp,npmax,irc)
+     &kstrt,nvp,idimp,npmax,irc)
       if (irc /= 0) then
          if (kstrt==1) then
             write (*,*) 'mpvrdistr2h:particle number error, irc=', irc
@@ -253,41 +340,125 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
+      subroutine mpfedges2(edges,nyp,noff,ampy,scaley,shifty,nypmx,nypmn&
+     &,ny,kstrt,nvp,ipbc,ndpro,ierr)
+! finds new 1d partitions from initial analytic distribution function
+      implicit none
+      integer, intent(in) :: ny, kstrt, nvp, ipbc, ndpro
+      integer, intent(inout) :: nyp, noff, nypmx, nypmn, ierr
+      real, intent(in) :: ampy, scaley, shifty
+      real, dimension(:), intent(inout) :: edges
+! local data
+      integer :: idps
+      double precision :: dmpy, syi, dshifty, zero
+      double precision, external :: DLDISTR1, DSDISTR1, DGDISTR1
+      double precision, external :: DHDISTR1, DEDISTR1
+      idps = size(edges,1)
+      ierr = 0
+      dmpy = dble(ampy)
+      syi = 0.0d0
+      if (scaley /= 0.0) syi = 1.0d0/dble(scaley)
+      dshifty = dble(shifty)
+      zero = 0.0d0
+! call low level procedure
+      select case(ndpro)
+! uniform density
+      case (0)
+         call PFEDGES2(edges,nyp,noff,DLDISTR1,zero,zero,zero,nypmx,    &
+     &nypmn,ny,kstrt,nvp,idps,ipbc)
+! linear density
+      case (1)
+         if (ampy.le.2.0) then
+            call PFEDGES2(edges,nyp,noff,DLDISTR1,dmpy,syi,dshifty,nypmx&
+     &,nypmn,ny,kstrt,nvp,idps,ipbc)
+         else
+            ierr = -4
+         endif
+! sinusoidal density
+      case (2)
+         if (ampy.le.1.0) then
+            call PFEDGES2(edges,nyp,noff,DSDISTR1,dmpy,syi,dshifty,nypmx&
+     &,nypmn,ny,kstrt,nvp,idps,ipbc)
+         else
+            ierr = -5
+         endif
+! gaussian density
+      case (3)
+         call PFEDGES2(edges,nyp,noff,DGDISTR1,dmpy,syi,dshifty,nypmx,  &
+     &nypmn,ny,kstrt,nvp,idps,ipbc)
+! hyperbolic secant squared density
+      case (4)
+         call PFEDGES2(edges,nyp,noff,DHDISTR1,dmpy,syi,dshifty,nypmx,  &
+     &nypmn,ny,kstrt,nvp,idps,ipbc)
+! exponential density
+      case (5)
+         call PFEDGES2(edges,nyp,noff,DEDISTR1,dmpy,syi,dshifty,nypmx,  &
+     &nypmn,ny,kstrt,nvp,idps,ipbc)
+      case default
+         ierr = -3
+      end select
+! check error
+      if (ierr /= 0) then
+         if (kstrt==1) then
+            write (*,*) 'mpfedges2 error: ndpro, ierr=', ndpro, ierr
+         endif
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpfholes2(part,edges,npp,iholep)
+! determines list of particles which are leaving this node
+      implicit none
+      integer, intent(in) :: npp
+      real, dimension(:,:), intent(in) :: part
+      real, dimension(:), intent(in) :: edges
+      integer, dimension(:), intent(inout) :: iholep
+! local data
+      integer :: idimp, npmax, idps, ntmax
+! extract dimensions
+      idimp = size(part,1); npmax = size(part,2)
+      idps = size(edges,1); ntmax = size(iholep,1) - 1
+! call low level procedure
+      call PFHOLES2(part,edges,npp,iholep,idimp,npmax,idps,ntmax)
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine wmpvdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,    &
-     &kstrt,relativity,irc)
+     &kstrt,nvp,relativity,irc)
 ! generic procedure to initialize particle velocities in 2d
       implicit none
-      integer, intent(in) :: nps, npp, npx, npy, kstrt, relativity
+      integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp, relativity
       integer, intent(inout) :: irc
       real, intent(in) :: vtx, vty, vdx, vdy, ci
       real, dimension(:,:), intent(inout) :: part
 ! maxwell-juttner distribution
       if (relativity==1) then
-         call mpvrdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,kstrt,  &
-     &irc)
+         call mpvrdistr2(part,nps,npp,vtx,vty,vdx,vdy,ci,npx,npy,kstrt, &
+     &nvp,irc)
 ! maxwellian distribution
       else
-         call mpvdistr2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,irc)
+         call mpvdistr2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,nvp, &
+     &irc)
       endif
       end subroutine
 !
 !-----------------------------------------------------------------------
       subroutine wmpvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx&
-     &,npy,kstrt,relativity,irc)
+     &,npy,kstrt,nvp,relativity,irc)
 ! generic procedure to initialize particle velocities in 2-1/2d
       implicit none
-      integer, intent(in) :: nps, npp, npx, npy, kstrt, relativity
+      integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp, relativity
       integer, intent(inout) :: irc
       real, intent(in) :: vtx, vty, vtz, vdx, vdy, vdz, ci
       real, dimension(:,:), intent(inout) :: part
 ! maxwell-juttner distribution
       if (relativity==1) then
          call mpvrdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,  &
-     &npy,kstrt,irc)
+     &npy,kstrt,nvp,irc)
 ! maxwellian distribution
       else
-         call mpvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy,   &
-     &kstrt,irc)
+         call mpvdistr2h(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy,  &
+     &kstrt,nvp,irc)
       endif
       end subroutine
 !

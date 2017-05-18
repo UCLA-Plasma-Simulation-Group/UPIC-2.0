@@ -129,6 +129,64 @@
       end interface
 !
       interface
+         subroutine PPGPPUSH32ZF(ppart,kpic,dt,ek,idimp,nppmx,nx,ny,nz, &
+     &mxyzp1,ipbc)
+         implicit none
+         integer, intent(in) :: idimp, nppmx, nx, ny, nz, mxyzp1, ipbc
+         real, intent(in) :: dt
+         real, intent(inout) :: ek
+         real, dimension(idimp,nppmx,mxyzp1), intent(inout) :: ppart
+         integer, dimension(mxyzp1), intent(in) :: kpic
+         end subroutine
+      end interface
+!
+      interface
+         subroutine PPGPPUSHF32ZF(ppart,kpic,ncl,ihole,noff,nyzp,dt,ek, &
+     &idimp,nppmx,nx,ny,nz,mx,my,mz,mx1,myp1,mxyzp1,ntmax,idds,irc)
+         implicit none
+         integer, intent(in) :: idimp, nppmx, nx, ny, nz, mx, my, mz
+         integer, intent(in) :: mx1, myp1, mxyzp1, ntmax, idds
+         integer, intent(inout) :: irc
+         real, intent(in) :: dt
+         real, intent(inout) :: ek
+         real, dimension(idimp,nppmx,mxyzp1), intent(inout) :: ppart
+         integer, dimension(mxyzp1), intent(in) :: kpic
+         integer, dimension(26,mxyzp1), intent(inout) :: ncl
+         integer, dimension(2,ntmax+1,mxyzp1), intent(inout) :: ihole
+         integer, dimension(idds), intent(in) :: noff, nyzp
+         end subroutine
+      end interface
+!
+      interface
+         subroutine PPGRPPUSH32ZF(ppart,kpic,dt,ci,ek,idimp,nppmx,nx,ny,&
+     &nz,mxyzp1,ipbc)
+         implicit none
+         integer, intent(in) :: idimp, nppmx, nx, ny, nz, mxyzp1, ipbc
+         real, intent(in) :: dt, ci
+         real, intent(inout) :: ek
+         real, dimension(idimp,nppmx,mxyzp1), intent(inout) :: ppart
+         integer, dimension(mxyzp1), intent(in) :: kpic
+         end subroutine
+      end interface
+!
+      interface
+         subroutine PPGRPPUSHF32ZF(ppart,kpic,ncl,ihole,noff,nyzp,dt,ci,&
+     &ek,idimp,nppmx,nx,ny,nz,mx,my,mz,mx1,myp1,mxyzp1,ntmax,idds,irc)
+         implicit none
+         integer, intent(in) :: idimp, nppmx, nx, ny, nz, mx, my, mz
+         integer, intent(in) :: mx1, myp1, mxyzp1, ntmax, idds
+         integer, intent(inout) :: irc
+         real, intent(in) :: dt, ci
+         real, intent(inout) :: ek
+         real, dimension(idimp,nppmx,mxyzp1), intent(inout) :: ppart
+         integer, dimension(mxyzp1), intent(in) :: kpic
+         integer, dimension(26,mxyzp1), intent(inout) :: ncl
+         integer, dimension(2,ntmax+1,mxyzp1), intent(inout) :: ihole
+         integer, dimension(idds), intent(in) :: noff, nyzp
+         end subroutine
+      end interface
+!
+      interface
          subroutine PPGPPOST32L(ppart,q,kpic,noff,qm,nppmx,idimp,mx,my, &
      &mz,nxv,nypmx,nzpmx,mx1,myp1,mxyzp1,idds)
          implicit none

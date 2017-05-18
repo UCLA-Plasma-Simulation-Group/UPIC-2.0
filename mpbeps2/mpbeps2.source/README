@@ -42,7 +42,7 @@ number of threads per node expected.
 
 To compile all these codes without MPI, execute:
 
-make noMPI
+make nompi
 
 To compile just one, execute:
 
@@ -53,6 +53,15 @@ where program_name is either: mbeps2, mbbeps2, or mdbeps2
 To execute, type the name of the executable:
 
 ./program_name
+
+To delete compiled libraries (.o files), but not the executables,
+execute:
+
+make clean
+
+To delete compiled libraries (.o files) and the executables, execute:
+
+make clobber
 
 The Fortran version can be compiled to run with double precision by
 changing the Makefile (for gfortran, set the compiler options to:

@@ -125,8 +125,8 @@ EMHOBJS = libmpbpush3_h.o libmpcurd3_h.o
 
 EDHOBJS = libmpdpush3_h.o
 
-ESMODS = modmpinit3.o modmppush3.o modmpsort3.o modmpgard3.o modmpfft3.o \
-modmpfield3.o
+ESMODS = input3mod.o modmpinit3.o modmppush3.o modmpsort3.o modmpgard3.o \
+modmpfft3.o modmpfield3.o modmpdiag3.o
 
 EMMODS = modmpbpush3.o modmpcurd3.o
 
@@ -256,6 +256,9 @@ libmpfft3_h.o : libmpfft3_h.f90
 libmpfield3_h.o : libmpfield3_h.f90
 	$(FC90) $(OPTS90) -o libmpfield3_h.o -c libmpfield3_h.f90
 
+input3mod.o : input3mod.f90
+	$(FC90) $(OPTS90) -o input3mod.o -c input3mod.f90
+
 modmpinit3.o : modmpinit3.f90 libmpinit3_h.o
 	$(FC90) $(OPTS90) -o modmpinit3.o -c modmpinit3.f90
 
@@ -282,6 +285,9 @@ modmpfft3.o : modmpfft3.f90 libmpfft3_h.o
 
 modmpfield3.o : modmpfield3.f90 libmpfield3_h.o
 	$(FC90) $(OPTS90) -o modmpfield3.o -c modmpfield3.f90
+
+modmpdiag3.o : modmpdiag3.f90
+	$(FC90) $(OPTS90) -o modmpdiag3.o -c modmpdiag3.f90
 
 ompplib3.o : ompplib3.f90 modmpsort3.o modmpfft3.o modmpgard3.o mppmod3.o
 	$(FC90) $(OPTS90) -o ompplib3.o -c ompplib3.f90

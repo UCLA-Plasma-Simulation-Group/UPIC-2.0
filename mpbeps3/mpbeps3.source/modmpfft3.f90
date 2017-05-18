@@ -11,7 +11,7 @@
 !          calls WPPFFT32RM3 or WPPFFT32RMN
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 17, 2016
+! update: february 23, 2016
 !
       use libmpfft3_h
       implicit none
@@ -21,13 +21,13 @@
 !
 ! gs = complex scratch array for intermediate fft in y
       complex, dimension(:,:,:,:), allocatable :: gs
-      integer :: szgs = 0
+      integer :: szgs = -1
 ! bs/br = complex send/receive buffers for data transpose
       complex, dimension(:,:,:), allocatable :: bs, br
-      integer :: szbuf = 0
+      integer :: szbuf = -1
 ! ss = scratch array for WPPFFT2RMN
       complex, dimension(:,:), allocatable :: ss
-      integer :: szss = 0
+      integer :: szss = -1
       save
 !
       private :: ntpose, gs, bs, br, ss, szgs, szbuf, szss
@@ -75,13 +75,13 @@
       nyv = 2**indy; kzyp = max(kyzp,kyp)
 ! check if required size of buffers has increased
       if (szgs < nyv*kxypd*kzpd) then
-         if (szgs /= 0) deallocate(gs)
+         if (szgs > 0) deallocate(gs)
 ! allocate new buffer
          allocate(gs(1,nyv,kxypd,kzpd))
          szgs = nyv*kxypd*kzpd
       endif
       if (szbuf < kxyp*kzyp*kzp) then
-         if (szbuf /= 0) deallocate(bs,br)
+         if (szbuf > 0) deallocate(bs,br)
 ! allocate new buffers
          allocate(bs(1,kxyp*kzyp,kzp),br(1,kxyp*kzyp,kzp))
          szbuf = kxyp*kzyp*kzp
@@ -125,13 +125,13 @@
       nyv = 2**indy; kzyp = max(kyzp,kyp)
 ! check if required size of buffers has increased
       if (szgs < ndim*nyv*kxypd*kzpd) then
-         if (szgs /= 0) deallocate(gs)
+         if (szgs > 0) deallocate(gs)
 ! allocate new buffer
          allocate(gs(ndim,nyv,kxypd,kzpd))
          szgs = ndim*nyv*kxypd*kzpd
       endif
       if (szbuf < ndim*kxyp*kzyp*kzp) then
-         if (szbuf /= 0) deallocate(bs,br)
+         if (szbuf > 0) deallocate(bs,br)
 ! allocate new buffers
          allocate(bs(ndim,kxyp*kzyp,kzp),br(ndim,kxyp*kzyp,kzp))
          szbuf = ndim*kxyp*kzyp*kzp
@@ -147,7 +147,7 @@
       case default
 ! check if required size of buffer has increased
          if (szss < ndim*nxvh*kzpd) then
-            if (szss /= 0) deallocate(ss)
+            if (szss > 0) deallocate(ss)
 ! allocate new buffer
             allocate(ss(ndim*nxvh,kzpd))
             szss = ndim*nxvh*kzpd

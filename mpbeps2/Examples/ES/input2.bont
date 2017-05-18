@@ -1,0 +1,13 @@
+ &input2
+ IDRUN = 17
+ INDX =   8, INDY =   8, NPX =  1536, NPY =  1536
+ NPXB =   512, NPYB =   512
+ NTW = 1
+ NTP = 5, MODESXP = 41, MODESYP = 41, NPREC = 0
+ TEND =  100.000, DT =   0.200
+ VTX =   1.000, VTY =   1.000
+ VX0 =   0.000, VY0 =   0.000
+ VDX =   0.000, VDY =   5.000
+ VTDX =   0.500, VTDY =   0.500
+ NPLOT = 4
+ /

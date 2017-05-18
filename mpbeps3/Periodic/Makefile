@@ -115,21 +115,21 @@ LEGACY =
 
 # Linkage rules
 
-all : mp_dfields3 
+all : mp_pfields3 
 
-nompi : m_dfields3 
+nompi : m_pfields3 
 
-mp_dfields3 : mp_dfields3.o libmpfield3.o libmpfft3.o libmpinit3.o dtimer.o
-	$(MPIFC) $(OPTS90) $(LOPTS) -o mp_dfields3 \
-    mp_dfields3.o libmpfield3.o libmpfft3.o libmpinit3.o modmpfield3.o \
+mp_pfields3 : mp_pfields3.o libmpfield3.o libmpfft3.o libmpinit3.o dtimer.o
+	$(MPIFC) $(OPTS90) $(LOPTS) -o mp_pfields3 \
+    mp_pfields3.o libmpfield3.o libmpfft3.o libmpinit3.o modmpfield3.o \
     modmpfft3.o mpplib3.o mppmod3.o omplib.o omppflib3.o libmpfield3_h.o \
     libmpfft3_h.o libmpinit3_h.o dtimer.o
 
 #noMPI
-m_dfields3 : m_dfields3.o libmpfield3.o libmpfft3.o libmpinit3.o noMPI.o \
+m_pfields3 : m_pfields3.o libmpfield3.o libmpfft3.o libmpinit3.o noMPI.o \
              dtimer.o
-	$(FC90) $(OPTS90) $(LOPTS) -o m_dfields3 \
-    m_dfields3.o libmpfield3.o libmpfft3.o libmpinit3.o modmpfield3.o \
+	$(FC90) $(OPTS90) $(LOPTS) -o m_pfields3 \
+    m_pfields3.o libmpfield3.o libmpfft3.o libmpinit3.o modmpfield3.o \
     modmpfft3.o nmpplib3.o nmppmod3.o omplib.o nomppflib3.o libmpfield3_h.o \
     libmpfft3_h.o libmpinit3_h.o noMPI.o dtimer.o
 
@@ -191,17 +191,17 @@ modmpfft3.o : modmpfft3.f90 libmpfft3_h.o
 omppflib3.o : omppflib3.f90 modmpfft3.o mppmod3.o
 	$(FC90) $(OPTS90) -o omppflib3.o -c omppflib3.f90
 
-mp_dfields3.o : mp_dfields3.f90 modmpfield3.o mppmod3.o omplib.o omppflib3.o \
+mp_pfields3.o : mp_pfields3.f90 modmpfield3.o mppmod3.o omplib.o omppflib3.o \
                 libmpinit3_h.o
-	$(FC90) $(OPTS90) -o mp_dfields3.o -c mp_dfields3.f90
+	$(FC90) $(OPTS90) -o mp_pfields3.o -c mp_pfields3.f90
 
 #noMPI
-m_dfields3.o : mp_dfields3.f90 modmpfield3.o nmppmod3.o omplib.o nomppflib3.o \
+m_pfields3.o : mp_pfields3.f90 modmpfield3.o nmppmod3.o omplib.o nomppflib3.o \
                libmpinit3_h.o
-	$(FC90) $(OPTS90) -o m_dfields3.o -c mp_dfields3.f90
+	$(FC90) $(OPTS90) -o m_pfields3.o -c mp_pfields3.f90
 
 clean :
 	rm -f *.o *.mod
 
 clobber: clean
-	rm -f mp_dfields3 m_dfields3
+	rm -f mp_pfields3 m_pfields3

@@ -2,101 +2,65 @@
 ! 2-1/2D Electromagnetic MPI/OpenMP PIC code
 ! written by Viktor K. Decyk, UCLA
       program mpbbeps2
+      use in2
       use modmpinit2
       use modmppush2
       use modmpbpush2
       use modmpcurd2
       use modmpfield2
+      use mpdiag2
       use mppmod2
+      use pgraf2
       use omplib
       use ompplib2
       implicit none
-! indx/indy = exponent which determines grid points in x/y direction:
-! nx = 2**indx, ny = 2**indy.
-      integer :: indx =   9, indy =   9
-! npx/npy = number of background electrons distributed in x/y direction
-! npxb/npyb = number of beam electrons distributed in x/y direction
-      integer :: npx =  3072, npy =   3072, npxb = 0, npyb =  0
-! ndim = number of velocity coordinates = 3
-      integer :: ndim = 3
-! tend = time at end of simulation, in units of plasma frequency.
-! dt = time interval between successive calculations
-! qme = charge on electron, in units of e.
-      real :: tend = 10.0, dt = 0.04, qme = -1.0
-! vtx/vty/vtz = thermal velocity of background electrons in x/y/z
-! direction
-      real :: vtx = 1.0, vty = 1.0, vtz = 1.0
-! vx0/vy0/vz0 = drift velocity of background electrons in x/y/z
-! direction
-      real :: vx0 = 0.0, vy0 = 0.0, vz0 = 0.0
-! vtdx/vtdy/vtdz = thermal velocity of beam electrons in x/y/z direction
-      real :: vtdx = 1.0, vtdy = 1.0, vtdz = 1.0
-! vdx/vdy/vdz = drift velocity of beam electrons in x/y/z direction
-      real :: vdx = 0.0, vdy = 0.0, vdz = 0.0
-! ax/ay = smoothed particle size in x/y direction
-! ci = reciprocal of velocity of light.
-      real :: ax = .912871, ay = .912871, ci = 0.1
+!
 ! idimp = dimension of phase space = 5
 ! ipbc = particle boundary condition: 1 = periodic
-! relativity = (no,yes) = (0,1) = relativity is used
-      integer :: idimp = 5, ipbc = 1, relativity = 1
-! omx/omy/omz = magnetic field electron cyclotron frequency in x/y/z 
-      real :: omx = 0.0, omy = 0.0, omz = 0.0
+      integer :: idimp = 5, ipbc = 1
 ! idps = number of partition boundaries
       integer :: idps = 2
 ! wke/wki/we = particle kinetic/electrostatic field energy
-! wf/wm = transverse electric field/magnetic field
-      real :: wke = 0.0, wki = 0.0, we = 0.0, wf = 0.0, wm = 0.0
-! wt = total energy
-      real :: wt = 0.0
-! sorting tiles, should be less than or equal to 32
-      integer :: mx = 16, my = 16
-! fraction of extra particles needed for particle management
-      real :: xtras = 0.2
+! wf/wb = transverse electric field/magnetic field
+      real :: wke = 0.0, wki = 0.0, we = 0.0, wf = 0.0, wb = 0.0
+      real :: zero = 0.0
 ! plist = (true,false) = list of particles leaving tiles found in push
       logical :: plist = .true.
-!
-! movion = (0,1) = (no,yes) move the ions
-      integer :: movion = 1
-! npxi/npyi = number of background ions distributed in x/y direction
-! npxbi/npybi = number of beam ions distributed in x/y direction
-      integer :: npxi = 3072, npyi = 3072, npxbi = 0, npybi = 0
-! qmi = charge on ion, in units of e
-! rmass = ion/electron mass ratio
-      real :: qmi = 1.0, rmass = 100.0
-! rtempxi/rtempyi/rtempzi = electron/ion temperature ratio of background
-! ions in x/y/z direction
-      real :: rtempxi = 1.0, rtempyi = 1.0, rtempzi = 1.0
-! vxi0/vyi0/vzi0 = drift velocity of background ions in x/y/z direction
-      real :: vxi0 = 0.0, vyi0 = 0.0, vzi0 = 0.0
-! rtempdxi/rtempdyi/rtempdzi = electron/ion temperature ratio of beam
-! ions in x/y/z direction
-      real :: rtempdxi = 1.0, rtempdyi = 1.0, rtempdzi = 1.0
-! vdxi/vdyi/vdzi = drift velocity of beam ions in x/y/z direction
-      real :: vdxi = 0.0, vdyi = 0.0, vdzi = 0.0
-!
-! monitor = (0,1,2) = (disable,normal,extended) error processing
-      integer :: monitor = 0
 !
 ! declare scalars for standard code
       integer :: n
       integer :: nx, ny, nxh, nyh, nxe, nye, nxeh, nnxe, nxyh, nxhy
-      integer :: mx1, ntime, nloop, isign, it, ierr
-      real :: qbme, affp, dth, omt
+      integer :: mx1, ntime, nloop, isign, ierr
+      real :: qbme, affp, dth, omt, ws
       real :: qbmi, vtxi, vtyi, vtzi, vtdxi, vtdyi, vtdzi
       double precision :: npxy, npxyb, np, npxyi, npxybi
       double precision :: npi = 0.0d0
 !
 ! declare scalars for MPI code
-      integer :: nvp, idproc, kstrt, npmax, kxp, kyp, nypmx, nypmn
-      integer :: nyp, noff, npp, nps, myp1, mxyp1
-      integer :: npimax, nppi
+      integer :: idproc, kstrt, npmax, kxp, kyp, nypmx, nypmn
+      integer :: nyp, noff, npp, nps, myp1, mxyp1, ntmax
+      integer :: npimax, nppi, maxnp
       integer :: nterf
 !
 ! declare scalars for OpenMP code
-      integer :: nppmx, nppmx0, nppmx1, nbmaxp, ntmaxp, npbmx, nvpp
+      integer :: nppmx, nppmx0, nppmx1, nbmaxp, ntmaxp, npbmx
       integer :: irc = 0
       integer, dimension(2) :: irc2 = 0
+!
+! declare scalars for diagnostics
+      integer :: it, mtw
+      integer :: itw
+! default Fortran unit numbers
+      integer :: iuin = 8, iuot = 18, iudm = 19
+      integer :: iude = 10, iup = 11, iuel = 12
+      integer :: iua = 13, iuet = 14, iub = 15, iuar = 16
+      integer :: iudi = 20, iuji = 21
+! dimensions for fourier data
+      integer :: modesxpd, modesy2de, modesy2p, modesy2el, modesy2di
+      integer :: modesy2ar, modesy2a, modesy2et, modesy2b, modesy2ji
+      real :: wef
+      character(len=10) :: cdrun
+      character(len=32) :: fname
 !
 ! declare arrays for standard code
 ! part = particle array
@@ -128,6 +92,8 @@
 ! declare arrays for MPI code
 ! edges(1:2) = lower:upper y boundaries of particle partition
       real, dimension(:), allocatable  :: edges
+! iholep = location of hole left in linear particle arrays
+      integer, dimension(:), allocatable :: iholep
 !
 ! declare arrays for OpenMP code
 ! ppart/pparti = tiled electron/ion particle arrays
@@ -139,13 +105,43 @@
 ! ihole = location/destination of each particle departing tile
       integer, dimension(:,:,:), allocatable :: ihole
 !
+! diagnostic arrays
+! wt = energy time history array
+      real, dimension(:,:), allocatable :: wt
+! s = scratch array for energies
+      double precision, dimension(:), allocatable :: s
+! scratch arrays for scalar field
+      complex, dimension(:,:), allocatable :: sfieldc
+      real, dimension(:,:), allocatable :: sfield
+! scratch arrays for vector field
+      complex, dimension(:,:,:), allocatable :: vfieldc
+      real, dimension(:,:,:), allocatable :: vfield
+! denet/denit = store selected fourier modes for electron/ion density
+      complex, dimension(:,:), allocatable :: denet, denit
+! pott = store selected fourier modes for potential
+      complex, dimension(:,:), allocatable :: pott
+! elt = store selected fourier modes for longitudinal efield
+      complex, dimension(:,:,:), allocatable :: elt
+! curit = store selected fourier modes for ion current density
+      complex, dimension(:,:,:), allocatable :: curit
+! oldcut = previous current density
+      complex, dimension(:,:,:), allocatable :: oldcut
+! vpotr = store selected fourier modes for radiative vector potential
+      complex, dimension(:,:,:), allocatable :: vpotr
+! vpott = store selected fourier modes for vector potential
+      complex, dimension(:,:,:), allocatable :: vpott
+! ett = store selected fourier modes for transverse efield
+      complex, dimension(:,:,:), allocatable :: ett
+! bt = store selected fourier modes for magnetic field
+      complex, dimension(:,:,:), allocatable :: bt
+!
 ! declare and initialize timing data
       real :: time
       integer, dimension(4) :: itime, ltime
       real :: tinit = 0.0, tloop = 0.0
       real :: tdpost = 0.0, tguard = 0.0, ttp = 0.0, tfield = 0.0
       real :: tdjpost = 0.0, tpush = 0.0, tsort = 0.0, tmov = 0.0
-      real :: tfmov = 0.0
+      real :: tfmov = 0.0, tdiag = 0.0
       real, dimension(2) :: tfft = 0.0
       double precision :: dtime
 !
@@ -155,10 +151,47 @@
       irc = 0
 ! nvpp = number of shared memory nodes (0=default)
       nvpp = 0
-!     write (*,*) 'enter number of nodes:'
-!     read (5,*) nvpp
+!     if (kstrt==1) then
+!        write (*,*) 'enter number of nodes:'
+!        read (5,*) nvpp
+!     endif
 ! initialize for shared memory parallel processing
       call INIT_OMP(nvpp)
+!      
+! nvp = number of distributed memory nodes
+! initialize for distributed memory parallel processing
+      call PPINIT2(idproc,nvp)
+      kstrt = idproc + 1
+!
+! read namelists
+      if (kstrt==1) then
+! override default input data
+         emf = 1
+         relativity = 1
+! read namelist
+         call readnml2(iuin)
+! override input data
+         idcode = 2
+         ndim = 3
+! create string from idrun
+         write (cdrun,'(i10)') idrun
+         cdrun = adjustl(cdrun)
+! text output file
+         fname = 'output2.'//cdrun
+         open(unit=iuot,file=trim(fname),form='formatted',              &
+     &status='replace')
+      endif
+!
+! broadcast namelists to other nodes
+      call sendnmls2()
+!
+! open graphics device
+      call IPLTCOMM(nplot)
+      if (kstrt==1) then
+         irc = open_pgraphs(nplot)
+! set palette to color wheel
+         call STPALIT(2)
+      endif
 !
 ! initialize scalars for standard code
 ! np = total number of particles in simulation
@@ -190,11 +223,7 @@
          vtdzi = vtz/sqrt(rmass*rtempdzi)
       endif
       dth = 0.0
-!      
-! nvp = number of distributed memory nodes
-! initialize for distributed memory parallel processing
-      call PPINIT2(idproc,nvp)
-      kstrt = idproc + 1
+!
 ! check if too many processors
       if (nvp > ny) then
          if (kstrt==1) then
@@ -212,7 +241,15 @@
 ! noff = lowermost global gridpoint in particle partition
 ! nypmx = maximum size of particle partition, including guard cells
 ! nypmn = minimum value of nyp
-      call mpdcomp2(edges,nyp,noff,nypmx,nypmn,ny,kstrt,nvp)
+! find new 1d partition for uniform density distribution
+!     call mpdcomp2(edges,nyp,noff,nypmx,nypmn,ny,kstrt,nvp)
+! find new 1d partition from initial analytic distribution function
+      call mpfedges2(edges,nyp,noff,ampdy,scaledy,shiftdy,nypmx,nypmn,ny&
+     &,kstrt,nvp,ipbc,ndprof,ierr)
+      if (ierr /= 0) then
+         call PPEXIT()
+         stop
+      endif
 !
 ! check for unimplemented features
       if ((plist).and.(ipbc.ne.1)) then
@@ -230,13 +267,16 @@
       kyp = (ny - 1)/nvp + 1
 ! npmax/npimax = maximum number of electrons/ions in each partition
       npmax = (np/nvp)*1.25; npimax = (npi/nvp)*1.25
+      maxnp = max(npmax,npimax)
 ! myp1 = number of tiles in y direction
       myp1 = (nyp - 1)/my + 1; mxyp1 = mx1*myp1
 ! nterf = number of shifts required by field manager (0=search)
       nterf = 0
+! ntmax = size of iholep buffer for particles leaving node
+      ntmax = 0.2*npmax
 !
 ! allocate and initialize data for standard code
-      allocate(part(idimp,max(npmax,npimax)))
+      allocate(part(idimp,maxnp))
       allocate(qe(nxe,nypmx),qi(nxe,nypmx))
       allocate(cue(ndim,nxe,nypmx))
       allocate(fxyze(ndim,nxe,nypmx),bxyze(ndim,nxe,nypmx))
@@ -244,7 +284,7 @@
       allocate(qt(nye,kxp),fxyt(ndim,nye,kxp))
       allocate(cut(ndim,nye,kxp),bxyt(ndim,nye,kxp))
       allocate(ffc(nyh,kxp),mixup(nxhy),sct(nxyh))
-      allocate(kpic(mxyp1))
+      allocate(kpic(mxyp1),iholep(ntmax+1))
 !
 ! prepare fft tables
       call mpfft2_init(mixup,sct,indx,indy)
@@ -257,11 +297,14 @@
 ! background electrons
       if (npxy > 0.0d0) then
 ! calculates initial electron co-ordinates with uniform density
-         call mpudistr2(part,edges,npp,npx,npy,nx,ny,kstrt,ipbc,ierr)
+!        call mpudistr2(part,edges,npp,npx,npy,nx,ny,kstrt,ipbc,ierr)
+! calculates initial electron co-ordinates with various density profiles
+         call mpfdistr2(part,npp,ampdx,scaledx,shiftdx,ampdy,scaledy,   &
+     &shiftdy,npx,npy,nx,ny,kstrt,nvp,ipbc,ndprof,ierr)
 ! initialize electron velocities or momenta
          if (ierr==0) then
             call wmpvdistr2h(part,nps,npp,vtx,vty,vtz,vx0,vy0,vz0,ci,npx&
-     &,npy,kstrt,relativity,ierr)
+     &,npy,kstrt,nvp,relativity,ierr)
          endif
 ! check for background electron initialization error
          if (ierr /= 0) then
@@ -273,17 +316,45 @@
       if (npxyb > 0.0d0) then
          nps = npp + 1
 ! calculates initial electron co-ordinates with uniform density
-         call mpudistr2(part,edges,npp,npxb,npyb,nx,ny,kstrt,ipbc,ierr)
+!        call mpudistr2(part,edges,npp,npxb,npyb,nx,ny,kstrt,ipbc,ierr)
+! calculates initial electron co-ordinates with various density profiles
+         call mpfdistr2(part,npp,ampdx,scaledx,shiftdx,ampdy,scaledy,   &
+     &shiftdy,npxb,npyb,nx,ny,kstrt,nvp,ipbc,ndprof,ierr)
 ! initialize electron velocities or momenta
          if (ierr==0) then
             call wmpvdistr2h(part,nps,npp,vtdx,vtdy,vtdz,vdx,vdy,vdz,ci,&
-     &npxb,npyb,kstrt,relativity,ierr)
+     &npxb,npyb,kstrt,nvp,relativity,ierr)
          endif
 ! check for beam electron initialization error
          if (ierr /= 0) then
             call PPEXIT()
             stop
          endif
+      endif
+!
+! check if any electrons are in the wrong node
+      call mpfholes2(part,edges,npp,iholep)
+! iholep overflow
+      if (iholep(1) < 0) then
+         ntmax = -iholep(1)
+         ntmax = 1.5*ntmax
+         deallocate(iholep)
+         if (kstrt==1) then
+            write (*,*) 'reallocating electron iholep: ntmax=', ntmax
+         endif
+         allocate(iholep(ntmax+1))
+         call mpfholes2(part,edges,npp,iholep)
+         if (iholep(1) < 0) then
+            if (kstrt==1) write (*,*) 'iholep overflow: ntmax=', ntmax
+            call PPEXIT()
+            stop
+         endif
+      endif
+! more electrons to correct node
+      call ipmove2(part,edges,npp,iholep,ny,tmov,kstrt,nvp,ierr)
+      if (ierr /= 0) then
+         call PPEXIT()
+         stop
       endif
 !
 ! find number of electrons in each of mx, my tiles: updates kpic, nppmx
@@ -318,12 +389,15 @@
 ! background ions
          if (npxyi > 0.0d0) then
 ! calculates initial ion co-ordinates with uniform density
-            call mpudistr2(part,edges,nppi,npxi,npyi,nx,ny,kstrt,ipbc,  &
-     &ierr)
+!           call mpudistr2(part,edges,nppi,npxi,npyi,nx,ny,kstrt,ipbc,  &
+!    &ierr)
+! calculates initial ion co-ordinates with various density profiles
+            call mpfdistr2(part,nppi,ampdxi,scaledxi,shiftdxi,ampdyi,   &
+     &scaledyi,shiftdyi,npxi,npyi,nx,ny,kstrt,nvp,ipbc,ndprofi,ierr)
 ! initialize ion velocities or momenta
             if (ierr==0) then
                call wmpvdistr2h(part,nps,nppi,vtxi,vtyi,vtzi,vxi0,vyi0, &
-     &vzi0,ci,npxi,npyi,kstrt,relativity,ierr)
+     &vzi0,ci,npxi,npyi,kstrt,nvp,relativity,ierr)
             endif
 ! check for background ion initialization error
             if (ierr /= 0) then
@@ -335,18 +409,46 @@
          if (npxybi > 0.0d0) then
             nps = nppi + 1
 ! calculates initial ion co-ordinates with uniform density
-            call mpudistr2(part,edges,nppi,npxbi,npybi,nx,ny,kstrt,ipbc,&
-     &ierr)
+!           call mpudistr2(part,edges,nppi,npxbi,npybi,nx,ny,kstrt,ipbc,&
+!    &ierr)
+! calculates initial ion co-ordinates with various density profiles
+            call mpfdistr2(part,nppi,ampdxi,scaledxi,shiftdxi,ampdyi,   &
+     &scaledyi,shiftdyi,npxbi,npybi,nx,ny,kstrt,nvp,ipbc,ndprofi,ierr)
 ! initialize ion velocities or momenta
             if (ierr==0) then
                call wmpvdistr2h(part,nps,nppi,vtdxi,vtdyi,vtdzi,vdxi,   &
-     &vdyi,vdzi,ci,npxbi,npybi,kstrt,relativity,ierr)
+     &vdyi,vdzi,ci,npxbi,npybi,kstrt,nvp,relativity,ierr)
             endif
 ! check for beam ion initialization error
             if (ierr /= 0) then
                call PPEXIT()
                stop
             endif
+         endif
+!
+! check if any ions are in the wrong node
+         call mpfholes2(part,edges,nppi,iholep)
+! iholep overflow
+      if (iholep(1) < 0) then
+         ntmax = -iholep(1)
+         ntmax = 1.5*ntmax
+         deallocate(iholep)
+         if (kstrt==1) then
+            write (*,*) 'reallocating ion iholep: ntmax=', ntmax
+         endif
+         allocate(iholep(ntmax+1))
+         call mpfholes2(part,edges,nppi,iholep)
+         if (iholep(1) < 0) then
+            if (kstrt==1) write (*,*) 'iholep overflow: ntmax=', ntmax
+            call PPEXIT()
+            stop
+         endif
+      endif
+! more ions to correct node
+         call ipmove2(part,edges,nppi,iholep,ny,tmov,kstrt,nvp,ierr)
+         if (ierr /= 0) then
+            call PPEXIT()
+            stop
          endif
 !
 ! find number of ions in each of mx, my tiles: updates kipic, nppmx
@@ -365,8 +467,238 @@
 ! initialize transverse electromagnetic fields
       exyz = cmplx(0.0,0.0)
       bxyz = cmplx(0.0,0.0)
+      cut = cmplx(0.0,0.0)
 ! set magnitude of external magnetic field
       omt = sqrt(omx*omx + omy*omy + omz*omz)
+!
+! allocate diagnostic arrays
+! reverse simulation at end back to start
+      if (treverse==1) nloop = 2*nloop
+!
+! energy time history
+      if (ntw > 0) then
+         mtw = (nloop - 1)/ntw + 1; itw = 0
+         allocate(wt(mtw,7),s(7))
+         wt = 0.0; s = 0.0d0
+      endif
+!
+! allocate scratch arrays for scalar fields
+      if ((ntde > 0).or.(ntp > 0).or.(ntdi > 0)) then
+         allocate(sfieldc(nye,kxp),sfield(nxe,nypmx))
+      endif
+!
+! allocate scratch arrays for vector fields
+      if ((ntel>0).or.(nta>0).or.(ntet>0).or.(ntb>0).or.(ntar>0)        &
+     &.or.(ntji>0)) then
+         allocate(vfieldc(ndim,nye,kxp),vfield(ndim,nxe,nypmx))
+      endif
+!
+! initialize electron density diagnostic
+      if (ntde > 0) then
+         modesxde = min(modesxde,nxh+1)
+         modesyde = min(modesyde,nyh+1)
+         modesy2de = min(2*modesyde-1,ny)
+         modesxpd = min(modesxde,kxp)
+         if (modesxde==(nxh+1)) modesxpd = modesxpd + 1
+         allocate(denet(modesy2de,modesxpd))
+! open file
+         if (kstrt==1) then
+! open file for complex data: updates nderec and possibly iude
+!           fdename = 'denek2.'//cdrun
+!           if (nderec==0) then
+!              call dafopenc2(denet,iude,nderec,trim(fdename))
+!           endif
+! open file for real data: updates nderec and possibly iude
+            fdename = 'dener2.'//cdrun
+            if (nderec==0) then
+               call dafopen2(sfield,nx,kyp,iude,nderec,trim(fdename))
+            endif
+         endif
+      endif
+!
+! initialize ion density diagnostic
+      if (movion==1) then
+         if (ntdi > 0) then
+            modesxdi = min(modesxdi,nxh+1)
+            modesydi = min(modesydi,nyh+1)
+            modesy2di = min(2*modesydi-1,ny)
+            modesxpd = min(modesxdi,kxp)
+            if (modesxdi==(nxh+1)) modesxpd = modesxpd + 1
+            allocate(denit(modesy2di,modesxpd))
+! open file
+            if (kstrt==1) then
+! open file for complex data: updates ndirec and possibly iudi
+!              fdiname = 'denik2.'//cdrun
+!              if (ndirec==0) then
+!                 call dafopenc2(denit,iudi,ndirec,trim(fdiname))
+!              endif
+! open file for real data: updates ndirec and possibly iudi
+               fdiname = 'denir2.'//cdrun
+               if (ndirec==0) then
+                  call dafopen2(sfield,nx,kyp,iudi,ndirec,trim(fdiname))
+               endif
+            endif
+         endif
+      endif
+!
+! initialize potential diagnostic
+      if (ntp > 0) then
+         modesxp = min(modesxp,nxh+1)
+         modesyp = min(modesyp,nyh+1)
+         modesy2p = min(2*modesyp-1,ny)
+         modesxpd = min(modesxp,kxp)
+         if (modesxp==(nxh+1)) modesxpd = modesxpd + 1
+         allocate(pott(modesy2p,modesxpd))
+! open file
+         if (kstrt==1) then
+! open file for complex data: updates nprec and possibly iup
+!           fpname = 'potk2.'//cdrun
+!           if (nprec==0) call dafopenc2(pott,iup,nprec,trim(fpname))
+! open file for real data: updates nprec and possibly iup
+            fpname = 'potr2.'//cdrun
+            if (nprec==0) then
+               call dafopen2(sfield,nx,kyp,iup,nprec,trim(fpname))
+            endif
+         endif
+      endif
+!
+! initialize longitudinal efield diagnostic
+      if (ntel > 0) then
+         modesxel = min(modesxel,nxh+1)
+         modesyel = min(modesyel,nyh+1)
+         modesy2el = min(2*modesyel-1,ny)
+         modesxpd = min(modesxel,kxp)
+         if (modesxel==(nxh+1)) modesxpd = modesxpd + 1
+         allocate(elt(ndim,modesy2el,modesxpd))
+! open file
+         if (kstrt==1) then
+! open file for complex data: updates nelrec and possibly iuel
+!           felname = 'elk2.'//cdrun
+!           if (nelrec==0) then
+!              call dafopenvc2(elt,iuel,nelrec,trim(felname))
+!           endif
+! open file for real data: updates nelrec and possibly iuel
+            felname = 'elr2.'//cdrun
+            if (nelrec==0) then
+               call dafopenv2(vfield,nx,kyp,iuel,nelrec,trim(felname))
+            endif
+         endif
+      endif
+!
+! initialize ion current density diagnostic
+      if (movion==1) then
+         if (ntji > 0) then
+            modesxji = min(modesxji,nxh+1)
+            modesyji = min(modesyji,nyh+1)
+            modesy2ji = min(2*modesyji-1,ny)
+            modesxpd = min(modesxji,kxp)
+            if (modesxji==(nxh+1)) modesxpd = modesxpd + 1
+            allocate(curit(ndim,modesy2ji,modesxpd))
+! open file
+            if (kstrt==1) then
+! open file for complex data: updates njirec and possibly iuji
+!              fjiname = 'curik2.'//cdrun
+!              if (njirec==0) then
+!                 call dafopenvc2(curit,iuji,njirec,trim(fjiname))
+!              endif
+! open file for real data: updates njirec and possibly iuji
+               fjiname = 'curir2.'//cdrun
+               if (njirec==0) then
+                  call dafopenv2(vfield,nx,kyp,iuji,njirec,trim(fjiname)&
+     &)
+               endif
+            endif
+         endif
+      endif
+!
+! initialize radiative vector potential diagnostic
+      if (ntar > 0) then
+         modesxar = min(modesxar,nxh+1)
+         modesyar = min(modesyar,nyh+1)
+         modesy2ar= min(2*modesyar-1,ny)
+         modesxpd = min(modesxar,kxp)
+         if (modesxar==(nxh+1)) modesxpd = modesxpd + 1
+         allocate(vpotr(ndim,modesy2ar,modesxpd))
+         allocate(oldcut(ndim,nye,kxp))
+! open file
+         if (kstrt==1) then
+! open file for complex data: updates narrec and possibly iuar
+!           farname = 'vpotrk2.'//cdrun
+!           if (narec==0) then
+!              call dafopenvc2(vpotr,iuar,narrec,trim(farname))
+!           endif
+! open file for real data: updates narrec and possibly iuar
+            farname = 'vpotrr2.'//cdrun
+            if (narec==0) then
+               call dafopenv2(vfield,nx,kyp,iuar,narrec,trim(farname))
+            endif
+         endif
+      endif
+!
+! initialize vector potential diagnostic
+      if (nta > 0) then
+         modesxa = min(modesxa,nxh+1)
+         modesya = min(modesya,nyh+1)
+         modesy2a = min(2*modesya-1,ny)
+         modesxpd = min(modesxa,kxp)
+         if (modesxa==(nxh+1)) modesxpd = modesxpd + 1
+         allocate(vpott(ndim,modesy2a,modesxpd))
+! open file
+         if (kstrt==1) then
+! open file for complex data: updates narec and possibly iua
+!           faname = 'vpotk2.'//cdrun
+!           if (narec==0) call dafopenvc2(vpott,iua,narec,trim(faname))
+! open file for real data: updates narec and possibly iua
+            faname = 'vpotr2.'//cdrun
+            if (narec==0) then
+               call dafopenv2(vfield,nx,kyp,iua,narec,trim(faname))
+            endif
+         endif
+      endif
+!
+! initialize transverse efield diagnostic
+      if (ntet > 0) then
+         modesxet = min(modesxet,nxh+1)
+         modesyet = min(modesyet,nyh+1)
+         modesy2et = min(2*modesyet-1,ny)
+         modesxpd = min(modesxet,kxp)
+         if (modesxet==(nxh+1)) modesxpd = modesxpd + 1
+         allocate(ett(ndim,modesy2et,modesxpd))
+! open file
+         if (kstrt==1) then
+! open file for complex data: updates netrec and possibly iuet
+!           fetname = 'etk2.'//cdrun
+!           if (netrec==0) then
+!              call dafopenvc2(ett,iuet,netrec,trim(fetname))
+!           endif
+! open file for real data: updates netrec and possibly iuet
+            fetname = 'etr2.'//cdrun
+            if (netrec==0) then
+               call dafopenv2(vfield,nx,kyp,iuet,netrec,trim(fetname))
+            endif
+         endif
+      endif
+!
+! initialize magnetic field diagnostic
+      if (ntb > 0) then
+         modesxb = min(modesxb,nxh+1)
+         modesyb = min(modesyb,nyh+1)
+         modesy2b = min(2*modesyb-1,ny)
+         modesxpd = min(modesxb,kxp)
+         if (modesxb==(nxh+1)) modesxpd = modesxpd + 1
+         allocate(bt(ndim,modesy2b,modesxpd))
+! open file
+         if (kstrt==1) then
+! open file for complex data: updates nbrec and possibly iub
+!           fbname = 'bk2.'//cdrun
+!           if (nbrec==0) call dafopenvc2(bt,iub,nbrec,trim(fbname))
+! open file for real data: updates nbrec and possibly iub
+            fbname = 'br2.'//cdrun
+            if (nbrec==0) then
+               call dafopenv2(vfield,nx,kyp,iub,nbrec,trim(fbname))
+            endif
+         endif
+      endif
 !
       if (dt > 0.45*ci) then
          if (kstrt==1) then
@@ -380,13 +712,19 @@
 ! start timing loop
       call dtimer(dtime,ltime,-1)
 !
-      if (kstrt==1) write (*,*) 'program mpbbeps2'
+      if (kstrt==1) write (iuot,*) 'program mpbbeps2'
 !
 ! * * * start main iteration loop * * *
 !
       do n = 1, nloop 
       ntime = n - 1
-!     if (kstrt==1) write (*,*) 'ntime = ', ntime
+      if (kstrt==1) write (iuot,*) 'ntime = ', ntime
+!
+! save previous current in fourier space for radiative vector potential
+      if (ntar > 0) then
+         it = ntime/ntar
+         if (ntime==ntar*it) oldcut = cut
+      endif
 !
 ! deposit electron current with OpenMP:
 ! updates ppart and cue, and possibly ncl, ihole, irc
@@ -490,7 +828,52 @@
          endif
       endif
 !
-! deposit charge with OpenMP: updates qe
+! ion current density diagnostic
+      if (movion==1) then
+         if (ntji > 0) then
+            it = ntime/ntji
+            if (ntime==ntji*it) then
+               vfield = cui
+! transform ion current density to fourier space: updates cut
+! moves data to uniform partition
+               isign = -1
+               call wmpfft2rn(vfield,cut,noff,nyp,isign,mixup,sct,tfft, &
+     &tfmov,indx,indy,kstrt,nvp,kyp,ny,nterf,ierr)
+! calculate smoothed ion current in fourier space: updates vfieldc
+               call mpsmooth23(cut,vfieldc,ffc,tfield,nx,ny,kstrt)
+! store selected fourier modes: updates curit
+               call mprdvmodes2(vfieldc,curit,tfield,nx,ny,modesxji,    &
+     &modesyji,kstrt)
+! write fourier space diagnostic output: updates njirec
+!              call mpvcwrite2(curit,tdiag,modesxji,modesy2ji,kxp,iuji, &
+!    &njirec)
+!              call mpvcread2(curit,tdiag,modesxji,modesy2ji,kxp,iuji,  &
+!    &njirec,irc)
+! transform smoothed ion current to real space: updates vfield
+               isign = 1
+               call mpfft2rn(vfield,vfieldc,isign,mixup,sct,tfft,indx,  &
+     &indy,kstrt,nvp,kyp)
+! write real space diagnostic output: updates njirec
+               call mpvwrite2(vfield,tdiag,nx,ny,kyp,iuji,njirec)
+!              call mpvread2(vfield,tdiag,nx,ny,kyp,iuji,njirec,irc)
+! move vector data to non-uniform partition, updates: vfield, ierr
+               isign = 1
+               call mpfnmove2(vfield,noff,nyp,isign,tfmov,kyp,ny,kstrt, &
+     &nvp,nterf,ierr)
+! display smoothed ion current
+               call wmpncguard2(vfield,nyp,tfield,nx,kstrt,nvp)
+               call pdvector2(vfield,nyp,nvp,'ION CURRENT',ntime,999,0, &
+     &ndstyle,1,nx,ny,ierr)
+               if (ierr==1) then
+                  call PPEXIT()
+                  stop
+               endif
+               ierr = 0
+            endif
+         endif
+      endif
+!
+! deposit electron charge with OpenMP: updates qe
       call dtimer(dtime,itime,-1)
       qe = 0.0
       call dtimer(dtime,itime,1)
@@ -498,6 +881,49 @@
       call mppost2(ppart,qe,kpic,noff,qme,tdpost,mx,my,mx1)
 ! add guard cells with OpenMP: updates qe
       call wmpaguard2(qe,nyp,tguard,nx,kstrt,nvp)
+!
+! electron density diagnostic
+      if (ntde > 0) then
+         it = ntime/ntde
+         if (ntime==ntde*it) then
+            sfield = -qe
+! transform electron density to fourier space: updates qt
+! moves data to uniform partition
+            isign = -1
+            call wmpfft2r(sfield,qt,noff,nyp,isign,mixup,sct,tfft,tfmov,&
+     &indx,indy,kstrt,nvp,kyp,ny,nterf,ierr)
+! calculate smoothed electron density in fourier space: updates sfieldc
+            call mpsmooth2(qt,sfieldc,ffc,tfield,nx,ny,kstrt)
+! store selected fourier modes: updates denet
+            call mprdmodes2(sfieldc,denet,tfield,nx,ny,modesxde,modesyde&
+     &,kstrt)
+! write fourier space diagnostic output: updates nderec
+!           call mpcwrite2(denet,tdiag,modesxde,modesy2de,kxp,iude,     &
+!    &nderec)
+!           call mpcread2(denet,tdiag,modesxde,modesy2de,kxp,iude,nderec&
+!    &,irc)
+! transform smoothed electron density to real space: updates sfield
+            isign = 1
+            call mpfft2r(sfield,sfieldc,isign,mixup,sct,tfft,indx,indy, &
+     &kstrt,nvp,kyp)
+! write real space diagnostic output: updates nderec
+            call mpwrite2(sfield,tdiag,nx,ny,kyp,iude,nderec)
+!           call mpread2(sfield,tdiag,nx,ny,kyp,iude,nderec,irc)
+! move data to non-uniform partition, updates: sfield, ierr
+            isign = 1
+            call mpfmove2(sfield,noff,nyp,isign,tfmov,kyp,ny,kstrt,nvp, &
+     &nterf,ierr)
+! display smoothed electron density
+            call wmpcguard2(sfield,nyp,tguard,nx,kstrt,nvp)
+            call pdscaler2(sfield,nyp,nvp,'EDENSITY',ntime,999,1,ndstyle&
+     &,nx,ny,ierr)
+            if (ierr==1) then
+               call PPEXIT()
+               stop
+            endif
+            ierr = 0
+         endif
+      endif
 !
 ! deposit ion charge with OpenMP: updates qi
       if (movion==1) then
@@ -510,6 +936,51 @@
          call wmpaguard2(qi,nyp,tguard,nx,kstrt,nvp)
       endif
 !
+! ion density diagnostic
+      if (movion==1) then
+         if (ntdi > 0) then
+            it = ntime/ntdi
+            if (ntime==ntdi*it) then
+               sfield = qi
+! transform ion density to fourier space: updates qt
+! moves data to uniform partition
+               isign = -1
+               call wmpfft2r(sfield,qt,noff,nyp,isign,mixup,sct,tfft,   &
+     &tfmov,indx,indy,kstrt,nvp,kyp,ny,nterf,ierr)
+! calculate smoothed ion density in fourier space: updates sfieldc
+               call mpsmooth2(qt,sfieldc,ffc,tfield,nx,ny,kstrt)
+! store selected fourier modes: updates denit
+               call mprdmodes2(sfieldc,denit,tfield,nx,ny,modesxdi,     &
+     &modesydi,kstrt)
+! write fourier space diagnostic output: updates ndirec
+!              call mpcwrite2(denit,tdiag,modesxdi,modesy2di,kxp,iudi,  &
+!    &ndirec)
+!              call mpcread2(denit,tdiag,modesxdi,modesy2di,kxp,iudi,   &
+!    &ndirec,irc)
+! transform smoothed ion density to real space: updates sfield
+               isign = 1
+               call mpfft2r(sfield,sfieldc,isign,mixup,sct,tfft,indx,   &
+     &indy,kstrt,nvp,kyp)
+! write real space diagnostic output: updates ndirec
+               call mpwrite2(sfield,tdiag,nx,ny,kyp,iudi,ndirec)
+!              call mpread2(sfield,tdiag,nx,ny,kyp,iudi,ndirec,irc)
+! move data to non-uniform partition, updates: sfield, ierr
+               isign = 1
+               call mpfmove2(sfield,noff,nyp,isign,tfmov,kyp,ny,kstrt,  &
+     &nvp,nterf,ierr)
+! display smoothed ion density
+               call wmpcguard2(sfield,nyp,tguard,nx,kstrt,nvp)
+               call pdscaler2(sfield,nyp,nvp,'ION DENSITY',ntime,999,1, &
+     &ndstyle,nx,ny,ierr)
+               if (ierr==1) then
+                  call PPEXIT()
+                  stop
+               endif
+               ierr = 0
+            endif
+         endif
+      endif
+!
 ! add electron and ion densities: updates qe
       call mpaddqei2(qe,qi,nyp,tfield,nx)
 !
@@ -517,12 +988,14 @@
       if (movion==1) call mpaddcuei2(cue,cui,nyp,tfield,nx)
 !
 ! transform charge to fourier space with OpenMP:
+! moves data to uniform partition
 ! updates qt, nterf, and ierr, modifies qe
       isign = -1
       call wmpfft2r(qe,qt,noff,nyp,isign,mixup,sct,tfft,tfmov,indx,indy,&
      &kstrt,nvp,kyp,ny,nterf,ierr)
 !
 ! transform current to fourier space with OpenMP:
+! moves data to uniform partition
 ! updates cut, nterf, and ierr, modifies cue
       isign = -1
       call wmpfft2rn(cue,cut,noff,nyp,isign,mixup,sct,tfft,tfmov,indx,  &
@@ -531,12 +1004,52 @@
 ! take transverse part of current with OpenMP: updates cut
       call mpcuperp2(cut,tfield,nx,ny,kstrt)
 !
+! radiative vector potential diagnostic
+      if (ntar > 0) then
+         it = ntime/ntar
+         if (ntime==ntar*it) then
+! average current: updates vfieldc = 0.5*(cut + oldcut)
+            call mcuave2(vfieldc,cut,oldcut,tfield,ny)
+! calculate radiative vector potential in fourier space: updates vfieldc
+! vfieldc should contain averaged current on entry
+            call mpavrpot2(vfieldc,bxyz,ffc,affp,ci,tfield,nx,ny,kstrt)
+! store selected fourier modes: updates vpotr
+            call mprdvmodes2(vfieldc,vpotr,tfield,nx,ny,modesxar,       &
+     &modesyar,kstrt)
+! write fourier space diagnostic output: updates narrec
+!           call mpvcwrite2(vpotr,tdiag,modesxar,modesy2ar,kxp,iuar,    &
+!    &narrec)
+!           call mpvcread2(vpotr,tdiag,modesxar,modesy2ar,kxp,iuar,     &
+!    &narrec,irc)
+! transform radiative vector potential to real space: updates vfield
+            isign = 1
+            call mpfft2rn(vfield,vfieldc,isign,mixup,sct,tfft,indx,indy,&
+     &kstrt,nvp,kyp)
+! write real space diagnostic output: updates narrec
+            call mpvwrite2(vfield,tdiag,nx,ny,kyp,iuar,narrec)
+!           call mpvread2(vfield,tdiag,nx,ny,kyp,iuar,narrec,irc)
+! move vector data to non-uniform partition, updates: vfield, ierr
+            isign = 1
+            call mpfnmove2(vfield,noff,nyp,isign,tfmov,kyp,ny,kstrt,nvp,&
+     &nterf,ierr)
+! display radiative vector potential
+            call wmpncguard2(vfield,nyp,tfield,nx,kstrt,nvp)
+            call pdvector2(vfield,nyp,nvp,'RADIATIVE VPOTENTIAL',ntime, &
+     &999,0,ndstyle,1,nx,ny,ierr)
+            if (ierr==1) then
+               call PPEXIT()
+               stop
+            endif
+            ierr = 0
+         endif
+      endif
+!
 ! calculate electromagnetic fields in fourier space with OpenMP:
-! updates exyz, bxyz, wf, wm
+! updates exyz, bxyz, wf, wb
       if (ntime==0) then
 ! initialize electromagnetic fields from darwin fields
 ! calculate initial darwin magnetic field
-         call mpibpois2(cut,bxyz,ffc,ci,wm,tfield,nx,ny,kstrt)
+         call mpibpois2(cut,bxyz,ffc,ci,wb,tfield,nx,ny,kstrt)
          wf = 0.0
 ! calculate initial darwin electric field
          allocate(amu(4,nxe,nypmx),amut(4,nye,kxp),dcut(ndim,nye,kxp))
@@ -555,7 +1068,7 @@
          dth = 0.5*dt
 ! update electromagnetic fields
       else
-         call mpmaxwel2(exyz,bxyz,cut,ffc,affp,ci,dt,wf,wm,tfield,nx,ny,&
+         call mpmaxwel2(exyz,bxyz,cut,ffc,affp,ci,dt,wf,wb,tfield,nx,ny,&
      &kstrt)
       endif
 !
@@ -572,12 +1085,14 @@
       call mpemfield2(bxyt,bxyz,ffc,isign,tfield,nx,ny,kstrt)
 !
 ! transform force to real space with OpenMP:
+! moves data to non-uniform partition
 ! updates fxyze, nterf, and ierr, modifies fxyt
       isign = 1
       call wmpfft2rn(fxyze,fxyt,noff,nyp,isign,mixup,sct,tfft,tfmov,indx&
      &,indy,kstrt,nvp,kyp,ny,nterf,ierr)
 !
 ! transform magnetic field to real space with OpenMP:
+! moves data to non-uniform partition
 ! updates bxyze, nterf, and ierr, modifies bxyt
       isign = 1
       call wmpfft2rn(bxyze,bxyt,noff,nyp,isign,mixup,sct,tfft,tfmov,indx&
@@ -589,6 +1104,184 @@
 ! copy guard cells with OpenMP: updates fxyze, bxyze
       call wmpncguard2(fxyze,nyp,tguard,nx,kstrt,nvp)
       call wmpncguard2(bxyze,nyp,tguard,nx,kstrt,nvp)
+!
+! potential diagnostic
+      if (ntp > 0) then
+         it = ntime/ntp
+         if (ntime==ntp*it) then
+! calculate potential in fourier space: updates sfieldc
+            call mppot2(qt,sfieldc,ffc,ws,tfield,nx,ny,kstrt)
+! store selected fourier modes: updates pott
+            call mprdmodes2(sfieldc,pott,tfield,nx,ny,modesxp,modesyp,  &
+     &kstrt)
+! write fourier space diagnostic output: updates nprec
+!           call mpcwrite2(pott,tdiag,modesxp,modesy2p,kxp,iup,nprec)
+!           call mpcread2(pott,tdiag,modesxp,modesy2p,kxp,iup,nprec,irc)
+! transform potential to real space: updates sfield
+            isign = 1
+            call mpfft2r(sfield,sfieldc,isign,mixup,sct,tfft,indx,indy, &
+     &kstrt,nvp,kyp)
+! write real space diagnostic output: updates nprec
+            call mpwrite2(sfield,tdiag,nx,ny,kyp,iup,nprec)
+!           call mpread2(sfield,tdiag,nx,ny,kyp,iup,nprec,irc)
+! move data to non-uniform partition, updates: sfield, ierr
+            isign = 1
+            call mpfmove2(sfield,noff,nyp,isign,tfmov,kyp,ny,kstrt,nvp, &
+     &nterf,ierr)
+! display potential
+            call wmpcguard2(sfield,nyp,tguard,nx,kstrt,nvp)
+            call pdscaler2(sfield,nyp,nvp,'POTENTIAL',ntime,999,0,      &
+     &ndstyle,nx,ny,ierr)
+            if (ierr==1) then
+               call PPEXIT()
+               stop
+            endif
+            ierr = 0
+         endif
+      endif
+!
+! longitudinal efield diagnostic
+      if (ntel > 0) then
+         it = ntime/ntel
+         if (ntime==ntel*it) then
+! calculate longitudinal efield in fourier space: updates vfieldc
+            call mpelfield2(qt,vfieldc,ffc,ws,tfield,nx,ny,kstrt)
+! store selected fourier modes: updates elt
+            call mprdvmodes2(vfieldc,elt,tfield,nx,ny,modesxel,modesyel,&
+     &kstrt)
+! write fourier space diagnostic output: updates nelrec
+!           call mpvcwrite2(elt,tdiag,modesxel,modesy2el,kxp,iuel,nelrec&
+!    &)
+!           call mpvcread2(elt,tdiag,modesxel,modesy2el,kxp,iuel,nelrec,&
+!    &irc)
+! transform longitudinal efield to real space: updates vfield
+            isign = 1
+            call mpfft2rn(vfield,vfieldc,isign,mixup,sct,tfft,indx,indy,&
+     &kstrt,nvp,kyp)
+! write real space diagnostic output: updates nelrec
+            call mpvwrite2(vfield,tdiag,nx,ny,kyp,iuel,nelrec)
+!           call mpvread2(vfield,tdiag,nx,ny,kyp,iuel,nelrec,irc)
+! move data to non-uniform partition, updates: vfield, ierr
+            isign = 1
+            call mpfnmove2(vfield,noff,nyp,isign,tfmov,kyp,ny,kstrt,nvp,&
+     &nterf,ierr)
+! display longitudinal efield 
+            call wmpncguard2(vfield,nyp,tguard,nx,kstrt,nvp)
+            call pdvector2(vfield,nyp,nvp,'ELFIELD',ntime,999,0,ndstyle,&
+     &1,nx,ny,ierr)
+            if (ierr==1) then
+               call PPEXIT()
+               stop
+            endif
+            ierr = 0
+         endif
+      endif
+!
+! vector potential diagnostic
+      if (nta > 0) then
+         it = ntime/nta
+         if (ntime==nta*it) then
+! calculate vector potential in fourier space: updates vfieldc
+            call mpavpot2(bxyz,vfieldc,tfield,nx,ny,kstrt)
+! store selected fourier modes: updates vpott
+            call mprdvmodes2(vfieldc,vpott,tfield,nx,ny,modesxa,modesya,&
+     &kstrt)
+! write fourier space diagnostic output: updates narec
+!           call mpvcwrite2(vpott,tdiag,modesxa,modesy2a,kxp,iua,narec)
+!           call mpvcread2(vpott,tdiag,modesxa,modesy2a,kxp,iua,narec,  &
+!    &irc)
+! transform vector potential to real space: updates vfield
+            isign = 1
+            call mpfft2rn(vfield,vfieldc,isign,mixup,sct,tfft,indx,indy,&
+     &kstrt,nvp,kyp)
+! write real space diagnostic output: updates narec
+            call mpvwrite2(vfield,tdiag,nx,ny,kyp,iua,narec)
+!           call mpvread2(vfield,tdiag,nx,ny,kyp,iua,narec,irc)
+! move vector data to non-uniform partition, updates: vfield, ierr
+            isign = 1
+            call mpfnmove2(vfield,noff,nyp,isign,tfmov,kyp,ny,kstrt,nvp,&
+     &nterf,ierr)
+! display vector potential
+            call wmpncguard2(vfield,nyp,tfield,nx,kstrt,nvp)
+            call pdvector2(vfield,nyp,nvp,'VECTOR POTENTIAL',ntime,999,0&
+     &,ndstyle,1,nx,ny,ierr)
+            if (ierr==1) then
+               call PPEXIT()
+               stop
+            endif
+            ierr = 0
+         endif
+      endif
+!
+! transverse efield diagnostic
+      if (ntet > 0) then
+         it = ntime/ntet
+         if (ntime==ntet*it) then
+            vfieldc = exyz
+! store selected fourier modes: updates ett
+            call mprdvmodes2(vfieldc,ett,tfield,nx,ny,modesxet,modesyet,&
+     &kstrt)
+! write fourier space diagnostic output: updates netrec
+!           call mpvcwrite2(ett,tdiag,modesxet,modesy2et,kxp,iuet,netrec&
+!    &)
+!           call mpvcread2(ett,tdiag,modesxet,modesy2et,kxp,iuet,netrec,&
+!    &irc)
+! transform transverse efield to real space: updates vfield
+            isign = 1
+            call mpfft2rn(vfield,vfieldc,isign,mixup,sct,tfft,indx,indy,&
+     &kstrt,nvp,kyp)
+! write real space diagnostic output: updates netrec
+            call mpvwrite2(vfield,tdiag,nx,ny,kyp,iuet,netrec)
+!           call mpvread2(vfield,tdiag,nx,ny,kyp,iuet,netrec,irc)
+! move data to non-uniform partition, updates: vfield, ierr
+            isign = 1
+            call mpfnmove2(vfield,noff,nyp,isign,tfmov,kyp,ny,kstrt,nvp,&
+     &nterf,ierr)
+! display transverse efield 
+            call wmpncguard2(vfield,nyp,tguard,nx,kstrt,nvp)
+            call pdvector2(vfield,nyp,nvp,'TRANSVERSE EFIELD',ntime,999,&
+     &0,ndstyle,1,nx,ny,ierr)
+            if (ierr==1) then
+               call PPEXIT()
+               stop
+            endif
+            ierr = 0
+         endif
+      endif
+!
+! magnetic field diagnostic
+      if (ntb > 0) then
+         it = ntime/ntb
+         if (ntime==ntb*it) then
+            vfieldc = bxyz
+! store selected fourier modes: updates bt
+            call mprdvmodes2(vfieldc,bt,tfield,nx,ny,modesxb,modesyb,   &
+     &kstrt)
+! write fourier space diagnostic output: updates nbrec
+!           call mpvcwrite2(bt,tdiag,modesxb,modesy2b,kxp,iub,nbrec)
+!           call mpvcread2(bt,tdiag,modesxb,modesy2b,kxp,iub,nbrec,irc)
+! transform magnetic field to real space: updates vfield
+            isign = 1
+            call mpfft2rn(vfield,vfieldc,isign,mixup,sct,tfft,indx,indy,&
+     &kstrt,nvp,kyp)
+! write real space diagnostic output: updates nbrec
+            call mpvwrite2(vfield,tdiag,nx,ny,kyp,iub,nbrec)
+!           call mpvread2(vfield,tdiag,nx,ny,kyp,iub,nbrec,irc)
+! move vector data to non-uniform partition, updates: vfield, ierr
+            isign = 1
+            call mpfnmove2(vfield,noff,nyp,isign,tfmov,kyp,ny,kstrt,nvp,&
+     &nterf,ierr)
+! display magnetic field
+            call wmpncguard2(vfield,nyp,tfield,nx,kstrt,nvp)
+            call pdvector2(vfield,nyp,nvp,'MAGNETIC FIELD',ntime,999,0, &
+     &ndstyle,1,nx,ny,ierr)
+            if (ierr==1) then
+               call PPEXIT()
+               stop
+            endif
+            ierr = 0
+         endif
+      endif
 !
 ! push electrons with OpenMP:
 ! updates ppart and wke, and possibly ncl, ihole, irc
@@ -683,33 +1376,80 @@
          endif
       endif
 !
-! energy diagnostic
-      wt = we + wf + wm
-      wtot(1) = wt
-      wtot(2) = wke
-      wtot(3) = wki
-      wtot(4) = wke + wt
-      wtot(5) = we
-      wtot(6) = wf
-      wtot(7) = wm
-      call PPDSUM(wtot,work,7)
-      wke = wtot(2)
-      wki = wtot(3)
-      we = wtot(5)
-      wf = wtot(6)
-      wm = wtot(7)
-      if ((ntime==0).and.(kstrt==1)) then
-         wt = we + wf + wm
-         write (*,*) 'Initial Total Field, Kinetic and Total Energies:'
-         if (movion==0) then
-            write (*,'(3e14.7)') wt, wke, wke + wt
-         else
-            write (*,'(4e14.7)') wt, wke, wki, wke + wki + wt
+! start running simulation backwards:
+! need to advance maxwell field solver one step ahead
+      if (treverse==1) then
+         if (((ntime+1)==(nloop/2)).or.((ntime+1)==nloop)) then
+! deposit electron current: updates cue
+            cue = 0.0
+            call wmpdjpost2(ppart,cue,kpic,ncl,ihole,noff,nyp,qme,zero, &
+     &ci,tdjpost,nx,ny,mx,my,mx1,ipbc,relativity,plist,irc)
+            call wmpnacguard2(cue,nyp,tguard,nx,kstrt,nvp)
+! deposit ion current: updates cui
+            if (movion==1) then
+               cui = 0.0
+               call wmpdjpost2(pparti,cui,kipic,ncl,ihole,noff,nyp,qmi, &
+     &zero,ci,tdjpost,nx,ny,mx,my,mx1,ipbc,relativity,plist,irc)
+               call wmpnacguard2(cui,nyp,tguard,nx,kstrt,nvp)
+               call mpaddcuei2(cue,cui,nyp,tfield,nx)
+            endif
+            isign = -1
+            call wmpfft2rn(cue,cut,noff,nyp,isign,mixup,sct,tfft,tfmov, &
+     &indx,indy,kstrt,nvp,kyp,ny,nterf,ierr)
+            call mpcuperp2(cut,tfield,nx,ny,kstrt)
+! updates exyz, bxyz, wf, wb
+            call mpmaxwel2(exyz,bxyz,cut,ffc,affp,ci,dt,wf,wb,tfield,nx,&
+     &ny,kstrt)
+! reverse time
+            dt = -dt; dth = -dth
          endif
-         write (*,*) 'Initial Electrostatic, Transverse Electric and Mag&
-     &netic Field Energies:'
-         write (*,'(3e14.7)') we, wf, wm
       endif
+!
+! energy diagnostic
+      if (ntw > 0) then
+         it = ntime/ntw
+         if (ntime==ntw*it) then
+            wef = we + wf + wb
+            wtot(1) = wef
+            wtot(2) = wke
+            wtot(3) = wki
+            wtot(4) = wef + wke
+            wtot(5) = we
+            wtot(6) = wf
+            wtot(7) = wb
+            call PPDSUM(wtot,work,7)
+            wke = wtot(2)
+            wki = wtot(3)
+            we = wtot(5)
+            wf = wtot(6)
+            wb = wtot(7)
+            wef = we + wf + wb
+            ws = wef + wke + wki
+            if (ntime==0) s(6) = ws
+            if (kstrt==1) then
+               write (iuot,*) 'Total Field, Kinetic and Total Energies:'
+               if (movion==0) then
+                  write (iuot,'(3e14.7)') wef, wke, ws
+               else
+                  write (iuot,'(4e14.7)') wef, wke, wki, ws
+               endif
+               write (iuot,*) 'Electrostatic, Transverse Electric and Ma&
+     &gnetic Field Energies:'
+               write (iuot,'(3e14.7)') we, wf, wb
+            endif
+            itw = itw + 1
+! store energies in time history array
+            wt(itw,:) = (/wef,wke,wki,ws,we,wf,wb/)
+            s(1) = s(1) + we
+            s(2) = s(2) + wke
+            s(3) = s(3) + wf
+            s(4) = s(4) + wb
+            s(5) = s(5) + wki
+            s(6) = min(s(6),dble(ws))
+            s(7) = max(s(7),dble(ws))
+         endif
+      endif
+!
       enddo
       ntime = ntime + 1
 !
@@ -720,48 +1460,108 @@
 ! * * * end main iteration loop * * *
 !
       if (kstrt.eq.1) then
-         write (*,*)
-         write (*,*) 'ntime, relativity = ', ntime, relativity
-         write (*,*) 'MPI nodes nvp = ', nvp
-         wt = we + wf + wm
-         write (*,*) 'Final Total Field, Kinetic and Total Energies:'
-         if (movion==0) then
-            write (*,'(3e14.7)') wt, wke, wke + wt
-         else
-            write (*,'(4e14.7)') wt, wke, wki, wke + wki + wt
-         endif
-         write (*,*) 'Final Electrostatic, Transverse Electric and Magne&
-     &tic Field Energies:'
-         write (*,'(3e14.7)') we, wf, wm
+         write (iuot,*)
+         write (iuot,*) 'ntime, relativity = ', ntime, relativity
+         if (treverse==1) write (iuot,*) 'treverse = ', treverse
+         write (iuot,*) 'MPI nodes nvp = ', nvp
 !
-         write (*,*)
-         write (*,*) 'initialization time = ', tinit
-         write (*,*) 'deposit time = ', tdpost
-         write (*,*) 'current deposit time = ', tdjpost
+! energy diagnostic
+         if (ntw > 0) then
+!           ts = t0 + dt*real(ntw)
+!           call displayw1(wt,ts,dt*real(ntw),itw,irc)
+            s(6) = (s(7) - s(6))/wt(1,4)
+            write (iuot,*) 'Energy Conservation = ', real(s(6))
+            s(1) = s(1)/real(itw)
+            write (iuot,*) 'Average Field Energy <WE> = ', real(s(1))
+            s(2) = s(2)/real(itw)
+            write (iuot,*) 'Average Electron Kinetic Energy <WKE> = ',  &
+     &real(s(2))
+            write (iuot,*) 'Ratio <WE>/<WKE>= ', real(s(1)/s(2))
+            s(3) = s(3)/real(itw)
+            write (iuot,*) 'Average Transverse EField Energy <WF> = ',  &
+     &real(s(3))
+            write (iuot,*) 'Ratio <WF>/<WKE>= ', real(s(3)/s(2))
+            s(4) = s(4)/real(itw)
+            write (iuot,*) 'Average Magnetic Field Energy <WB> = ',     &
+     &real(s(4))
+            write (iuot,*) 'Ratio <WB>/<WKE>= ', real(s(4)/s(2))
+         endif
+!
+         write (iuot,*)
+         write (iuot,*) 'initialization time = ', tinit
+         write (iuot,*) 'deposit time = ', tdpost
+         write (iuot,*) 'current deposit time = ', tdjpost
          tdpost = tdpost + tdjpost
-         write (*,*) 'total deposit time = ', tdpost
-         write (*,*) 'guard time = ', tguard
-         write (*,*) 'solver time = ', tfield
-         write (*,*) 'field move time = ', tfmov
-         write (*,*) 'fft and transpose time = ', tfft(1), tfft(2)
-         write (*,*) 'push time = ', tpush
-         write (*,*) 'particle move time = ', tmov
-         write (*,*) 'sort time = ', tsort
+         write (iuot,*) 'total deposit time = ', tdpost
+         write (iuot,*) 'guard time = ', tguard
+         write (iuot,*) 'solver time = ', tfield
+         write (iuot,*) 'field move time = ', tfmov
+         write (iuot,*) 'fft and transpose time = ', tfft(1), tfft(2)
+         write (iuot,*) 'push time = ', tpush
+         write (iuot,*) 'particle move time = ', tmov
+         write (iuot,*) 'sort time = ', tsort
          tfield = tfield + tguard + tfft(1) + tfmov
-         write (*,*) 'total solver time = ', tfield
+         write (iuot,*) 'total solver time = ', tfield
          tsort = tsort + tmov
          time = tdpost + tpush + tsort
-         write (*,*) 'total particle time = ', time
-         wt = time + tfield
-         tloop = tloop - wt
-         write (*,*) 'total and additional time = ', wt, tloop
-         write (*,*)
+         write (iuot,*) 'total particle time = ', time
+         write (iuot,*) 'total diagnostic time = ', tdiag
+         ws = time + tfield + tdiag
+         tloop = tloop - ws
+         write (iuot,*) 'total and additional time = ', ws, tloop
+         write (iuot,*)
 !
-         wt = 1.0e+09/(real(nloop)*real(np+npi))
-         write (*,*) 'Push Time (nsec) = ', tpush*wt
-         write (*,*) 'Deposit Time (nsec) = ', tdpost*wt
-         write (*,*) 'Sort Time (nsec) = ', tsort*wt
-         write (*,*) 'Total Particle Time (nsec) = ', time*wt
+         ws = 1.0e+09/(real(nloop)*real(np+npi))
+         write (iuot,*) 'Push Time (nsec) = ', tpush*ws
+         write (iuot,*) 'Deposit Time (nsec) = ', tdpost*ws
+         write (iuot,*) 'Sort Time (nsec) = ', tsort*ws
+         write (iuot,*) 'Total Particle Time (nsec) = ', time*ws
+!
+! reset parameters for final diagnostic metafile
+! electron density diagnostic
+         if (ntde > 0) then
+            nderec = nderec - 1
+         endif
+! potential diagnostic
+         if (ntp > 0) then
+            nprec = nprec - 1; ceng = affp
+         endif
+! longitudinal efield diagnostic
+         if (ntel > 0) then
+            nelrec = nelrec - 1; ceng = affp
+         endif
+! radiative vector potential diagnostic
+         if (ntar > 0) then
+            narrec = narrec - 1; ceng = affp
+         endif
+! vector potential diagnostic
+         if (nta > 0) then
+            narec = narec - 1; ceng = affp
+         endif
+! transverse efield diagnostic
+         if (ntet > 0) then
+            netrec = netrec - 1; ceng = affp
+         endif
+! magnetic field diagnostic
+         if (ntb > 0) then
+            nbrec = nbrec - 1; ceng = affp
+         endif
+! ion diagnostics
+         if (movion==1) then
+! ion density diagnostic
+            if (ntdi > 0) then
+               ndirec = ndirec - 1
+            endif
+! ion current diagnostic
+            if (ntdi > 0) then
+               njirec = njirec - 1
+            endif
+         endif
+! write final diagnostic metafile
+         call writnml2(iudm)
+         write (iuot,*) ' * * * q.e.d. * * *'
+         close(unit=iudm)
+         close(unit=iuot)
       endif
 !
       call PPEXIT()

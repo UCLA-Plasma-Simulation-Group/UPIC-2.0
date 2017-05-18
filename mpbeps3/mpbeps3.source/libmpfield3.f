@@ -30,6 +30,7 @@
 ! MPPGRADF32 calculates the gradient in fourier space
 ! MPPCURLF32 calculates the curl in fourier space
 ! MPPAVPOT332 calculates 3d vector potential from magnetic field
+! MCUAVE33 averages current in fourier space for 3d code
 ! MPPAVRPOT332 solves 3d poisson's equation for the radiative part of	
 !              the vector potential
 ! MPPAPOTP32 solves 3d poisson's equation for vector potential
@@ -47,7 +48,7 @@
 !              unpacked array and stores them into a packed array
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 10, 2017
+! update: april 26, 2017
 !-----------------------------------------------------------------------
       subroutine MPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz,  &
      &kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
@@ -420,7 +421,7 @@
 ! nx/ny/nz = system length in x/y/z direction
 ! kstrt = starting data block number
 ! nvpy/nvpz = number of procs in y/z
-! nzv = first dimension of field arrays, must be >= nz
+! nzv = second dimension of field arrays, must be >= nz
 ! kxyp/kyzp = number of complex grids in each field partition in
 ! x/y direction
       implicit none
@@ -4613,6 +4614,38 @@
   110       continue
          endif
       endif
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine MCUAVE33(cuave,cunew,cuold,nz,kxyp,kyzp,nzv)
+! this subroutine averages current in fourier space for 2-1/2d code
+! input: all except cuave, output: cuave
+! cunew(i,l,j,k),cuold(i,l,j,k) = complex current densities to be
+! averaged
+! cuave(i,l,j,k) = average complex current density
+! for component i, all for fourier mode (j-1,k-1,l-1)
+! nz = system length in z direction
+! kxyp/kyzp = number of complex grids in each field partition in
+! x/y direction
+! nzv = second dimension of field arrays, must be >= nz
+      implicit none
+      integer nz, kxyp, kyzp, nzv
+      complex cuave, cunew, cuold
+      dimension cuave(3,nzv,kxyp,kyzp), cuold(3,nzv,kxyp,kyzp)
+      dimension cunew(3,nzv,kxyp,kyzp)
+! local data
+      integer j, k, l
+!$OMP PARALLEL DO PRIVATE(j,k,l)
+      do 30 k = 1, kyzp
+      do 20 j = 1, kxyp
+      do 10 l = 1, nz
+      cuave(1,l,j,k) = 0.5*(cunew(1,l,j,k) + cuold(1,l,j,k))
+      cuave(2,l,j,k) = 0.5*(cunew(2,l,j,k) + cuold(2,l,j,k))
+      cuave(3,l,j,k) = 0.5*(cunew(3,l,j,k) + cuold(3,l,j,k))
+   10 continue
+   20 continue
+   30 continue
+!$OMP END PARALLEL DO
       return
       end
 !-----------------------------------------------------------------------

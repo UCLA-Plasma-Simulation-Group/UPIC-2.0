@@ -239,6 +239,15 @@
       end interface
 !
       interface
+         subroutine MCUAVE33(cuave,cunew,cuold,nz,kxyp,kyzp,nzv)
+         implicit none
+         integer, intent(in) :: nz, kxyp, kyzp, nzv
+         complex, dimension(3,nzv,kxyp,kyzp), intent(in) :: cunew, cuold
+         complex, dimension(3,nzv,kxyp,kyzp), intent(inout) :: cuave
+         end subroutine
+      end interface
+!
+      interface
          subroutine MPPAVRPOT332(axyz,bxyz,ffc,affp,ci,nx,ny,nz,kstrt,  &
      &nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
          implicit none

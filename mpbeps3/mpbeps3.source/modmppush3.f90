@@ -20,13 +20,25 @@
 ! mprpushf3 push relativistic particles and determine which particles
 !           are leaving tile
 !           calls PPGRPPUSHF32L
+! mppush3zf push particles in 3d with fixed velocities
+!           calls PPGPPUSH32ZF
+! mppushf3zf push particles in 3d with fixed velocities and determines
+!            which particles are leaving tile
+!            calls PPGPPUSHF32ZF
+! mprpush3zf push relativistic particles in 3d with fixed momenta
+!            calls PPGRPPUSH32ZF
+! mprpushf3zf push relativistic particles in 3d with fixed momenta and 
+!             determines which particles are leaving tile
+!             calls PPGRPPUSHF32ZF
 ! mppost3 deposits charge density
 !         calls PPGPPOST32L
-! wmppush2 generic procedure to push particles
-!          calls mprpushf2, mppushf2, mprpush2, or mppush2
+! wmppush3 generic procedure to push particles
+!          calls mprpushf3, mppushf3, mprpush3, or mppush3
+! wmppush3zf generic procedure to push particles with fixed velocity
+!            calls mppush3zf, mppushf3zf, mprpush3zf, or mprpushf3zf
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 28, 2017
+! update: may 16, 2017
 !
       use libmppush3_h
       implicit none
@@ -261,7 +273,123 @@
       tpush = tpush + real(dtime)
       end subroutine
 !
-
+!-----------------------------------------------------------------------
+      subroutine mppush3zf(ppart,kpic,dt,ek,tpush,nx,ny,nz,ipbc)
+! push particles in 3d with fixed velocities
+      implicit none
+      integer, intent(in) :: nx, ny, nz, ipbc
+      real, intent(in) :: dt
+      real, intent(inout) :: ek, tpush
+      real, dimension(:,:,:), intent(inout) :: ppart
+      integer, dimension(:), intent(in) :: kpic
+! local data
+      integer :: idimp, nppmx, mxyzp1
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      idimp = size(ppart,1); nppmx = size(ppart,2)
+      mxyzp1 = size(kpic,1)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call PPGPPUSH32ZF(ppart,kpic,dt,ek,idimp,nppmx,nx,ny,nz,mxyzp1,   &
+     &ipbc)
+! record time
+      call dtimer(dtime,itime,1)
+      tpush = tpush + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mppushf3zf(ppart,kpic,ncl,ihole,noff,nyzp,dt,ek,tpush, &
+     &nx,ny,nz,mx,my,mz,mx1,myp1,irc)
+! push particles in 3d with fixed velocities
+! determine which particles are leaving tile
+      implicit none
+      integer, intent(in) :: nx, ny, nz, mx, my, mz, mx1, myp1
+      integer, intent(inout) :: irc
+      real, intent(in) :: dt
+      real, intent(inout) :: ek, tpush
+      real, dimension(:,:,:), intent(inout) :: ppart
+      integer, dimension(:), intent(in) :: kpic
+      integer, dimension(:,:), intent(inout) :: ncl
+      integer, dimension(:,:,:), intent(inout) :: ihole
+      integer, dimension(:), intent(in) :: noff, nyzp
+! local data
+      integer :: idimp, nppmx, mxyzp1, ntmax, idds
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      idimp = size(ppart,1); nppmx = size(ppart,2)
+      mxyzp1 = size(kpic,1); ntmax = size(ihole,2) - 1
+      idds = size(noff,1)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+      call PPGPPUSHF32ZF(ppart,kpic,ncl,ihole,noff,nyzp,dt,ek,idimp,    &
+     &nppmx,nx,ny,nz,mx,my,mz,mx1,myp1,mxyzp1,ntmax,idds,irc)
+! record time
+      call dtimer(dtime,itime,1)
+      tpush = tpush + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mprpush3zf(ppart,kpic,dt,ci,ek,tpush,nx,ny,nz,ipbc)
+! push relativistic particles in 3d with fixed momenta
+      implicit none
+      integer, intent(in) :: nx, ny, nz, ipbc
+      real, intent(in) :: dt, ci
+      real, intent(inout) :: ek, tpush
+      real, dimension(:,:,:), intent(inout) :: ppart
+      integer, dimension(:), intent(in) :: kpic
+! local data
+      integer :: idimp, nppmx, mxyzp1
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      idimp = size(ppart,1); nppmx = size(ppart,2)
+      mxyzp1 = size(kpic,1)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call PPGRPPUSH32ZF(ppart,kpic,dt,ci,ek,idimp,nppmx,nx,ny,nz,mxyzp1&
+     &,ipbc)
+! record time
+      call dtimer(dtime,itime,1)
+      tpush = tpush + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mprpushf3zf(ppart,kpic,ncl,ihole,noff,nyzp,dt,ci,ek,   &
+     &tpush,nx,ny,nz,mx,my,mz,mx1,myp1,irc)
+! push relativistic particles in 3d with fixed momenta
+! determine which particles are leaving tile
+      implicit none
+      integer, intent(in) :: nx, ny, nz, mx, my, mz, mx1, myp1
+      integer, intent(inout) :: irc
+      real, intent(in) :: dt, ci
+      real, intent(inout) :: ek, tpush
+      real, dimension(:,:,:), intent(inout) :: ppart
+      integer, dimension(:), intent(in) :: kpic
+      integer, dimension(:,:), intent(inout) :: ncl
+      integer, dimension(:,:,:), intent(inout) :: ihole
+      integer, dimension(:), intent(in) :: noff, nyzp
+! local data
+      integer :: idimp, nppmx, mxyzp1, ntmax, idds
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      idimp = size(ppart,1); nppmx = size(ppart,2)
+      mxyzp1 = size(kpic,1); ntmax = size(ihole,2) - 1
+      idds = size(noff,1)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call PPGRPPUSHF32ZF(ppart,kpic,ncl,ihole,noff,nyzp,dt,ci,ek,idimp,&
+     &nppmx,nx,ny,nz,mx,my,mz,mx1,myp1,mxyzp1,ntmax,idds,irc)
+! record time
+      call dtimer(dtime,itime,1)
+      tpush = tpush + real(dtime)
+      end subroutine
+!
 !-----------------------------------------------------------------------
       subroutine mppost3(ppart,q,kpic,noff,qm,tdpost,mx,my,mz,mx1,myp1)
 ! deposit charge
@@ -331,6 +459,47 @@
          else
             call mppush3(ppart,fxyz,kpic,noff,nyzp,qbm,dt,ek,tpush,nx,ny&
      &,nz,mx,my,mz,mx1,myp1,ipbc)
+         endif
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine wmppush3zf(ppart,kpic,ncl,ihole,noff,nyzp,dt,ci,ek,    &
+     &tpush,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,relativity,plist,irc)
+! generic procedure to push particles with fixed velocity
+! plist = (true,false) = list of particles leaving tiles found in push
+      implicit none
+      integer, intent(in) :: nx, ny, nz, mx, my, mz, mx1, myp1, ipbc
+      integer, intent(in) :: relativity
+      integer, intent(inout) :: irc
+      logical, intent(in) :: plist
+      real, intent(in) :: dt, ci
+      real, intent(inout) :: ek, tpush
+      real, dimension(:,:,:), intent(inout) :: ppart
+      integer, dimension(:), intent(in) :: kpic
+      integer, dimension(:,:), intent(inout) :: ncl
+      integer, dimension(:,:,:), intent(inout) :: ihole
+      integer, dimension(:), intent(in) :: noff, nyzp
+! also calculate list of particles leaving tile
+      if (plist) then
+! updates ppart, ek, ncl, ihole, irc
+         if (relativity==1) then
+            call mprpushf3zf(ppart,kpic,ncl,ihole,noff,nyzp,dt,ci,ek,   &
+     &tpush,nx,ny,nz,mx,my,mz,mx1,myp1,irc)
+         else
+            call mppushf3zf(ppart,kpic,ncl,ihole,noff,nyzp,dt,ek,tpush, &
+     &nx,ny,nz,mx,my,mz,mx1,myp1,irc)
+         endif
+         if (irc /= 0) then
+            write (*,*) 'info:wmppush3zf overflow: irc=', irc
+         endif
+! do not also calculate list of particles leaving tile
+      else
+! updates ppart and ek
+         if (relativity==1) then
+            call mprpush3zf(ppart,kpic,dt,ci,ek,tpush,nx,ny,nz,ipbc)
+         else
+            call mppush3zf(ppart,kpic,dt,ek,tpush,nx,ny,nz,ipbc)
          endif
       endif
       end subroutine

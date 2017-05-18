@@ -33,6 +33,7 @@
 ! MPPGRADF2 calculates the gradient in fourier space
 ! MPPCURLF2 calculates the curl in fourier space
 ! MPPAVPOT23 calculates 2-1/2d vector potential from magnetic field
+! MCUAVE23 averages current in fourier space for 2-1/2d code
 ! MPPAVRPOT23 solves 2-1/2d poisson's equation for the radiative part of
 !             the vector potential
 ! MPPAPOTP23 solves 2-1/2d poisson's equation for vector potential
@@ -50,7 +51,7 @@
 !             unpacked array and stores them into a packed array
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 12, 2017
+! update: april 26, 2017
 !-----------------------------------------------------------------------
       subroutine MPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,&
      &kxp,nyhd)
@@ -194,7 +195,7 @@
 !-----------------------------------------------------------------------
       subroutine MPPOIS23(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,&
      &kxp,nyhd)
-! this subroutine solves 2d poisson's equation in fourier space for
+! this subroutine solves 2-1/2d poisson's equation in fourier space for
 ! force/charge (or convolution of electric field over particle shape)
 ! with periodic boundary conditions.  Zeros out z component.
 ! for distributed data.
@@ -669,7 +670,7 @@
       if (kstrt.gt.nxh) go to 40
 ! calculate the electromagnetic fields
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,afdt,zt1,zt2,zt3,zt4,zt5,zt6,
+!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,afdt,zt1,zt2,zt3,zt4,zt5,zt6,  
 !$OMP& zt7,zt8,zt9,ws,wp)
 !$OMP& REDUCTION(+:sum1,sum2)
       do 20 j = 1, kxps
@@ -1172,7 +1173,7 @@
 ! on output:
 ! dcu(i,k,j) = i-th component of transverse part of complex derivative
 ! of current for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
-! amu(1,k,j) = xx component of complex momentum flux
+! amu(1,k,j) = xx-yy component of complex momentum flux
 ! amu(2,k,j) = xy component of complex momentum flux
 ! amu(3,k,j) = zx component of complex momentum flux
 ! amu(4,k,j) = zy component of complex momentum flux
@@ -1294,7 +1295,7 @@
 ! on output:
 ! dcu(i,k,j) = i-th component of transverse part of complex derivative
 ! of current for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
-! amu(1,k,j) = xx component of complex momentum flux
+! amu(1,k,j) = xx-yy component of complex momentum flux
 ! amu(2,k,j) = xy component of complex momentum flux
 ! amu(3,k,j) = zx component of complex momentum flux
 ! amu(4,k,j) = zy component of complex momentum flux
@@ -1644,7 +1645,7 @@
 ! s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)/2), except for
 ! pot(kx=pi) = pot(ky=pi) = 0, and pot(kx=0,ky=0) = 0.
 ! q(k,j) = complex charge density for fourier mode (jj-1,k-1)
-! pot(k,j) = x component of complex potential
+! pot(k,j) = complex potential
 ! for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
 ! kxp = number of data values per block
 ! kstrt = starting data block number
@@ -2323,6 +2324,33 @@
       return
       end
 !-----------------------------------------------------------------------
+      subroutine MCUAVE23(cuave,cunew,cuold,ny,kxp,nyv)
+! this subroutine averages current in fourier space for 2-1/2d code
+! input: all except cuave, output: cuave
+! cunew(i,k,j),cuold(i,k,j) = complex current densities to be averaged
+! cuave(i,k,j) = average complex current density
+! for component i, all for fourier mode (j-1,k-1)
+! ny = system length in y direction
+! kxp = number of data values per block
+! nyv = first dimension of field arrays, must be >= ny
+      implicit none
+      integer ny, kxp, nyv
+      complex cuave, cunew, cuold
+      dimension cuave(3,nyv,kxp), cuold(3,nyv,kxp), cunew(3,nyv,kxp)
+! local data
+      integer j, k
+!$OMP PARALLEL DO PRIVATE(j,k)
+      do 20 j = 1, kxp
+      do 10 k = 1, ny
+      cuave(1,k,j) = 0.5*(cunew(1,k,j) + cuold(1,k,j))
+      cuave(2,k,j) = 0.5*(cunew(2,k,j) + cuold(2,k,j))
+      cuave(3,k,j) = 0.5*(cunew(3,k,j) + cuold(3,k,j))
+   10 continue
+   20 continue
+!$OMP END PARALLEL DO
+      return
+      end
+!-----------------------------------------------------------------------
       subroutine MPPAVRPOT23(axy,bxy,ffc,affp,ci,nx,ny,kstrt,nyv,kxp,   &
      &nyhd)
 ! this subroutine solves 2-1/2d poisson's equation in fourier space for
@@ -2716,7 +2744,6 @@
 ! smoothing is calculated using the equation:
 ! qs(kx,ky) = q(kx,ky)*s(kx,ky)
 ! where kx = 2pi*j/nx, ky = 2pi*k/ny, and j,k = fourier mode numbers,
-! g(kx,ky) = (affp/(kx**2+ky**2))*s(kx,ky),
 ! s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)/2), except for
 ! qs(kx=pi) = qs(ky=pi) = 0, and qs(kx=0,ky=0) = 0.
 ! q(k,j) = complex charge density
@@ -2794,7 +2821,6 @@
 ! cusy(kx,ky) = cuy(kx,ky)*s(kx,ky)
 ! cusz(kx,ky) = cuz(kx,ky)*s(kx,ky)
 ! where kx = 2pi*j/nx, ky = 2pi*k/ny, and j,k = fourier mode numbers,
-! g(kx,ky) = (affp/(kx**2+ky**2))*s(kx,ky),
 ! s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)/2), except for
 ! cusx(kx=pi) = cusy(kx=pi) = cusz(kx=pi) = 0,
 ! cusx(ky=pi) = cusy(ky=pi) = cusz(ky=pi) = 0,

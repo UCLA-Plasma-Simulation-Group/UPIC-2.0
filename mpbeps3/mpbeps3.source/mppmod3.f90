@@ -16,13 +16,27 @@
 !          calls PPFYMOVE32 and PPFZMOVE32
 ! mpfnmove3 moves vector grids into appropriate spatial regions in y/z
 !           calls PPFYMOVE32 and PPFZMOVE32
+! ipmove3 moves particles to appropriate node
+!         calls PPMOVE32
 ! mpmove3 moves particles into appropriate spatial regions in y and z
 !         calls PPPMOVE32
 ! mpimax finds parallel maximum for each element of an integer vector
 !        calls PPIMAX
+! mpwrite3 collects a subset of a distributed real 3d scalar array and
+!          writes it to a direct access binary file
+!          calls PPWRITE32
+! mpread3 reads a real 3d scalar array from a direct access binary file
+!         and distributes it
+!         calls PPREAD32
+! mpvwrite3 collects a subset of a distributed real 3d scalar array and
+!           writes it to a direct access binary file
+!           calls PPVWRITE32
+! mpvread3 reads a real 3d vector array from a direct access binary file
+!          and distributes it
+!          calls PPVREAD32
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 16, 2017
+! update: may 10, 2017
 !
       use mpplib3
       implicit none
@@ -30,18 +44,36 @@
 ! scr/scs = guard cell buffers received from nearby processors
       real, dimension(:,:), allocatable  :: scr
       real, dimension(:,:,:), allocatable  :: scs
-      integer :: szscr = 0, szscs = 0
+      integer :: szscr = 0, szscs = -1
 ! gbuf/hbuf = scratch memorys for field manager
       real, dimension(:,:), allocatable :: gbuf, hbuf
-      integer :: szghbuf = 0
+      integer :: szghbuf = -1
 ! ig = scratch buffer for integer reduction
       integer, dimension(:), allocatable :: ig
-      integer :: szig = 0
+      integer :: szig = -1
+! fg = scratch buffer for scalar file output
+      real, dimension(:,:,:), allocatable :: fg
+      integer :: szfg = -1
+! fvg = scratch buffer for vector file output
+      real, dimension(:,:,:,:), allocatable :: fvg
+      integer :: szfvg = -1
+! buffer data for particle managers
+      real, dimension(:,:), allocatable :: sbufl, sbufr, rbufl, rbufr
+      integer :: szbuf = -1
       save
 !
-      private :: gbuf, hbuf, scr, scs, szscr, szghbuf
+!     private :: lstat, nproc, lgrp, mreal, mint, mcplx, mdouble, lworld
+      private :: gbuf, hbuf, scr, scs, fg, fvg
+      private :: szscr, szghbuf, szfg, szfvg, szbuf
 !
       contains
+!
+      subroutine mppdelszbuf()
+! allocate szbuf buffers used by ipmove3
+      implicit none
+      deallocate(sbufl,sbufr,rbufl,rbufr)
+      szbuf = 0
+      end subroutine
 !
 !-----------------------------------------------------------------------
       subroutine mpcguard3(f,nyzp,tguard,kstrt,nvpy,nvpz)
@@ -60,7 +92,7 @@
       idds = size(nyzp,1)
 ! check if required size of buffer has increased
       if (szscs < nxv*nzpmx*2) then
-         if (szscs /= 0) deallocate(scs)
+         if (szscs > 0) deallocate(scs)
 ! allocate new buffer
          allocate(scs(nxv,nzpmx,2))
          szscs = nxv*nzpmx*2
@@ -91,7 +123,7 @@
       idds = size(nyzp,1)
 ! check if required size of buffer has increased
       if (szscs < nxv*nzpmx*2) then
-         if (szscs /= 0) deallocate(scs)
+         if (szscs > 0) deallocate(scs)
 ! allocate new buffer
          allocate(scs(nxv,nzpmx,2))
          szscs = nxv*nzpmx*2
@@ -122,13 +154,13 @@
       idds = size(nyzp,1)
 ! check if required size of buffers has increased
       if (szscr < nxv*nypmx) then
-         if (szscr /= 0) deallocate(scr)
+         if (szscr > 0) deallocate(scr)
 ! allocate new buffer
          allocate(scr(nxv,nypmx))
          szscr = nxv*nypmx
       endif
       if (szscs < nxv*nzpmx*2) then
-         if (szscs /= 0) deallocate(scs)
+         if (szscs > 0) deallocate(scs)
 ! allocate new buffer
          allocate(scs(nxv,nzpmx,2))
          szscs = nxv*nzpmx*2
@@ -161,13 +193,13 @@
       idds = size(nyzp,1)
 ! check if required size of buffers has increased
       if (szscr < ndim*nxv*nypmx) then
-         if (szscr /= 0) deallocate(scr)
+         if (szscr > 0) deallocate(scr)
 ! allocate new buffer
          allocate(scr(ndim*nxv,nypmx))
          szscr = ndim*nxv*nypmx
       endif
       if (szscs < ndim*nxv*nzpmx*2) then
-         if (szscs /= 0) deallocate(scs)
+         if (szscs > 0) deallocate(scs)
 ! allocate new buffer
          allocate(scs(ndim*nxv,nzpmx,2))
          szscs = ndim*nxv*nzpmx*2
@@ -205,7 +237,7 @@
       idds = size(noff,1)
 ! check if required size of buffer has increased
       if (szghbuf < nxv*nypmx*nzpmx) then
-         if (szghbuf /= 0) deallocate(gbuf,hbuf)
+         if (szghbuf > 0) deallocate(gbuf,hbuf)
 ! allocate new buffer
          allocate(gbuf(nxv,nypmx*nzpmx),hbuf(nxv,nypmx*nzpmx))
          szghbuf = nxv*nypmx*nzpmx
@@ -273,7 +305,7 @@
       idds = size(noff,1)
 ! check if required size of buffer has increased
       if (szghbuf < nxv*nypmx*nzpmx) then
-         if (szghbuf /= 0) deallocate(gbuf,hbuf)
+         if (szghbuf > 0) deallocate(gbuf,hbuf)
 ! allocate new buffer
          allocate(gbuf(nxv,nypmx*nzpmx),hbuf(nxv,nypmx*nzpmx))
          szghbuf = nxv*nypmx*nzpmx
@@ -308,6 +340,55 @@
          endif
          call PPEXIT()
          stop
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine ipmove3(part,edges,npp,iholep,ny,nz,tmov,kstrt,nvpy,   &
+     &nvpz,ierr)
+! particle manager: moves particles into appropriate spatial regions
+      implicit none
+      integer, intent(in) :: ny, nz, kstrt, nvpy, nvpz
+      real, intent(inout) :: tmov
+      integer, intent(inout) :: npp, ierr
+      real, dimension(:,:), intent(inout) :: part
+      real, dimension(:), intent(in) :: edges
+      integer, dimension(:,:), intent(inout) :: iholep
+! local data
+      integer :: idimp, npmax, idps, nbmax, ntmax
+      integer, dimension(7) :: info
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      idimp = size(part,1); npmax = size(part,2)
+      idps = size(edges,1); ntmax = size(iholep,1) - 1
+      nbmax = ntmax/2
+! check if size of buffers has changed
+      if (szbuf < idimp*nbmax) then
+         if (szbuf > 0) deallocate(sbufl,sbufr,rbufl,rbufr)
+! allocate buffers
+         allocate(sbufl(idimp,nbmax),sbufr(idimp,nbmax))
+         allocate(rbufl(idimp,nbmax),rbufr(idimp,nbmax))
+         szbuf = idimp*nbmax
+      endif
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call PPMOVE32(part,edges,npp,sbufr,sbufl,rbufr,rbufl,iholep,ny,nz,&
+     &kstrt,nvpy,nvpz,idimp,npmax,idps,nbmax,ntmax,info)
+      ierr = info(1)
+! record time
+      call dtimer(dtime,itime,1)
+      tmov = tmov + real(dtime)
+! check for errors
+      if (ierr /= 0) then
+         if (kstrt==1) then
+            if (ierr > 0) then
+               write (*,*) 'ipmove3 particle overflow error: ierr=',ierr
+            else if (ierr < 0) then
+               write (*,*) 'ipmove3 iholep overflow error: ierr=',ierr
+            endif
+         endif
       endif
       end subroutine
 !
@@ -356,7 +437,7 @@
       nxp = size(if,1)
 ! check if required size of buffer has increased
       if (szig < nxp) then
-         if (szig /= 0) deallocate(ig)
+         if (szig > 0) deallocate(ig)
 ! allocate new buffer
          allocate(ig(nxp))
          szig = nxp
@@ -368,6 +449,144 @@
 ! record time
       call dtimer(dtime,itime,1)
       tmov = tmov + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpwrite3(f,tdiag,nx,ny,nz,kyp,kzp,nvpy,iunit,nrec)
+! collects a subset of a distributed real 3d scalar array and writes it
+! to a direct access binary file, for uniform 2d partitions
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, iunit
+      integer, intent(inout) :: nrec
+      real, intent(inout) :: tdiag
+      real, dimension(:,:,:), intent(in) :: f
+! local data
+      integer :: nxv, nypmx, nzpmx
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      nxv = size(f,1); nypmx = size(f,2); nzpmx = size(f,3)
+! check if required size of buffer has increased
+      if (szfg < nxv*nypmx*nzpmx) then
+         if (szfg > 0) deallocate(fg)
+! allocate new buffer
+         allocate(fg(nxv,nypmx,nzpmx))
+         szfg = nxv*nypmx*nzpmx
+      endif
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call PPWRITE32(f,fg,nx,ny,nz,kyp,kzp,nvpy,nxv,nypmx,nzpmx,iunit,  &
+     &nrec)
+! record time
+      call dtimer(dtime,itime,1)
+      tdiag = tdiag + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpread3(f,tdiag,nx,ny,nz,kyp,kzp,nvpy,iunit,nrec,irc)
+! reads a real 3d scalar array from a direct access binary file and
+! distributes it, for uniform 2d partitions
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, iunit
+      integer, intent(inout) :: nrec, irc
+      real, intent(inout) :: tdiag
+      real, dimension(:,:,:), intent(inout) :: f
+! local data
+      integer :: nxv, nypmx, nzpmx
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      nxv = size(f,1); nypmx = size(f,2); nzpmx = size(f,3)
+! check if required size of buffer has increased
+      if (szfg < nxv*nypmx*nzpmx) then
+         if (szfg > 0) deallocate(fg)
+! allocate new buffer
+         allocate(fg(nxv,nypmx,nzpmx))
+         szfg = nxv*nypmx*nzpmx
+      endif
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure-
+      call PPREAD32(f,fg,nx,ny,nz,kyp,kzp,nvpy,nxv,nypmx,nzpmx,iunit,   &
+     &nrec,irc)
+! record time
+      call dtimer(dtime,itime,1)
+      tdiag = tdiag + real(dtime)
+! check for errors
+      if (irc /= 0) then
+         write (*,*) 'mpread3 file read error: irc=', irc
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpvwrite3(f,tdiag,nx,ny,nz,kyp,kzp,nvpy,iunit,nrec)
+! collects a subset of a distributed real 3d vector array and writes it
+! to a direct access binary file, for uniform 2d partitions
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, iunit
+      integer, intent(inout) :: nrec
+      real, intent(inout) :: tdiag
+      real, dimension(:,:,:,:), intent(in) :: f
+! local data
+      integer :: ndim, nxv, nypmx, nzpmx
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      ndim = size(f,1); nxv = size(f,2)
+      nypmx = size(f,3); nzpmx = size(f,4)
+! check if required size of buffer has increased
+      if (szfvg < ndim*nxv*nypmx*nzpmx) then
+         if (szfvg > 0) deallocate(fvg)
+! allocate new buffer
+         allocate(fvg(ndim,nxv,nypmx,nzpmx))
+         szfvg = ndim*nxv*nypmx*nzpmx
+      endif
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call PPVWRITE32(f,fvg,nx,ny,nz,kyp,kzp,nvpy,ndim,nxv,nypmx,nzpmx, &
+     &iunit,nrec)
+! record time
+      call dtimer(dtime,itime,1)
+      tdiag = tdiag + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpvread3(f,tdiag,nx,ny,nz,kyp,kzp,nvpy,iunit,nrec,irc)
+! reads a real 3d vector array from a direct access binary file and
+! distributes it, for uniform 2d partitions
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, iunit
+      integer, intent(inout) :: nrec, irc
+      real, intent(inout) :: tdiag
+      real, dimension(:,:,:,:), intent(inout) :: f
+! local data
+      integer :: ndim, nxv, nypmx, nzpmx
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      ndim = size(f,1); nxv = size(f,2)
+      nypmx = size(f,3); nzpmx = size(f,4)
+! check if required size of buffer has increased
+      if (szfvg < ndim*nxv*nypmx*nzpmx) then
+         if (szfvg > 0) deallocate(fvg)
+! allocate new buffer
+         allocate(fvg(ndim,nxv,nypmx,nzpmx))
+         szfvg = ndim*nxv*nypmx*nzpmx
+      endif
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call PPVREAD32(f,fvg,nx,ny,nz,kyp,kzp,nvpy,ndim,nxv,nypmx,nzpmx,  &
+     &iunit,nrec,irc)
+! record time
+      call dtimer(dtime,itime,1)
+      tdiag = tdiag + real(dtime)
+! check for errors
+      if (irc /= 0) then
+         write (*,*) 'mpvread3 file read error: irc=', irc
+      endif
       end subroutine
 !
       end module

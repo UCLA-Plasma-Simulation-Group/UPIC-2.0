@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 ! Basic parallel PIC library for MPI communications with OpenMP
-! pplib3.f90 contains basic communications procedures for 1d partitions:
+! mpplib3.f90 contains basic communications procedures for 2d partitions:
 ! PPINIT2 initializes parallel processing for Fortran90, returns
 !         number of processors and processor id.
 ! PPEXIT terminates parallel processing.
@@ -39,11 +39,22 @@
 ! PPNTPOS3B performs a transpose of an n component complex vector array,
 !           distributed in x and z, to an n component complex vector
 !           array, distributed in x and y.
+! PPMOVE32 moves particles in y/z into appropriate spatial regions with
+!          periodic boundary conditions.  Assumes ihole list has been
+!          found.
 ! PPPMOVE32 moves particles in y/z into appropriate spatial regions for
 !           tiled distributed data with 2D spatial decomposition
+! PPWRITE32 collects distributed real 3d scalar data f and writes to a
+!           direct access binary file with 2D spatial decomposition
+! PPREAD32 reads real 3d scalar data f from a direct access binary file
+!          and distributes it with 2D spatial decomposition
+! PPVWRITE32 collects distributed real 3d vector data f and writes to a
+!            direct access binary file with 2D spatial decomposition
+! PPVREAD32 reads real 3d vector data f from a direct access binary file
+!           and distributes it with 2D spatial decomposition
 ! written by viktor k. decyk, ucla
 ! copyright 1995, regents of the university of california
-! update: february 14, 2017
+! update: may 10, 2017
       module mpplib3
       use mpi
       implicit none
@@ -70,7 +81,9 @@
       public :: PPBICAST, PPBDCAST
       public :: PPISHFTR2, PPNCGUARD32L, PPNAGUARD32L, PPNACGUARD32L
       public :: PPFYMOVE32, PPFZMOVE32
-      public :: PPTPOS3A, PPTPOS3B, PPNTPOS3A, PPNTPOS3B, PPPMOVE32
+      public :: PPTPOS3A, PPTPOS3B, PPNTPOS3A, PPNTPOS3B
+      public :: PPMOVE32, PPPMOVE32
+      public :: PPWRITE32, PPREAD32, PPVWRITE32, PPVREAD32
 !
       contains
 !
@@ -226,7 +239,7 @@
 ! local data
       integer :: j, ierr
 ! return if only one processor
-      if (nproc.eq.1) return
+      if (nproc==1) return
 ! perform sum
       call MPI_ALLREDUCE(f,g,nxp,mreal,msum,lgrp,ierr)
 ! copy output from scratch array
@@ -252,7 +265,7 @@
 ! local data
       integer :: j, ierr
 ! return if only one processor
-      if (nproc.eq.1) return
+      if (nproc==1) return
 ! perform sum
       call MPI_ALLREDUCE(f,g,nxp,mdouble,msum,lgrp,ierr)
 ! copy output from scratch array
@@ -278,7 +291,7 @@
 ! local data
       integer j, ierr
 ! return if only one processor
-      if (nproc.eq.1) return
+      if (nproc==1) return
 ! find maximum
       call MPI_ALLREDUCE(f,g,nxp,mreal,mmax,lgrp,ierr)
 ! copy output from scratch array
@@ -304,7 +317,7 @@
 ! local data
       integer :: j, ierr
 ! return if only one processor
-      if (nproc.eq.1) return
+      if (nproc==1) return
 ! find maximum
       if (nproc > 1) then
          call MPI_ALLREDUCE(if,ig,nxp,mint,mmax,lgrp,ierr)
@@ -332,7 +345,7 @@
 ! local data
       integer j, ierr
 ! return if only one processor
-      if (nproc.eq.1) return
+      if (nproc==1) return
 ! find maximum
       call MPI_ALLREDUCE(f,g,nxp,mdouble,mmax,lgrp,ierr)
 ! copy output from scratch array
@@ -358,7 +371,7 @@
 ! local data
       integer :: j, ierr
 ! return if only one processor
-      if (nproc.eq.1) return
+      if (nproc==1) return
 ! performs a parallel prefixm sum
        call MPI_SCAN(f,g,nxp,mdouble,msum,lgrp,ierr)
 ! copy output from scratch array
@@ -381,7 +394,7 @@
 ! local data
       integer :: ierr
 ! return if only one processor
-      if (nproc.eq.1) return
+      if (nproc==1) return
 ! broadcast integer
       call MPI_BCAST(if,nxp,mint,0,lgrp,ierr)
       end subroutine
@@ -400,7 +413,7 @@
 ! local data
       integer :: ierr
 ! return if only one processor
-      if (nproc.eq.1) return
+      if (nproc==1) return
 ! broadcast integer
       call MPI_BCAST(f,nxp,mdouble,0,lgrp,ierr)
       end subroutine
@@ -428,7 +441,7 @@
 ! find number of processors
       call MPI_COMM_SIZE(lgrp,nvp,ierr)
 ! return if only one processor
-      if (nvp.eq.1) return
+      if (nvp==1) return
 ! determine neighbors
       kb = idproc/nvpy
       jb = idproc - nvpy*kb
@@ -1105,7 +1118,7 @@
 ! should not happen, other processors do not know about this error
          if (npr /= 0) then
             ierr = npr
-            write (2,*) kstrt, 'local field overflow error, ierr=', ierr
+            write (*,*) kstrt, 'local field overflow error, ierr=', ierr
             return
          endif
 ! continue iteration
@@ -1120,7 +1133,7 @@
       if (ibflg(1) /= 0) then
          ierr = ibflg(1)
          if (kstrt==1) then
-            write (2,*) 'global field overflow error, ierr = ', ierr
+            write (*,*) 'global field overflow error, ierr = ', ierr
          endif
          return
       endif
@@ -1133,7 +1146,7 @@
          if (iter < itermax) go to 10
          ierr = -((iter-2)/2)
          if (kstrt==1) then
-            write (2,*) 'Iteration overflow, iter = ', ierr
+            write (*,*) 'Iteration overflow, iter = ', ierr
          endif
       endif
       mter = nps
@@ -1438,7 +1451,7 @@
 ! should not happen, other processors do not know about this error
          if (npr /= 0) then
             ierr = npr
-            write (2,*) kstrt, 'local field overflow error, ierr=', ierr
+            write (*,*) kstrt, 'local field overflow error, ierr=', ierr
             return
          endif
 ! continue iteration
@@ -1453,7 +1466,7 @@
       if (ibflg(1) /= 0) then
          ierr = ibflg(1)
          if (kstrt==1) then
-            write (2,*) 'global field overflow error, ierr = ', ierr
+            write (*,*) 'global field overflow error, ierr = ', ierr
          endif
          return
       endif
@@ -1466,7 +1479,7 @@
          if (iter < itermax) go to 10
          ierr = -((iter-2)/2)
          if (kstrt==1) then
-            write (2,*) 'Iteration overflow, iter = ', ierr
+            write (*,*) 'Iteration overflow, iter = ', ierr
          endif
       endif
       mter = nps
@@ -1939,6 +1952,522 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
+      subroutine PPMOVE32(part,edges,npp,sbufr,sbufl,rbufr,rbufl,ihole, &
+     &ny,nz,kstrt,nvpy,nvpz,idimp,npmax,idps,nbmax,ntmax,info)
+! this subroutine moves particles into appropriate spatial regions
+! ihole array is calculated in particle push procedure
+! with periodic boundary conditions and 2D spatial decomposition
+! output: part, ihole, npp, sbufr, sbufl, rbufr, rbufl, info
+! part(1,n) = position x of particle n in partition
+! part(2,n) = position y of particle n in partition
+! part(3,n) = position z of particle n in partition
+! part(4,n) = velocity vx of particle n in partition
+! part(5,n) = velocity vy of particle n in partition
+! part(6,n) = velocity vz of particle n in partition m
+! edges(1:2) = lower/upper boundary in y of particle partition
+! edges(3:4) = back/front boundary in z of particle partition
+! npp = number of particles in partition
+! sbufl = buffer for particles being sent to back processor
+! sbufr = buffer for particles being sent to front processor
+! rbufl = buffer for particles being received from back processor
+! rbufr = buffer for particles being received from front processor
+! ihole = location of holes left in particle arrays
+! ny/nz = system length in y/z direction
+! kstrt = starting data block number
+! nvpy/nvpz = number of real or virtual processors in y/z
+! idimp = size of phase space = 6
+! npmax = maximum number of particles in each partition.
+! idps = number of particle partition boundaries = 4
+! nbmax =  size of buffers for passing particles between processors
+! ntmax =  size of hole array for particles leaving processors
+! info = status information
+! info(1) = ierr = (0,N) = (no,yes) error condition exists
+! info(2) = maximum number of particles per processor
+! info(3) = minimum number of particles per processor
+! info(4:5) = maximum number of buffer overflows in y/z
+! info(6:7) = maximum number of particle passes required in y/z
+      implicit none
+      integer, intent(in) :: ny, nz, kstrt, nvpy, nvpz, idimp, npmax
+      integer, intent(in) :: idps, nbmax, ntmax
+      integer, intent(inout) :: npp
+      real, dimension(idimp,npmax), intent(inout) :: part
+      real, dimension(idps), intent(in) :: edges
+      real, dimension(idimp,nbmax), intent(inout) :: sbufr, sbufl
+      real, dimension(idimp,nbmax), intent(inout) :: rbufr, rbufl
+      integer, dimension(ntmax+1,2) , intent(inout):: ihole
+      integer, dimension(7), intent(inout) :: info
+! lgrp = current communicator
+! mint = default datatype for integers
+! mreal = default datatype for reals
+! local data
+! iy/iz = partitioned co-ordinates
+      integer, parameter :: iy = 2, iz = 3
+      integer :: i, j, n, js, ks, ic, nvp, iter, nps, kl, kr, j1, j2
+      integer :: ih, jh, nh, j3, joff, jin, nbsize, nter, mter, itermax
+      integer :: itg, ierr
+      real :: an, xt
+      integer, dimension(4) :: msid
+      integer, dimension(lstat) :: istatus
+      integer, dimension(2) :: kb, jsl, jsr, jss
+      integer, dimension(5) :: ibflg, iwork
+! js/ks = processor co-ordinates in y/z=> idproc = js + nvpy*ks
+      ks = (kstrt - 1)/nvpy
+      js = kstrt - nvpy*ks - 1
+      nbsize = idimp*nbmax
+      info(1) = 0
+      info(6) = 0
+      info(7) = 0
+      itermax = 2000
+! buffer outgoing particles, first in y then in z direction
+         do n = 1, 2
+         if (n==1) then
+            ic = iy
+            nvp = nvpy
+            an = real(ny)
+            jh = ihole(1,n+1)
+            ibflg(5) = 0
+         else if (n==2) then
+            ic = iz
+            nvp = nvpz
+            an = real(nz)
+         endif
+         iter = 2
+         nter = 0
+         ih = ihole(1,n)
+         joff = 1
+         jin = 1
+! ih = number of particles extracted from holes
+! joff = next hole location for extraction
+! jss(1) = number of holes available to be filled
+! jin = next hole location to be filled
+! start loop
+   10    mter = 0
+         nps = 0
+         kb(1) = js
+         kb(2) = ks
+! buffer outgoing particles
+         jsl(1) = 0
+         jsr(1) = 0
+! load particle buffers
+         do j = 1, ih
+            j1 = ihole(j+joff,n)
+            xt = part(ic,j1)
+! particles going down or backward
+            if (xt < edges(2*n-1)) then
+               if (kb(n)==0) xt = xt + an
+               if (jsl(1) < nbmax) then
+                  jsl(1) = jsl(1) + 1
+                  do i = 1, idimp
+                     sbufl(i,jsl(1)) = part(i,j1)
+                  enddo
+                  sbufl(ic,jsl(1)) = xt
+               else
+                  nps = 1
+                  exit
+               endif
+! particles going up or forward
+            else
+               if (kb(n)==(nvp-1)) xt = xt - an
+               if (jsr(1) < nbmax) then
+                  jsr(1) = jsr(1) + 1
+                  do i = 1, idimp
+                     sbufr(i,jsr(1)) = part(i,j1)
+                  enddo
+                  sbufr(ic,jsr(1)) = xt
+               else
+                  nps = 1
+                  exit
+               endif
+            endif
+         enddo
+         jss(1) = jsl(1) + jsr(1)
+         joff = joff + jss(1)
+         ih = ih - jss(1)
+! check for full buffer condition
+         ibflg(3) = nps
+! copy particle buffers
+   60    iter = iter + 2
+         mter = mter + 1
+! special case for one processor
+         if (nvp==1) then
+            jsl(2) = jsr(1)
+            do j = 1, jsl(2)
+               do i = 1, idimp
+                  rbufl(i,j) = sbufr(i,j)
+               enddo
+            enddo
+            jsr(2) = jsl(1)
+            do j = 1, jsr(2)
+               do i = 1, idimp
+                  rbufr(i,j) = sbufl(i,j)
+               enddo
+            enddo
+! this segment is used for mpi computers
+         else
+! get particles from below and above or back and front
+            kb(1) = js
+            kb(2) = ks
+            kl = kb(n)
+            kb(n) = kl + 1
+            if (kb(n) >= nvp) kb(n) = kb(n) - nvp
+            kr = kb(1) + nvpy*kb(2)
+            kb(n) = kl - 1
+            if (kb(n) < 0) kb(n) = kb(n) + nvp
+            kl = kb(1) + nvpy*kb(2)
+! post receive
+            itg = iter - 1
+            call MPI_IRECV(rbufl,nbsize,mreal,kl,itg,lgrp,msid(1),ierr)
+            call MPI_IRECV(rbufr,nbsize,mreal,kr,iter,lgrp,msid(2),ierr)
+! send particles
+            jsr(1) = idimp*jsr(1)
+            call MPI_ISEND(sbufr,jsr(1),mreal,kr,itg,lgrp,msid(3),ierr)
+            jsl(1) = idimp*jsl(1)
+            call MPI_ISEND(sbufl,jsl(1),mreal,kl,iter,lgrp,msid(4),ierr)
+! wait for particles to arrive
+            call MPI_WAIT(msid(1),istatus,ierr)
+            call MPI_GET_COUNT(istatus,mreal,nps,ierr)
+            jsl(2) = nps/idimp
+            call MPI_WAIT(msid(2),istatus,ierr)
+            call MPI_GET_COUNT(istatus,mreal,nps,ierr)
+            jsr(2) = nps/idimp
+         endif
+! check if particles must be passed further
+! check if any particles coming from above or front belong here
+         jsl(1) = 0
+         jsr(1) = 0
+         jss(2) = 0
+         do j = 1, jsr(2)
+            if (rbufr(ic,j) < edges(2*n-1)) jsl(1) = jsl(1) + 1
+            if (rbufr(ic,j) >= edges(2*n)) jsr(1) = jsr(1) + 1
+         enddo
+!        if (jsr(1) /= 0) then
+!           if (n==1) then
+!              write (2,*) kb+1,'Info: particles returning above'
+!           else if (n==2) then
+!              write (2,*) kb+1,'Info: particles returning front'
+!           endif
+!       endif
+! check if any particles coming from below or back belong here
+         do j = 1, jsl(2)
+            if (rbufl(ic,j) >= edges(2*n)) jsr(1) = jsr(1) + 1
+            if (rbufl(ic,j) < edges(2*n-1)) jss(2) = jss(2) + 1
+         enddo
+!        if (jss(2) /= 0) then
+!           if (n==1) then
+!              write (2,*) kb+1,'Info: particles returning below'
+!           else if (n==2) then
+!              write (2,*) kb+1,'Info: particles returning back'
+!           endif
+!        endif
+         nps = jsl(1) + jsr(1) + jss(2)
+         ibflg(2) = nps
+! make sure sbufr and sbufl have been sent
+         if (nvp /= 1) then
+            call MPI_WAIT(msid(3),istatus,ierr)
+            call MPI_WAIT(msid(4),istatus,ierr)
+         endif
+         if (nps==0) go to 180
+! remove particles which do not belong here
+         kb(1) = js
+         kb(2) = ks
+! first check particles coming from above or front
+         jsl(1) = 0
+         jsr(1) = 0
+         jss(2) = 0
+         do j = 1, jsr(2)
+            xt = rbufr(ic,j)
+! particles going down or back
+            if (xt < edges(2*n-1)) then
+               jsl(1) = jsl(1) + 1
+               if (kb(n)==0) xt = xt + an
+               rbufr(ic,j) = xt
+               do i = 1, idimp
+                  sbufl(i,jsl(1)) = rbufr(i,j)
+               enddo
+! particles going up or front, should not happen
+            else if (xt >= edges(2*n)) then
+               jsr(1) = jsr(1) + 1
+               if (kb(n)==(nvp-1)) xt = xt - an
+               rbufr(ic,j) = xt
+               do i = 1, idimp
+                  sbufr(i,jsr(1)) = rbufr(i,j)
+               enddo
+! particles staying here
+            else
+               jss(2) = jss(2) + 1
+               do i = 1, idimp
+                  rbufr(i,jss(2)) = rbufr(i,j)
+               enddo
+            endif
+         enddo
+         jsr(2) = jss(2)
+! next check particles coming from below or back
+         jss(2) = 0
+         do j = 1, jsl(2)
+            xt = rbufl(ic,j)
+! particles going up or front
+            if (xt >= edges(2*n)) then
+               if (jsr(1) < nbmax) then
+                  jsr(1) = jsr(1) + 1
+                  if (kb(n)==(nvp-1)) xt = xt - an
+                  rbufl(ic,j) = xt
+                  do i = 1, idimp
+                     sbufr(i,jsr(1)) = rbufl(i,j)
+                  enddo
+               else
+                  jss(2) = 2*npmax
+                  exit
+               endif
+! particles going down or back, should not happen
+            else if (xt < edges(2*n-1)) then
+               if (jsl(1) < nbmax) then
+                  jsl(1) = jsl(1) + 1
+                  if (kb(n)==0) xt = xt + an
+                  rbufl(ic,j) = xt
+                  do i = 1, idimp
+                     sbufl(i,jsl(1)) = rbufl(i,j)
+                  enddo
+               else
+                  jss(2) = 2*npmax
+                  exit
+               endif
+! particles staying here
+            else
+               jss(2) = jss(2) + 1
+               do i = 1, idimp
+                  rbufl(i,jss(2)) = rbufl(i,j)
+               enddo
+            endif
+         enddo
+         jsl(2) = jss(2)
+! check if move would overflow particle array
+  180    nps = npp + jsl(2) + jsr(2) - jss(1)
+         ibflg(1) = nps
+         ibflg(4) = -min0(npmax,nps)
+         call PPIMAX(ibflg,iwork,5)
+         info(2) = ibflg(1)
+         info(3) = -ibflg(4)
+         ierr = ibflg(1)
+         if (ierr > npmax) then
+!           write (2,*) 'particle overflow error, ierr = ', ierr
+            info(1) = ierr
+            return
+         endif
+! check for ihole overflow condition
+         ierr = ibflg(5)
+         if (ierr > ntmax) then
+!           write (2,*) 'ihole overflow error, ierr = ', ierr
+            info(1) = -ierr
+            return
+         endif
+! distribute incoming particles from buffers
+         nh = 0
+! distribute particles coming from below or back into holes
+         jss(2) = min0(jss(1),jsl(2))
+         do j = 1, jss(2)
+            j1 = ihole(j+jin,n)
+            do i = 1, idimp
+               part(i,j1) = rbufl(i,j)
+            enddo
+! check if incoming particle is also out of bounds in z
+            if (n==1) then
+               xt = part(iz,j1)
+! if so, add it to list of particles in z
+               if ((xt < edges(2*n+1)).or.(xt >= edges(2*n+2))) then
+                  jh = jh + 1
+                  if (jh <= ntmax) then
+                     ihole(jh+1,n+1) = j1
+                  else
+                     nh = 1
+                 endif
+               endif
+            endif
+         enddo
+         jin = jin + jss(2)
+         if (jss(1) > jsl(2)) then
+            jss(2) = min0(jss(1)-jsl(2),jsr(2))
+         else
+            jss(2) = jsl(2) - jss(1)
+         endif
+         do j = 1, jss(2)
+! no more particles coming from below or back
+! distribute particles coming from above or front into holes
+            if (jss(1) > jsl(2)) then
+               j1 = ihole(j+jin,n)
+               do i = 1, idimp
+                  part(i,j1) = rbufr(i,j)
+               enddo
+! check if incoming particle is also out of bounds in z
+               if (n==1) then
+                  xt = part(iz,j1)
+! if so, add it to list of particles in z
+                  if ((xt < edges(2*n+1)).or.(xt >= edges(2*n+2))) then
+                     jh = jh + 1
+                     if (jh <= ntmax) then
+                        ihole(jh+1,n+1) = j1
+                     else
+                        nh = 1
+                     endif
+                  endif
+             endif
+! no more holes
+! distribute remaining particles from below or back into bottom
+            else
+               do i = 1, idimp
+                  part(i,j+npp) = rbufl(i,j+jss(1))
+               enddo
+! check if incoming particle is also out of bounds in z
+               if (n==1) then
+                  xt = part(iz,j+npp)
+! if so, add it to list of particles in z
+                  if ((xt < edges(2*n+1)).or.(xt >= edges(2*n+2))) then
+                     jh = jh + 1
+                     if (jh <= ntmax) then
+                        ihole(jh+1,n+1) = j + npp
+                     else
+                        nh = 1
+                     endif
+                  endif
+               endif
+            endif
+         enddo
+         if (jss(1) > jsl(2)) jin = jin + jss(2)
+         nps = jsl(2) + jsr(2)
+         if (jss(1) <= jsl(2)) then
+            npp = npp + (jsl(2) - jss(1))
+            jss(1) = jsl(2)
+         endif
+! no more holes
+! distribute remaining particles from above into bottom
+         jsr(2) = max0(0,nps-jss(1))
+         jss(1) = jss(1) - jsl(2)
+         do j = 1, jsr(2)
+            do i = 1, idimp
+               part(i,j+npp) = rbufr(i,j+jss(1))
+            enddo
+! check if incoming particle is also out of bounds in z
+            if (n==1) then
+               xt = part(iz,j+npp)
+! if so, add it to list of particles in z
+               if ((xt < edges(2*n+1)).or.(xt >= edges(2*n+2))) then
+                  jh = jh + 1
+                  if (jh <= ntmax) then
+                     ihole(jh+1,n+1) = j + npp
+                  else
+                     nh = 1
+                  endif
+               endif
+            endif
+
+         enddo
+         npp = npp + jsr(2)
+! check for ihole overflow condition
+         if ((n==1).and.(nh > 0)) ibflg(5) = jh
+! holes left over
+! fill up remaining holes in particle array with particles from bottom
+         if (ih==0) then
+            jsr(2) = max0(0,ihole(1,n)-jin+1)
+            nh = 0
+! holes are stored in increasing value
+            if (n==1) then
+               do j = 1, jsr(2)
+                  j1 = npp - j + 1
+                  j2 = ihole(jsr(2)-j+jin+1,n)
+                  if (j1 > j2) then
+! move particle only if it is below current hole
+                     do i = 1, idimp
+                        part(i,j2) = part(i,j1)
+                     enddo
+! check if this move makes the ihole list for z invalid
+                     xt = part(iz,j1)
+                     if ((xt<edges(2*n+1)).or.(xt>=edges(2*n+2))) then
+                        i = jh + 1
+! if so, adjust the list of holes
+                        j3 = ihole(i,n+1)
+                        do while (j3 /= j1)
+                           i = i - 1
+                           if (i==1) then
+                              write (*,*) kstrt,                        &
+     &                        'cannot find particle:n,j1=', n, j1
+                              nh = 1
+                              exit
+                           endif
+                           j3 = ihole(i,n+1)
+                        enddo
+! update ihole list to use new location
+                        ihole(i,n+1) = j2
+                     endif
+                  endif
+               enddo
+! holes may not be stored in increasing value
+            else
+               do j = 1, jsr(2)
+                  j1 = npp - j + 1
+                  j2 = ihole(jsr(2)-j+jin+1,n)
+                  xt = part(iz,j1)
+! determine if particle at location j1 represents an unfilled hole
+                  if ((xt < edges(2*n-1)).or.(xt >= edges(2*n))) then
+                     i = jh + 2 - j
+! if so, adjust the list of holes
+                     j3 = ihole(i,n)
+                     do while (j3 /= j1)
+                        i = i - 1
+                        if (i==1) then
+                           write (*,*) kstrt,                           &
+     &                     'cannot find particle:n,j1=', n, j1
+                           nh = 1
+                           exit
+                        endif
+                        j3 = ihole(i,n)
+                     enddo
+! update ihole list to use new location
+                     ihole(i,n) = j2
+                  else if (j1 > j2) then
+! move particle only if it is below current hole
+                     do i = 1, idimp
+                        part(i,j2) = part(i,j1)
+                     enddo
+                  endif
+               enddo
+! check for lost particle error
+               if (nh > 0) call PPABORT
+            endif
+            jin = jin + jsr(2)
+            npp = npp - jsr(2)
+         endif
+         jss(1) = 0
+! check if any particles have to be passed further
+         if (ibflg(3) > 0) ibflg(3) = 1
+         info(5+n) = max0(info(5+n),mter)
+         if (ibflg(2) > 0) then
+!           write (2,*) 'Info: particles being passed further = ',      &
+!    &                   ibflg(2)
+            if (iter < itermax) go to 60
+            ierr = -((iter-2)/2)
+            if (kstrt==1) then
+               write (*,*) 'Iteration overflow, iter = ', ierr
+            endif
+            info(1) = ierr
+            return
+         endif
+! check if buffer overflowed and more particles remain to be checked
+         if (ibflg(3) > 0) then
+            nter = nter + 1
+            go to 10
+         endif
+         info(3+n) = nter
+!        if (nter > 0) then
+!           if (kstrt==1) then
+!              write (2,*) 'Info: ',nter,' buffer overflows, nbmax=',   &
+!    &                     nbmax
+!           endif
+!        endif
+! update ihole number in z
+         if (n==1) ihole(1,2) = jh
+      enddo
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine PPPMOVE32(sbufr,sbufl,rbufr,rbufl,ncll,nclr,mcll,mclr, &
      &mcls,kstrt,nvpy,nvpz,idimp,nbmax,mx1,myp1,mzp1,mxzyp1,irc)
 ! this subroutine moves particles into appropriate spatial regions in y
@@ -2027,7 +2556,7 @@
 ! get particles from corners
          n = mx1*(mzp1 - 1)
 ! zero out base addresses in prefix scans
-         if (n.gt.0) then
+         if (n > 0) then
             nr = nclr(3,n,3,1)
             nl = ncll(3,n,3,1)
          else
@@ -2094,9 +2623,9 @@
       else
 ! get particles from below and above
          kr = js + 1
-         if (kr.ge.nvpy) kr = kr - nvpy
+         if (kr >= nvpy) kr = kr - nvpy
          kl = js - 1
-         if (kl.lt.0) kl = kl + nvpy
+         if (kl < 0) kl = kl + nvpy
          kr = kr + nvpy*ks
          kl = kl + nvpy*ks
 ! post receives
@@ -2130,13 +2659,13 @@
          enddo
 ! get particles from corners
          kr = js + 1
-         if (kr.ge.nvpy) kr = kr - nvpy
+         if (kr >= nvpy) kr = kr - nvpy
          kl = js - 1
-         if (kl.lt.0) kl = kl + nvpy
+         if (kl < 0) kl = kl + nvpy
          lr = ks + 1
-         if (lr.ge.nvpz) lr = lr - nvpz
+         if (lr >= nvpz) lr = lr - nvpz
          ll = ks - 1
-         if (ll.lt.0) ll = ll + nvpz
+         if (ll < 0) ll = ll + nvpz
          krl = kr + nvpy*ll
          krr = kr + nvpy*lr
          kll = kl + nvpy*ll
@@ -2144,7 +2673,7 @@
          nsize = 3*mx1
          n = mx1*(mzp1 - 1)
 ! zero out base addresses in prefix scans
-         if (n.gt.0) then
+         if (n > 0) then
             nr = nclr(3,n,3,1)
             nl = ncll(3,n,3,1)
          else
@@ -2190,7 +2719,7 @@
          nb(1) = min(-nbl,-nbr)
          call PPIMAX(nb,iwork,1)
          if (nb(1) > 0) then
-            write (2,*) 'corner buffer overflow error = ', nb(1)
+            write (*,*) kstrt, 'corner buffer overflow error = ', nb(1)
             irc = nb(1)
             return
          endif
@@ -2298,9 +2827,9 @@
       else
 ! get particles from back and front
          kr = ks + 1
-         if (kr.ge.nvpz) kr = kr - nvpz
+         if (kr >= nvpz) kr = kr - nvpz
          kl = ks - 1
-         if (kl.lt.0) kl = kl + nvpz
+         if (kl < 0) kl = kl + nvpz
          kr = js + nvpy*kr
          kl = js + nvpy*kl
 ! post receives
@@ -2333,6 +2862,333 @@
             call MPI_WAIT(msid(i+4),istatus,ierr)
          enddo
       endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRITE32(f,g,nx,ny,nz,kyp,kzp,nvpy,nxv,nypmx,nzpmx,   &
+     &iunit,nrec)
+! this subroutine collects distributed real 3d scalar data f and writes
+! to a direct access binary file with 2D spatial decomposition
+! data must have a uniform partition
+! f = input data to be written
+! g = scratch data
+! nx/ny/nz = system length in x/y/z direction
+! kyp/kzp = number of data values per block in y/z
+! nvpy = number of real or virtual processors in y
+! nxv = first dimension of data array f, must be >= nx
+! nypmx = second dimension of data array f, must be >= kyp
+! nzpmx = third dimension of data array f, must be >= kzp
+! iunit = fortran unit number
+! nrec = current record number for write, if nrec > 0
+! input: all, output: nrec
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, nxv
+      integer, intent(in) :: nypmx, nzpmx, iunit
+      integer, intent(inout) :: nrec
+      real, intent(in), dimension(nxv,nypmx,nzpmx) :: f
+      real, intent(inout), dimension(nxv,nypmx,nzpmx) :: g
+! lgrp = current communicator
+! mint = default datatype for integers
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, igo, js, ks, nxyv, nzp, kypp, kzpp
+      integer :: id, i, j, k, l, ierr
+      integer :: nsid, msid
+      integer, dimension(lstat) :: istatus
+      nxyv = nxv*nypmx
+      nzp = nxyv*kzp
+      igo = 1
+! this segment is used for shared memory computers
+!     write (unit=iunit,rec=nrec) (((f(j,k,l),j=1,nx),k=1,kyp),l=1,kzp)
+!     nrec = nrec + 1
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+      ks = idproc/nvpy
+      js = idproc - nvpy*ks
+! kypp = actual size to send in y direction
+      kypp = min(kyp,max(0,ny-kyp*js))
+! kzpp = actual size to send in z direction
+      kzpp = min(kzp,max(0,nz-kzp*ks))
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first write data for node 0
+         write (unit=iunit,rec=nrec) (((f(j,k,l),j=1,nx),k=1,kyp),l=1,  &
+     &kzp)
+         nrec = nrec + 1
+! then write data from remaining nodes
+         do i = 2, nvp
+         id = i - 1
+! send go signal to sending node
+         call MPI_SEND(igo,1,mint,id,98,lgrp,ierr)
+         call MPI_IRECV(kypp,1,mint,id,100,lgrp,nsid,ierr)
+         call MPI_IRECV(g,nzp,mreal,id,99,lgrp,msid,ierr)
+         call MPI_WAIT(nsid,istatus,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_GET_COUNT(istatus,mreal,kzpp,ierr)
+         kzpp = kzpp/nxyv
+         if (kypp*kzpp > 0) then
+            write (unit=iunit,rec=nrec) (((g(j,k,l),j=1,nx),k=1,kyp),   &
+     &l=1,kzp)
+            nrec = nrec + 1
+         endif
+         enddo
+! other nodes send data to node 0 after receiving go signal
+      else
+         call MPI_IRECV(igo,1,mint,0,98,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_SEND(kypp,1,mint,0,100,lgrp,ierr)
+         if ((kypp*kzpp)==0) nzp = 0
+         call MPI_SEND(f,nzp,mreal,0,99,lgrp,ierr)
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPREAD32(f,g,nx,ny,nz,kyp,kzp,nvpy,nxv,nypmx,nzpmx,    &
+     &iunit,nrec,irc)
+! this subroutine reads real 3d scalar data f from a direct access
+! binary file and distributes it with 2D spatial decomposition
+! data must have a uniform partition
+! f = output data to be read
+! g = scratch data
+! nx/ny/nz = system length in x/y/z direction
+! kyp/kzp = number of data values per block in y/z
+! nvpy = number of real or virtual processors in y
+! nxv = first dimension of data array f, must be >= nx
+! nypmx = second dimension of data array f, must be >= kyp
+! nzpmx = third dimension of data array f, must be >= kzp
+! iunit = fortran unit number
+! nrec = current record number for read, if nrec > 0
+! irc = error indicator
+! input: all, output: f, nrec, irc
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, nxv
+      integer, intent(in) :: nypmx, nzpmx, iunit
+      integer, intent(inout) :: nrec, irc
+      real, intent(inout), dimension(nxv,nypmx,nzpmx) :: f, g
+! lgrp = current communicator
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, js, ks, nxyv, nzp, nzps, kypp, kzpp
+      integer :: id, i, j, k, l, ios, ierr
+      integer, dimension(1) :: nrc, iwrk1
+      integer, dimension(lstat) :: istatus
+      nxyv = nxv*nypmx
+      nzp = nxyv*kzp
+      nrc(1) = 0
+! this segment is used for shared memory computers
+!     read (unit=iunit,rec=nrec,iostat=ios) (((f(j,k,l),j=1,nx),k=1,kyp)&
+!    &,l=1,kzp)
+!     if (ios /= 0) nrc(1) = 1
+!     nrec = nrec + 1
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc.eq.0) then
+! first read data for node 0
+         read (unit=iunit,rec=nrec,iostat=ios) (((f(j,k,l),j=1,nx),     &
+     &k=1,kyp),l=1,kzp)
+         if (ios /= 0) nrc(1) = 1
+         nrec = nrec + 1
+! then read data on node 0 to send to remaining nodes
+         do i = 2, nvp
+            id = i - 1
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+            ks = id/nvpy
+            js = id - nvpy*ks
+            kypp = min(kyp,max(0,ny-kyp*js))
+            kzpp = min(kzp,max(0,nz-kzp*ks))
+            if (kypp*kzpp > 0) then
+               read (unit=iunit,rec=nrec,iostat=ios) (((g(j,k,l),j=1,nx)&
+     &,k=1,kyp),l=1,kzp)
+               if (ios /= 0) then
+                  if (nrc(1) /= 0) nrc(1) = i
+               endif
+               nrec = nrec + 1
+            endif
+! send data from node 0
+            nzps = nzp
+            if ((kypp*kzpp)==0) nzps = 0
+            call MPI_SEND(g,nzps,mreal,id,98,lgrp,ierr)
+         enddo
+! other nodes receive data from node 0
+      else 
+         call MPI_RECV(f,nzp,mreal,0,98,lgrp,istatus,ierr)
+      endif
+! check for error condition
+      call PPIMAX(nrc,iwrk1,1)
+      irc = nrc(1)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPVWRITE32(f,g,nx,ny,nz,kyp,kzp,nvpy,ndim,nxv,nypmx,   &
+     &nzpmx,iunit,nrec)
+! this subroutine collects distributed real 3d vector data f and writes
+! to a direct access binary file with 2D spatial decomposition
+! data must have a uniform partition
+! f = input data to be written
+! g = scratch data
+! nx/ny/nz = system length in x/y/z direction
+! kyp/kzp = number of data values per block in y/z
+! nvpy = number of real or virtual processors in y
+! ndim = first dimension of data array f
+! nxv = second dimension of data array f, must be >= nx
+! nypmx = third dimension of data array f, must be >= kyp
+! nzpmx = fourth dimension of data array f, must be >= kzp
+! iunit = fortran unit number
+! nrec = current record number for write, if nrec > 0
+! input: all, output: nrec
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, ndim, nxv
+      integer, intent(in) :: nypmx, nzpmx, iunit
+      integer, intent(inout) :: nrec
+      real, intent(in), dimension(ndim,nxv,nypmx,nzpmx) :: f
+      real, intent(inout), dimension(ndim,nxv,nypmx,nzpmx) :: g
+! lgrp = current communicator
+! mint = default datatype for integers
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, igo, js, ks, nnxyv, nnzp, kypp, kzpp
+      integer :: id, i, j, k, l, n, ierr
+      integer :: nsid, msid
+      integer, dimension(lstat) :: istatus
+      nnxyv = ndim*nxv*nypmx
+      nnzp = nnxyv*kzp
+      igo = 1
+! this segment is used for shared memory computers
+!     write (unit=iunit,rec=nrec) ((((f(n,j,k,l),n=1,ndim),j=1,nx),     &
+!    &k=1,kyp),l=1,kzp)
+!     nrec = nrec + 1
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+      ks = idproc/nvpy
+      js = idproc - nvpy*ks
+! kypp = actual size to send in y direction
+      kypp = min(kyp,max(0,ny-kyp*js))
+! kzpp = actual size to send in z direction
+      kzpp = min(kzp,max(0,nz-kzp*ks))
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first write data for node 0
+         write (unit=iunit,rec=nrec) ((((f(n,j,k,l),n=1,ndim),j=1,nx),  &
+     &k=1,kyp),l=1,kzp)
+         nrec = nrec + 1
+! then write data from remaining nodes
+         do i = 2, nvp
+         id = i - 1
+! send go signal to sending node
+         call MPI_SEND(igo,1,mint,id,98,lgrp,ierr)
+         call MPI_IRECV(kypp,1,mint,id,100,lgrp,nsid,ierr)
+         call MPI_IRECV(g,nnzp,mreal,id,99,lgrp,msid,ierr)
+         call MPI_WAIT(nsid,istatus,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_GET_COUNT(istatus,mreal,kzpp,ierr)
+         kzpp = kzpp/nnxyv
+         if (kypp*kzpp > 0) then
+            write (unit=iunit,rec=nrec) ((((g(n,j,k,l),n=1,ndim),j=1,nx)&
+     &,k=1,kyp),l=1,kzp)
+            nrec = nrec + 1
+         endif
+         enddo
+! other nodes send data to node 0 after receiving go signal
+      else
+         call MPI_IRECV(igo,1,mint,0,98,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_SEND(kypp,1,mint,0,100,lgrp,ierr)
+         if ((kypp*kzpp)==0) nnzp = 0
+         call MPI_SEND(f,nnzp,mreal,0,99,lgrp,ierr)
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPVREAD32(f,g,nx,ny,nz,kyp,kzp,nvpy,ndim,nxv,nypmx,    &
+     &nzpmx,iunit,nrec,irc)
+! this subroutine reads real 3d vector data f from a direct access
+! binary file and distributes it with 2D spatial decomposition
+! data must have a uniform partition
+! f = output data to be read
+! g = scratch data
+! nx/ny/nz = system length in x/y/z direction
+! kyp/kzp = number of data values per block in y/z
+! nvpy = number of real or virtual processors in y
+! ndim = first dimension of data array f
+! nxv = second dimension of data array f, must be >= nx
+! nypmx = third dimension of data array f, must be >= kyp
+! nzpmx = fourth dimension of data array f, must be >= kzp
+! iunit = fortran unit number
+! nrec = current record number for read, if nrec > 0
+! irc = error indicator
+! input: all, output: f, nrec, irc
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, ndim, nxv
+      integer, intent(in) :: nypmx, nzpmx, iunit
+      integer, intent(inout) :: nrec, irc
+      real, intent(inout), dimension(ndim,nxv,nypmx,nzpmx) :: f, g
+! lgrp = current communicator
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, js, ks, nnxyv, nnzp, nnzps, kypp, kzpp
+      integer :: id, i, j, k, l, n, ios, ierr
+      integer, dimension(1) :: nrc, iwrk1
+      integer, dimension(lstat) :: istatus
+      nnxyv = ndim*nxv*nypmx
+      nnzp = nnxyv*kzp
+      nrc(1) = 0
+! this segment is used for shared memory computers
+!     read (unit=iunit,rec=nrec,iostat=ios) ((((f(n,j,k,l),n=1,ndim),   &
+!    &j=1,nx),k=1,kyp),l=1,kzp)
+!     if (ios /= 0) nrc(1) = 1
+!     nrec = nrec + 1
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc.eq.0) then
+! first read data for node 0
+         read (unit=iunit,rec=nrec,iostat=ios) ((((f(n,j,k,l),n=1,ndim),&
+     &j=1,nx),k=1,kyp),l=1,kzp)
+         if (ios /= 0) nrc(1) = 1
+         nrec = nrec + 1
+! then read data on node 0 to send to remaining nodes
+         do i = 2, nvp
+            id = i - 1
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+            ks = id/nvpy
+            js = id - nvpy*ks
+            kypp = min(kyp,max(0,ny-kyp*js))
+            kzpp = min(kzp,max(0,nz-kzp*ks))
+            if (kypp*kzpp > 0) then
+               read (unit=iunit,rec=nrec,iostat=ios) ((((g(n,j,k,l),    &
+     &n=1,ndim),j=1,nx),k=1,kyp),l=1,kzp)
+               if (ios /= 0) then
+                  if (nrc(1) /= 0) nrc(1) = i
+               endif
+               nrec = nrec + 1
+            endif
+! send data from node 0
+            nnzps = nnzp
+            if ((kypp*kzpp)==0) nnzps = 0
+            call MPI_SEND(g,nnzps,mreal,id,98,lgrp,ierr)
+         enddo
+! other nodes receive data from node 0
+      else 
+         call MPI_RECV(f,nnzp,mreal,0,98,lgrp,istatus,ierr)
+      endif
+! check for error condition
+      call PPIMAX(nrc,iwrk1,1)
+      irc = nrc(1)
       end subroutine
 !
       end module
@@ -2586,6 +3442,24 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
+      subroutine PPMOVE32(part,edges,npp,sbufr,sbufl,rbufr,rbufl,ihole, &
+     &ny,nz,kstrt,nvpy,nvpz,idimp,npmax,idps,nbmax,ntmax,info)
+      use mpplib3, only: SUB => PPMOVE32
+      implicit none
+      integer, intent(in) :: ny, nz, kstrt, nvpy, nvpz, idimp, npmax
+      integer, intent(in) :: idps, nbmax, ntmax
+      integer, intent(inout) :: npp
+      real, dimension(idimp,npmax), intent(inout) :: part
+      real, dimension(idps), intent(in) :: edges
+      real, dimension(idimp,nbmax), intent(inout) :: sbufl, sbufr
+      real, dimension(idimp,nbmax), intent(inout) :: rbufl, rbufr
+      integer, dimension(ntmax+1,2), intent(inout) :: ihole
+      integer, dimension(7), intent(inout) :: info
+      call SUB(part,edges,npp,sbufr,sbufl,rbufr,rbufl,ihole,ny,nz,kstrt,&
+     &nvpy,nvpz,idimp,npmax,idps,nbmax,ntmax,info)
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine PPPMOVE32(sbufr,sbufl,rbufr,rbufl,ncll,nclr,mcll,mclr, &
      &mcls,kstrt,nvpy,nvpz,idimp,nbmax,mx1,myp1,mzp1,mxzyp1,irc)
       use mpplib3, only: SUB => PPPMOVE32
@@ -2601,3 +3475,56 @@
       call SUB(sbufr,sbufl,rbufr,rbufl,ncll,nclr,mcll,mclr,mcls,kstrt,  &
      &nvpy,nvpz,idimp,nbmax,mx1,myp1,mzp1,mxzyp1,irc)
       end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRITE32(f,g,nx,ny,nz,kyp,kzp,nvpy,nxv,nypmx,nzpmx,   &
+     &iunit,nrec)
+      use mpplib3, only: SUB => PPWRITE32
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, nxv
+      integer, intent(in) :: nypmx, nzpmx, iunit
+      integer, intent(inout) :: nrec
+      real, intent(in), dimension(nxv,nypmx,nzpmx) :: f
+      real, intent(inout), dimension(nxv,nypmx,nzpmx) :: g
+      call SUB(f,g,nx,ny,nz,kyp,kzp,nvpy,nxv,nypmx,nzpmx,iunit,nrec)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPREAD32(f,g,nx,ny,nz,kyp,kzp,nvpy,nxv,nypmx,nzpmx,    &
+     &iunit,nrec,irc)
+      use mpplib3, only: SUB => PPREAD32
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, nxv
+      integer, intent(in) :: nypmx, nzpmx, iunit
+      integer, intent(inout) :: nrec, irc
+      real, intent(inout), dimension(nxv,nypmx,nzpmx) :: f, g
+      call SUB(f,g,nx,ny,nz,kyp,kzp,nvpy,nxv,nypmx,nzpmx,iunit,nrec,irc)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPVWRITE32(f,g,nx,ny,nz,kyp,kzp,nvpy,ndim,nxv,nypmx,   &
+     &nzpmx,iunit,nrec)
+      use mpplib3, only: SUB => PPVWRITE32
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, ndim, nxv
+      integer, intent(in) :: nypmx, nzpmx, iunit
+      integer, intent(inout) :: nrec
+      real, intent(in), dimension(ndim,nxv,nypmx,nzpmx) :: f
+      real, intent(inout), dimension(ndim,nxv,nypmx,nzpmx) :: g
+      call SUB(f,g,nx,ny,nz,kyp,kzp,nvpy,ndim,nxv,nypmx,nzpmx,iunit,nrec&
+     &)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPVREAD32(f,g,nx,ny,nz,kyp,kzp,nvpy,ndim,nxv,nypmx,    &
+     &nzpmx,iunit,nrec,irc)
+      use mpplib3, only: SUB => PPVREAD32
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kyp, kzp, nvpy, ndim, nxv
+      integer, intent(in) :: nypmx, nzpmx, iunit
+      integer, intent(inout) :: nrec, irc
+      real, intent(inout), dimension(ndim,nxv,nypmx,nzpmx) :: f, g
+      call SUB(f,g,nx,ny,nz,kyp,kzp,nvpy,ndim,nxv,nypmx,nzpmx,iunit,nrec&
+     &,irc)
+      end subroutine
+!

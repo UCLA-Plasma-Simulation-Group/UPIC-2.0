@@ -1,9 +1,9 @@
-2-1/2D Darwin Field MPI/OpenMP PIC test code
+2-1/2D Periodic Darwin Field MPI/OpenMP PIC test code
 by Viktor K. Decyk
 copyright 1994-2017, regents of the university of california
 
-This code is a unit test for the 2d periodic Darwin fields used in the
-mpbeps2 suite of PIC codes.  It is designed for Linux but will also
+This code is a test program for the 2d periodic Darwin fields used in
+the mpbeps2 suite of PIC codes.  It is designed for Linux but will also
 compile for Mac OS X.  OpenMP and MPI are used for parallelization, but
 if MPI is not available, the codes can be compiled for OpenMP only.  The
 default compiler used is gfortran, but other compiler flags are
@@ -21,7 +21,7 @@ License(CommercialReservation)
 The makefile is setup to use gcc and gfortran with Linux.  It should
 also work with MacOS X.
 
-The executable created is called mp_dfields2.
+The executable created is called mp_pfields2.
 
 To compile the program, execute:
 
@@ -30,7 +30,7 @@ make
 The command to execute a program with both MPI and OpenMP varies from
 one system to another.  One possible command is:
 
-mpiexec -np nproc -perhost n ./mp_dfields2
+mpiexec -np nproc -perhost n ./mp_pfields2
 
 where nproc is the number of processors to be used, and where n is the
 number of MPI nodes per host.
@@ -43,11 +43,11 @@ number of threads per node expected.
 
 To compile all this code without MPI, execute:
 
-make m_dfields2
+make m_pfields2
 
 To execute, type the name of the executable:
 
-./m_dfields2
+./m_pfields2
 
 The Fortran version can be compiled to run with double precision by
 changing the Makefile (for gfortran, set the compiler options to:
@@ -55,10 +55,13 @@ OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8)
 
 There is a simple built-in graphics library available which is normally
 used for debugging.  It is shut off by default, but is available for
-X11 devices.
+either Textronix or X11 devices.
 
 To turn it on for Fortran, search for the string: Fortran Graphics in
 the Makefile, and comment out the symbol GOBJS and NGOBJS for No
-graphics and uncomment it either for X11. The X11 option requires that
-the library Ygl is installed and the symbol
+graphics and uncomment it either for Tektronix or X1. The X11 option
+requires that the library Ygl is installed and the symbol
 LGOPTS = -lYgl -L/usr/X11R6/lib -lX11.
+
+To run with Tektronix, open the window xterm -t before executing the
+codes.

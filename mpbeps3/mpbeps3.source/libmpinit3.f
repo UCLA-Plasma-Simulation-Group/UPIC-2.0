@@ -19,17 +19,38 @@
 !           for 3d code with relativistic particles
 ! PUDISTR32 calculates initial particle co-ordinates with uniform density
 !           for 3d code
+! PLDISTR32 calculates initial particle co-ordinates with linear density
+!           profile for 3d code
+! PFDISTR32 calculates initial particle co-ordinates with general
+!           distribution in space for 3d code
 ! PVDISTR32 calculates initial particle velocities with maxwellian
 !           velocity with drift for 3d code
 ! PVRDISTR32 calculates initial particle momenta with maxwell-juttner
 !            distribution with drift for 3d code with relativistic
 !            particles
 ! PPDBLKP3L finds the maximum number of particles in each tile
+! PFEDGES32 = finds new partitions boundaries (edges,noff,nyzp)
+!             from analytic general density profiles.
+! PFHOLES32 determines list of particles which are leaving this node
 ! ranorm gaussian random number generator
 ! randum uniform random number generator
+! The following functions are used by FDISTR1 and GFDISTR1:
+! DLDISTR1 calculates either a density function or its integral
+!          for a linear density profile with uniform background
+! DSDISTR1 calculates either a density function or its integral
+!          for a sinusoidal density profile with uniform background
+! DGDISTR1 calculates either a density function or its integral
+!          for a gaussian density profile with uniform background
+! DHDISTR1 calculates either a density function or its integral
+!          for a hyperbolic secant squared density profile
+!          with uniform background
+! DEDISTR1 calculates either a density function or its integral
+!          for an exponential density profile with uniform background
+! DGDISTR0 calculates either a density function or its integral
+!          for a gaussian density profile with no background density
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 15, 2017
+! update: may 15, 2017
 !-----------------------------------------------------------------------
       subroutine PDICOMP32L(edges,nyzp,noff,nypmx,nzpmx,nypmn,nzpmn,ny, &
      &nz,kstrt,nvpy,nvpz,idps,idds)
@@ -687,8 +708,419 @@
       return
       end
 !-----------------------------------------------------------------------
+      subroutine PLDISTR32(part,npp,anlx,anly,anlz,npx,npy,npz,nx,ny,nz,&
+     &kstrt,nvpy,nvpz,idimp,npmax,ipbc,ierr)
+! for 3d code, this subroutine calculates initial particle co-ordinates
+! with the following tri-linear density profile:
+! n(x,y,z) = n(x)*n(y)*n(z), 
+! where n(x) = n0x*(1. + anlx*(x/nx - .5))
+!   and n(y) = n0y*(1. + anly*(y/ny - .5))
+!   and n(z) = n0z*(1. + anlz*(z/nz - .5))
+! n0x = npx/(nx - 2*edgelx), n0y = npy/(ny - 2*edgely)
+! and n0z = npz/(nz - 2*edgelz)
+! for distributed data with 2D spatial decomposition
+! the algorithm partitions the number of particles distributed in the
+! y/z direction uniformly (with possible remainders).
+! particles are not necessarily in the correct processor, and may need
+! to be moved to another processor.
+! part(1,n) = position x of particle n in partition
+! part(2,n) = position y of particle n in partition
+! part(3,n) = position z of particle n in partition
+! npp = number of particles in partition, updated in this procedure
+! anlx/anly/anlz = initial linear density weight in x/y/z direction
+! npx/npy/npz = initial number of particles distributed in x/y/z
+! direction
+! nx/ny/nz = system length in x/y/z direction
+! kstrt = starting data block number
+! nvpy/nvpz = number of real or virtual processors in y/z
+! idimp = size of phase space = 6
+! npmax = maximum number of particles in each partition
+! ipbc = particle boundary condition = (0,1,2,3) =
+! (none,3d periodic,3d reflecting,mixed 2d reflecting/1d periodic)
+! ierr = (0,1) = (no,yes) error condition exists
+      implicit none
+      integer npp, npx, npy, npz, nx, ny, nz, kstrt, nvpy, nvpz
+      integer idimp, npmax, ipbc, ierr
+      real anlx, anly, anlz
+      real part
+      dimension part(idimp,npmax)
+! local data
+      integer nps, npt, js, ks, j, k, l, kk, ll, mpy, mpys, mpz, mpzs
+      integer joff, koff
+      real edgelx, edgely, edgelz, at1, at2, at3, bt1, bt2, bt3
+      real antx, anty, antz, xt, yt, zt
+      double precision dnpxyz
+      integer ierr1, iwork1
+      double precision sum1, work1
+      dimension ierr1(1), iwork1(1), sum1(1), work1(1)
+      nps = npp
+! particle distribution constants
+      ks = kstrt - 1
+! find processor id and offsets in y/z
+! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+      ks = (kstrt - 1)/nvpy
+      js = kstrt - nvpy*ks - 1
+! mpy = number of particles per processor in y direction
+      mpy = (npy - 1)/nvpy + 1
+      mpys = min(mpy,max(0,npy-mpy*js))
+! mpz = number of particles per processor in z direction
+      mpz = (npz - 1)/nvpz + 1
+      mpzs = min(mpz,max(0,npz-mpz*ks))
+! check if particle overflow will occurr
+      npt = npp + npx*mpys*mpzs
+      ierr1(1) = npt
+      call PPIMAX(ierr1,iwork1,1)
+      ierr = ierr1(1)
+      if (ierr.gt.npmax) return
+      ierr = 0
+! set boundary values
+      edgelx = 0.0
+      edgely = 0.0
+      edgelz = 0.0
+      at1 = real(nx)/real(npx)
+      at2 = real(ny)/real(npy)
+      at3 = real(nz)/real(npz)
+      if (ipbc.eq.2) then
+         edgelx = 1.0
+         edgely = 1.0
+         edgelz = 1.0
+         at1 = real(nx-2)/real(npx)
+         at2 = real(ny-2)/real(npy)
+         at3 = real(nz-2)/real(npz)
+      else if (ipbc.eq.3) then
+         edgelx = 1.0
+         edgely = 1.0
+         at1 = real(nx-2)/real(npx)
+         at2 = real(ny-2)/real(npy)
+      endif
+      if (anlx.ne.0.0) then
+         antx = anlx/real(nx)
+         at1 = 2.0*antx*at1
+         bt1 = 1.0 - 0.5*antx*(float(nx) - 2.0*edgelx)
+      endif
+      if (anly.ne.0.0) then
+         anty = anly/real(ny)
+         at2 = 2.0*anty*at2
+         bt2 = 1.0 - 0.5*anty*(float(ny) - 2.0*edgely)
+      endif
+      if (anlz.ne.0.0) then
+         antz = anlz/real(nz)
+         at3 = 2.0*antz*at3
+         bt3 = 1.0 - 0.5*antz*(float(nz) - 2.0*edgelz)
+      endif
+! assign particle spatial coordinates
+!$OMP PARALLEL DO PRIVATE(j,k,l,kk,ll,joff,koff,xt,yt,zt)
+      do 30 l = 1, mpzs
+      ll = l + mpz*ks
+      koff = npx*mpys*(l - 1) + npp
+! linear density in z
+      if (anlz.ne.0.0) then
+         zt = edgelz + (sqrt(bt3*bt3 + at3*(real(ll) - 0.5)) - bt3)/antz
+! uniform density in z
+      else
+         zt = edgelz + at3*(real(ll) - 0.5)
+      endif
+      do 20 k = 1, mpys
+      kk = k + mpy*js
+      joff = npx*(k - 1) + koff
+! linear density in y
+      if (anly.ne.0.0) then
+         yt = edgely + (sqrt(bt2*bt2 + at2*(real(kk) - 0.5)) - bt2)/anty
+! uniform density in y
+      else
+         yt = edgely + at2*(real(kk) - 0.5)
+      endif
+      do 10 j = 1, npx
+! linear density in x
+      if (anlx.ne.0.0) then
+         xt = edgelx + (sqrt(bt1*bt1 + at1*(real(j) - 0.5)) - bt1)/antx
+! uniform density in x
+      else
+         xt = edgelx + at1*(real(j) - 0.5)
+      endif
+      part(1,j+joff) = xt
+      part(2,j+joff) = yt
+      part(3,j+joff) = zt
+   10 continue
+   20 continue
+   30 continue
+!$OMP END PARALLEL DO
+! update number of particles
+      npp = npt
+! check if not all particles were distributed
+      dnpxyz = dble(npx)*dble(npy)*dble(npz)
+      sum1(1) = dble(npp-nps)
+      call PPDSUM(sum1,work1,1)
+      dnpxyz = sum1(1) - dnpxyz
+      if (dnpxyz.ne.0.0d0) ierr = -1
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PFDISTR32(part,npp,fnx,argx1,argx2,argx3,fny,argy1,    &
+     &argy2,argy3,fnz,argz1,argz2,argz3,npx,npy,npz,nx,ny,nz,kstrt,nvpy,&
+     &nvpz,idimp,npmax,ipbc,ierr)
+! for 3d code, this subroutine calculates initial particle co-ordinates
+! with general density profile n(x,y) = n(x)*n(y)*n(z), 
+! where density in x is given by n(x) = fnx(x,argx1,argx2,argx3,0)
+! and integral of the density is given by = fnx(x,argx1,argx2,argx3,1)
+! and where density in y is given by n(y) = fny(y,argy1,argy2,argy3,0)
+! and integral of the density is given by = fny(y,argy1,argy2,argy3,1)
+! and where density in z is given by n(z) = fnz(z,argz1,argz2,argz3,0)
+! and integral of the density is given by = fnz(z,argz1,argz2,argz3,1)
+! for distributed data with 2D spatial decomposition.
+! the algorithm partitions the number of particles distributed in the
+! y/z direction uniformly (with possible remainders).
+! particles are not necessarily in the correct processor, and may need
+! to be moved to another processor.
+! part(1,n) = position x of particle n in partition
+! part(2,n) = position y of particle n in partition
+! part(3,n) = position z of particle n in partition
+! npp = number of particles in partition, updated in this procedure
+! fnx/fny/fnz = density and density integral function in x/y/z direction
+! argx1,argx2,argx3 = arguments to fnx
+! argy1,argy2,argy3 = arguments to fny
+! argz1,argz2,argz3 = arguments to fnz
+! npx/npy/npz = initial number of particles distributed in x/y/z
+! direction
+! nx/ny/nz = system length in x/y/z direction
+! kstrt = starting data block number
+! nvpy/nvpz = number of real or virtual processors in y/z
+! idimp = size of phase space = 6
+! npmax = maximum number of particles in each partition
+! ipbc = particle boundary condition = (0,1,2,3) =
+! (none,3d periodic,3d reflecting,mixed 2d reflecting/1d periodic)
+! ierr = (0,1) = (no,yes) error condition exists
+      implicit none
+      integer npp, npx, npy, npz, nx, ny, nz, kstrt, nvpy, nvpz
+      integer idimp, npmax, ipbc, ierr
+      double precision argx1, argx2, argx3, argy1, argy2, argy3
+      double precision argz1, argz2, argz3
+      real part
+      dimension part(idimp,npmax)
+      double precision fnx, fny, fnz
+      external fnx, fny, fnz
+! local data
+      integer nps, npt, js, ks, i, j, k, l, kk, ll, mpy, mpys, mpz, mpzs
+      integer imax, joff, koff, moff, loff
+      real edgelx, edgely, edgelz, anx, any, anz, bnx, bny, bnz
+      real xt0, yt0, zt0, x0, y0, z0, xn, yn, zn, eps, big, f, fp
+      double precision xt, yt, zt, dnpxyz
+      integer ierr1, iwork1
+      double precision sum1, work1
+      dimension ierr1(1), iwork1(1), sum1(1), work1(1)
+      nps = npp
+! particle distribution constants
+      ks = kstrt - 1
+! find processor id and offsets in y/z
+! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+      ks = (kstrt - 1)/nvpy
+      js = kstrt - nvpy*ks - 1
+! mpy = number of particles per processor in y direction
+      mpy = (npy - 1)/nvpy + 1
+      mpys = min(mpy,max(0,npy-mpy*js))
+! mpz = number of particles per processor in z direction
+      mpz = (npz - 1)/nvpz + 1
+      mpzs = min(mpz,max(0,npz-mpz*ks))
+! check if particle overflow will occurr
+      npt = npp + npx*mpys*mpzs
+      ierr1(1) = npt
+      call PPIMAX(ierr1,iwork1,1)
+      ierr = ierr1(1)
+      if (ierr.gt.npmax) return
+      ierr = 0
+! eps = convergence criterion
+      imax = max(nx,ny,nz)
+      eps = 0.0001
+      big = 0.25
+! set boundary values
+      edgelx = 0.0
+      edgely = 0.0
+      edgelz = 0.0
+      if (ipbc.eq.2) then
+         edgelx = 1.0
+         edgely = 1.0
+         edgelz = 1.0
+      else if (ipbc.eq.3) then
+         edgelx = 1.0
+         edgely = 1.0
+      endif
+! find normalization for function
+      anx = real(nx) - edgelx
+      any = real(ny) - edgely
+      anz = real(nz) - edgelz
+      x0 = fnx(dble(edgelx),argx1,argx2,argx3,1)
+      y0 = fny(dble(edgely),argy1,argy2,argy3,1)
+      z0 = fnz(dble(edgelz),argz1,argz2,argz3,1)
+      bnx = real(npx)/(fnx(dble(anx),argx1,argx2,argx3,1) - x0)
+      bny = real(npy)/(fny(dble(any),argy1,argy2,argy3,1) - y0)
+      bnz = real(npz)/(fnz(dble(anz),argz1,argz2,argz3,1) - z0)
+      x0 = bnx*x0 - 0.5
+      y0 = bny*y0 - 0.5
+      z0 = bnz*z0 - 0.5
+! density profile in x
+      do 20 j = 1, npx
+      xn = real(j) + x0
+! guess next value for xt
+      if (j.eq.1) then
+         xt0 = edgelx
+         xt = xt0
+         fp = bnx*fnx(xt,argx1,argx2,argx3,0)
+         if (fp.gt.0.0) xt = xt + 0.5/fp
+      else
+         fp = bnx*fnx(xt,argx1,argx2,argx3,0)
+         if (fp.eq.0.0) fp = 1.0
+         xt = xt + 1.0/fp
+      endif
+      xt = max(edgelx,min(xt,anx))
+      i = 0
+   10 f = bnx*fnx(xt,argx1,argx2,argx3,1) - dble(xn)
+! find improved value for xt
+      if (abs(f).ge.eps) then
+         fp = bnx*fnx(xt,argx1,argx2,argx3,0)
+! newton's method
+         if ((abs(f).lt.big).and.(fp.gt.0.0)) then
+            xt0 = xt
+            xt = xt - f/fp
+            xt = max(edgelx,min(xt,anx))
+! bisection method
+         else if (f.gt.0.0) then
+            fp = 0.5*abs(xt0 - xt)
+            xt = xt0 - fp
+         else
+            fp = abs(xt - xt0)
+            xt0 = xt
+            xt = xt + fp
+         endif
+         i = i + 1
+         if (i.lt.imax) go to 10
+!        write (*,*) j,'newton iteration max exceeded, xt = ', xt
+         ierr = ierr + 1
+      endif
+      part(1,j+npp) = xt
+      xt0 = xt
+   20 continue
+! quit if error
+      if (ierr.ne.0) return
+! density profile in y
+      moff = mpy*js
+      do 40 k = 1, mpys + moff
+      kk = k - moff
+      yn = real(k) + y0
+! guess next value for yt
+      if (k.eq.1) then
+         yt0 = edgely
+         yt = yt0
+         fp = bny*fny(yt,argy1,argy2,argy3,0)
+         if (fp.gt.0.0) yt = yt + 0.5/fp
+      else
+         fp = bny*fny(yt,argy1,argy2,argy3,0)
+         if (fp.eq.0.0) fp = 1.0
+         yt = yt + 1.0/fp
+      endif
+      yt = max(edgely,min(yt,any))
+      i = 0
+   30 f = bny*fny(yt,argy1,argy2,argy3,1) - dble(yn)
+! find improved value for yt
+      if (abs(f).ge.eps) then
+         fp = bny*fny(yt,argy1,argy2,argy3,0)
+! newton's method
+         if ((abs(f).lt.big).and.(fp.gt.0.0)) then
+            yt0 = yt
+            yt = yt - f/fp
+            yt = max(edgely,min(yt,any))
+! bisection method
+         else if (f.gt.0.0) then
+           fp = 0.5*abs(yt0 - yt)
+            yt = yt0 - fp
+         else
+            fp = abs(yt - yt0)
+            yt0 = yt
+            yt = yt + fp
+         endif
+         i = i + 1
+         if (i.lt.imax) go to 30
+!        write (*,*) k,'newton iteration max exceeded, yt = ', yt
+         ierr = ierr + 1
+      endif
+! store co-ordinates
+      if ((kk.ge.1).and.(kk.le.mpys)) then
+         joff = npx*(kk-1) + npp
+         part(2,joff+1) = yt
+      endif
+      yt0 = yt
+   40 continue
+! quit if error
+      if (ierr.ne.0) return
+! density profile in z
+      loff = mpz*ks
+      do 80 l = 1, mpzs + loff
+      ll = l - loff
+      zn = real(l) + z0
+! guess next value for zt
+      if (l.eq.1) then
+         zt0 = edgelz
+         zt = zt0
+         fp = bnz*fnz(zt,argz1,argz2,argz3,0)
+         if (fp.gt.0.0) zt = zt + 0.5/fp
+      else
+         fp = bnz*fnz(zt,argz1,argz2,argz3,0)
+         if (fp.eq.0.0) fp = 1.0
+         zt = zt + 1.0/fp
+      endif
+      zt = max(edgelz,min(zt,anz))
+      i = 0
+   50 f = bnz*fnz(zt,argz1,argz2,argz3,1) - dble(zn)
+! find improved value for zt
+      if (abs(f).ge.eps) then
+         fp = bnz*fnz(zt,argz1,argz2,argz3,0)
+! newton's method
+         if ((abs(f).lt.big).and.(fp.gt.0.0)) then
+            zt0 = zt
+            zt = zt - f/fp
+            zt = max(edgelz,min(zt,anz))
+! bisection method
+         else if (f.gt.0.0) then
+            fp = 0.5*abs(zt0 - zt)
+            zt = zt0 - fp
+         else
+            fp = abs(zt - zt0)
+            zt0 = zt
+            zt = zt + fp
+         endif
+         i = i + 1
+         if (i.lt.imax) go to 50
+!        write (*,*) l,'newton iteration max exceeded, zt = ', zt
+         ierr = ierr + 1
+      endif
+! store co-ordinates
+      if ((ll.ge.1).and.(ll.le.mpzs)) then
+         koff = npx*mpys*(ll - 1)
+         do 70 k = 1, mpys
+         joff = npx*(k - 1) + npp
+         do 60 j = 1, npx
+         part(1,j+joff+koff) = part(1,j+npp)
+         part(2,j+joff+koff) = part(2,joff+1)
+         part(3,j+joff+koff) = zt
+   60    continue
+   70    continue
+      endif
+      zt0 = zt
+   80 continue
+! quit if error
+      if (ierr.ne.0) return
+! update number of particles
+      npp = npt
+! check if not all particles were distributed
+      dnpxyz = dble(npx)*dble(npy)*dble(npz)
+      sum1(1) = dble(npp-nps)
+      call PPDSUM(sum1,work1,1)
+      dnpxyz = sum1(1) - dnpxyz
+      if (dnpxyz.ne.0.0d0) ierr = -1
+      return
+      end
+!-----------------------------------------------------------------------
       subroutine PVDISTR32(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy,&
-     &npz,idimp,npmax,ierr)
+     &npz,kstrt,nvpy,nvpz,idimp,npmax,ierr)
 ! for 3d code, this subroutine calculates initial particle velocities
 ! with maxwellian velocity with drift for distributed data
 ! algorithm designed to assign the same random numbers to particle
@@ -703,52 +1135,59 @@
 ! vdx/vdy/vdz = drift velocity of particles in x/y/z direction
 ! npx/npy/npz = initial number of particles distributed in x/y/z
 ! direction
+! kstrt = starting data block number
+! nvpy/nvpz = number of real or virtual processors in y/z
 ! idimp = size of phase space = 6
 ! npmax = maximum number of particles in each partition
 ! ierr = (0,1) = (no,yes) error condition exists
 ! ranorm = gaussian random number with zero mean and unit variance
 ! with 2D spatial decomposition
       implicit none
-      integer nps, npp, npx, npy, npz, idimp, npmax, ierr
+      integer nps, npp, npx, npy, npz, kstrt, nvpy, nvpz, idimp, npmax
+      integer ierr
       real vtx, vty, vtz, vdx, vdy, vdz
       real part
       dimension part(idimp,npmax)
 ! local data
-      integer j, k, l, npt, npxyzp
+      integer npt, npxyzp, js, ks, j, k, l, kk, ll, mpy, mpys, mpz, mpzs
       real vxt, vyt, vzt
-      double precision dps, dnpx, dnpxy, dkoff, djoff, dj, dnpxyz, dt1
+      double precision dnpxyz, dt1
       integer ierr1, iwork1
       dimension ierr1(1), iwork1(1)
-      double precision dpp, dpt, sum4, work4
-      dimension dpp(1), dpt(1), sum4(4), work4(4)
+      double precision sum4, work4
+      dimension sum4(4), work4(4)
       double precision ranorm
       ierr = 0
-! determine offsets for particle number
-! each random triplet is associated with a global particle index
-! 1:sum(npp-nps+1)
-      dps = dble(npp-nps+1)
-      dnpx = dble(npx)
-      dnpxy = dble(npy)*dnpx
-      dpp(1) = dps
-      call PPDSCAN(dpp,dpt,1)
-      dps = dpp(1) - dps
+! particle distribution constants
+      ks = kstrt - 1
+! find processor id and offsets in y/z
+! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+      ks = (kstrt - 1)/nvpy
+      js = kstrt - nvpy*ks - 1
+! mpy = number of particles per processor in y direction
+      mpy = (npy - 1)/nvpy + 1
+      mpys = min(mpy,max(0,npy-mpy*js))
+! mpz = number of particles per processor in z direction
+      mpz = (npz - 1)/nvpz + 1
+      mpzs = min(mpz,max(0,npz-mpz*ks))
 ! maxwellian velocity distribution
       npt = nps - 1
-      do 30 l = 1, npz
-      dkoff = dnpxy*dble(l - 1)
-      do 20 k = 1, npy
-      djoff = dnpx*dble(k - 1) + dkoff
+      do 30 ll = 1, npz
+      l = ll - mpz*ks
+      do 20 kk = 1, npy
+      k = kk - mpy*js
       do 10 j = 1, npx
-      dj = dble(j - 1) + djoff
       vxt = vtx*ranorm()
       vyt = vty*ranorm()
       vzt = vtz*ranorm()
-      if ((dj.ge.dps).and.(dj.lt.dpp(1))) then
-         npt = npt + 1
-         if (npt.le.npmax) then
-            part(4,npt) = vxt
-            part(5,npt) = vyt
-            part(6,npt) = vzt
+      if ((l.ge.1).and.(l.le.mpzs)) then
+         if ((k.ge.1).and.(k.le.mpys)) then
+            npt = npt + 1
+            if (npt.le.npmax) then
+               part(4,npt) = vxt
+               part(5,npt) = vyt
+               part(6,npt) = vzt
+            endif
          endif
       endif
    10 continue
@@ -787,7 +1226,7 @@
       end
 !-----------------------------------------------------------------------
       subroutine PVRDISTR32(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,&
-     &npy,npz,idimp,npmax,ierr)
+     &npy,npz,kstrt,nvpy,nvpz,idimp,npmax,ierr)
 ! for 3d code, this subroutine calculates initial particle velocities
 ! momentum with maxwell-juttner distribution with drift
 ! for relativistic particles and distributed data.
@@ -813,55 +1252,62 @@
 ! ci = reciprocal of velocity of light
 ! npx/npy/npz = initial number of particles distributed in x/y/z
 ! direction
+! kstrt = starting data block number
+! nvpy/nvpz = number of real or virtual processors in y/z
 ! idimp = size of phase space = 6
 ! npmax = maximum number of particles in each partition
 ! ierr = (0,1) = (no,yes) error condition exists
 ! ranorm = gaussian random number with zero mean and unit variance
 ! with 2D spatial decomposition
       implicit none
-      integer nps, npp, npx, npy, npz, idimp, npmax, ierr
+      integer nps, npp, npx, npy, npz, kstrt, nvpy, nvpz, idimp, npmax
+      integer ierr
       real vtx, vty, vtz, vdx, vdy, vdz, ci
       real part
       dimension part(idimp,npmax)
 ! local data
-      integer j, k, l, npt, npxyzp
+      integer npt, npxyzp, js, ks, j, k, l, kk, ll, mpy, mpys, mpz, mpzs
       real ci4, ptx, pty, ptz, pt2
-      double precision dps, dnpx, dnpxy, dkoff, djoff, dj, dnpxyz, dt1
+      double precision dnpxyz, dt1
       integer ierr1, iwork1
       dimension ierr1(1), iwork1(1)
-      double precision dpp, dpt, sum4, work4
-      dimension dpp(1), dpt(1), sum4(4), work4(4)
+      double precision sum4, work4
+      dimension sum4(4), work4(4)
       double precision ranorm
       ci4 = 0.25*ci*ci
       ierr = 0
-! determine offsets for particle number
-! each random triplet is associated with a global particle index
-! 1:sum(npp-nps+1)
-      dps = dble(npp-nps+1)
-      dnpx = dble(npx)
-      dnpxy = dble(npy)*dnpx
-      dpp(1) = dps
-      call PPDSCAN(dpp,dpt,1)
-      dps = dpp(1) - dps
+! particle distribution constants
+      ks = kstrt - 1
+! find processor id and offsets in y/z
+! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+      ks = (kstrt - 1)/nvpy
+      js = kstrt - nvpy*ks - 1
+! mpy = number of particles per processor in y direction
+      mpy = (npy - 1)/nvpy + 1
+      mpys = min(mpy,max(0,npy-mpy*js))
+! mpz = number of particles per processor in z direction
+      mpz = (npz - 1)/nvpz + 1
+      mpzs = min(mpz,max(0,npz-mpz*ks))
 ! maxwell-juttner momentum distribution
       npt = nps - 1
-      do 30 l = 1, npz
-      dkoff = dnpxy*dble(l - 1)
-      do 20 k = 1, npy
-      djoff = dnpx*dble(k - 1) + dkoff
+      do 30 ll = 1, npz
+      l = ll - mpz*ks
+      do 20 kk = 1, npy
+      k = kk - mpy*js
       do 10 j = 1, npx
-      dj = dble(j - 1) + djoff
       ptx = vtx*ranorm()
       pty = vty*ranorm()
       ptz = vtz*ranorm()
-      if ((dj.ge.dps).and.(dj.lt.dpp(1))) then
-         pt2 = ptx*ptx + pty*pty + ptz*ptz
-         pt2 = sqrt(1.0 + pt2*ci4)
-         npt = npt + 1
-         if (npt.le.npmax) then
-            part(4,npt) = ptx*pt2
-            part(5,npt) = pty*pt2
-            part(6,npt) = ptz*pt2
+      if ((l.ge.1).and.(l.le.mpzs)) then
+         if ((k.ge.1).and.(k.le.mpys)) then
+            pt2 = ptx*ptx + pty*pty + ptz*ptz
+            pt2 = sqrt(1.0 + pt2*ci4)
+            npt = npt + 1
+            if (npt.le.npmax) then
+               part(4,npt) = ptx*pt2
+               part(5,npt) = pty*pt2
+               part(6,npt) = ptz*pt2
+            endif
          endif
       endif
    10 continue
@@ -973,6 +1419,212 @@
       return
       end
 !-----------------------------------------------------------------------
+      subroutine PFEDGES32(edges,nyzp,noff,fny,argy1,argy2,argy3,fnz,   &
+     &argz1,argz2,argz3,nypmx,nzpmx,nypmn,nzpmn,ny,nz,kstrt,nvpy,nvpz,  &
+     &idps,idds,ipbc)
+! this subroutines finds new partitions boundaries (edges,noff,nyzp)
+! from density integrals given by = fny(z,argy1,argy2,argy3,1) and
+! fnz(z,argz1,argz2,argz3,1)
+! edges(1:2) = lower/upper boundary in y of particle partition
+! edges(3:4) = back/front boundary in z of particle partition
+! nyzp(1:2) = number of primary (complete) gridpoints in y/z
+! noff(1) = lowermost global gridpoint in y in particle partition
+! noff(2) = backmost global gridpoint in z in particle partition
+! fny/fnz = density and density integral function in y/z
+! argy1,argy2,argy3 = arguments to fny
+! argz1,argz2,argz3 = arguments to fnz
+! nypmx = maximum size of particle partition in y, including guard cells
+! nzpmx = maximum size of particle partition in z, including guard cells
+! nypmn = minimum value of nyzp(1)
+! nzpmn = minimum value of nyzp(2)
+! ny/nz = system length in y/z direction
+! kstrt = starting data block number (processor id + 1)
+! nvpy/nvpz = number of real or virtual processors in y/z
+! idps = number of particle partition boundaries = 4
+! idds = dimensionality of domain decomposition = 2
+! ipbc = particle boundary condition = (0,1,2,3) =
+! (none,2d periodic,2d reflecting,mixed reflecting/periodic)
+      implicit none
+      integer nypmx, nzpmx, nypmn, nzpmn, ny, nz, kstrt, nvpy, nvpz
+      integer idps, idds, ipbc
+      double precision argy1, argy2, argy3, argz1, argz2, argz3
+      integer nyzp, noff
+      real edges
+      dimension nyzp(idds), noff(idds)
+      dimension edges(idps)
+      double precision fny, fnz
+      external fny, fnz
+! local data
+      integer jb, kb
+      real edgely, edgelz, any1, any, anz1, anz, y0, y1, z0, z1
+      real anpav, anpl, anpr, sum1, at1, at2
+      integer myzpm, iwork4
+      dimension myzpm(4), iwork4(4)
+! determine decomposition
+! find processor id in y/z
+      kb = (kstrt - 1)/nvpy
+      jb = kstrt - nvpy*kb - 1
+! set boundary values
+      edgely = 0.0
+      edgelz = 0.0
+      if (ipbc.eq.2) then
+         edgely = 1.0
+         edgelz = 1.0
+      else if (ipbc.eq.3) then
+         edgely = 1.0
+      endif
+! find normalization for function
+      any = real(ny)
+      anz = real(nz)
+      any1 = any - edgely
+      anz1 = anz - edgelz
+      y0 = fny(dble(edgely),argy1,argy2,argy3,1)
+      z0 = fnz(dble(edgelz),argz1,argz2,argz3,1)
+! anpav = desired number of particles per processor in y
+      anpav = (fny(dble(any1),argy1,argy2,argy3,1) - y0)/real(nvpy)
+! search for boundaries in y
+      anpl = real(jb)*anpav
+      anpr = real(jb+1)*anpav
+      y1 = edgely
+      sum1 = 0.0
+! first find left boundary
+   10 at1 = sum1
+      sum1 = fny(dble(y1),argy1,argy2,argy3,1) - y0
+      y1 = y1 + 1.0
+      if ((sum1.lt.anpl).and.(y1.le.any)) go to 10 
+      if (sum1.gt.at1) then
+         at2 = (y1 - 2.0) + (anpl - at1)/(sum1 - at1)
+      else
+         at2 = y1 - 1.0
+      endif
+      edges(1) = at2
+! set leftmost edge to zero
+      if (jb.eq.0) edges(1) = 0.0
+! then find right boundary
+   20 at1 = sum1
+      sum1 = fny(dble(y1),argy1,argy2,argy3,1) - y0
+      y1 = y1 + 1.0
+      if ((sum1.lt.anpr).and.(y1.le.any)) go to 20
+      at2 = (y1 - 2.0) + (anpr - at1)/(sum1 - at1)
+      edges(2) = at2
+! set rightmost edge to ny
+      if ((jb+1).eq.nvpy) edges(2) = any
+! anpav = desired number of particles per processor in z
+      anpav = (fnz(dble(anz1),argz1,argz2,argz3,1) - z0)/real(nvpz)
+! search for boundaries in z
+      anpl = real(kb)*anpav
+      anpr = real(kb+1)*anpav
+      z1 = edgelz
+      sum1 = 0.0
+! first find left boundary
+   30 at1 = sum1
+      sum1 = fnz(dble(z1),argz1,argz2,argz3,1) - z0
+      z1 = z1 + 1.0
+      if ((sum1.lt.anpl).and.(z1.le.anz)) go to 30 
+      if (sum1.gt.at1) then
+         at2 = (z1 - 2.0) + (anpl - at1)/(sum1 - at1)
+      else
+         at2 = z1 - 1.0
+      endif
+      edges(3) = at2
+! set leftmost edge to zero
+      if (kb.eq.0) edges(3) = 0.0
+! then find right boundary
+   40 at1 = sum1
+      sum1 = fnz(dble(z1),argz1,argz2,argz3,1) - z0
+      z1 = z1 + 1.0
+      if ((sum1.lt.anpr).and.(z1.le.anz)) go to 40
+      at2 = (z1 - 2.0) + (anpr - at1)/(sum1 - at1)
+      edges(4) = at2
+! set rightmost edge to nz
+      if ((kb+1).eq.nvpz) edges(4) = anz
+! calculate number of grids and offsets in new partitions
+      noff(1) = edges(1) + 0.5
+      jb = edges(2) + 0.5
+      nyzp(1) = jb - noff(1)
+      edges(1) = real(noff(1))
+      edges(2) = real(jb)
+      noff(2) = edges(3) + 0.5
+      kb = edges(4) + 0.5
+      nyzp(2) = kb - noff(2)
+      edges(3) = real(noff(2))
+      edges(4) = real(kb)
+! find maximum/minimum partition size in y and z
+      myzpm(1) = nyzp(1)
+      myzpm(2) = -nyzp(1)
+      myzpm(3) = nyzp(2)
+      myzpm(4) = -nyzp(2)
+      call PPIMAX(myzpm,iwork4,4)
+      nypmx = myzpm(1) + 1
+      nypmn = -myzpm(2)
+      nzpmx = myzpm(3) + 1
+      nzpmn = -myzpm(4)
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PFHOLES32(part,edges,npp,ihole,idimp,npmax,idps,ntmax)
+! for 3d code, this subroutine determines list of particles which are
+! leaving this processor, with 2D spatial decomposition
+! input: all except ihole, output: ihole
+! part(2,n) = position y of particle n in partition
+! part(3,n) = position z of particle n in partition
+! edges(1:2) = lower/upper boundary in y of particle partition
+! edges(3:4) = back/front boundary in z of particle partition
+! npp = number of particles in partition
+! ihole(:,2) = location of holes left in y/z in particle arrays
+! ihole(1,:) = ih, number of holes left in y/z (error, if negative)
+! idimp = size of phase space = 4
+! npmax = maximum number of particles in each partition
+! idps = number of particle partition boundaries = 4
+! ntmax = size of hole array for particles leaving processors
+      implicit none
+      integer npp, idimp, npmax, idps, ntmax
+      real part, edges
+      integer ihole
+      dimension part(idimp,npmax)
+      dimension edges(idps), ihole(ntmax+1,2)
+! local data
+      integer j, ih1, ih2, nh
+      real dy, dz
+      integer ierr1, iwork1
+      dimension ierr1(1), iwork1(1)
+      ih1 = 0
+      ih2 = 0
+      nh = 0
+      do 10 j = 1, npp
+      dy = part(2,j)
+      dz = part(3,j)
+! find particles out of bounds
+! check particles leaving in y direction or y and z
+      if ((dy.lt.edges(1)).or.(dy.ge.edges(2))) then
+         ih1 = ih1 + 1
+         if (ih1.le.ntmax) then
+            ihole(ih1+1,1) = j
+         else
+            nh = 1
+         endif
+! check particles leaving in z direction only
+      else if ((dz.lt.edges(3)).or.(dz.ge.edges(4))) then
+         ih2 = ih2 + 1
+         if (ih2.le.ntmax) then
+            ihole(ih2+1,2) = j
+         else
+            nh = 1
+         endif
+      endif
+   10 continue
+! set end of file flag
+      if (nh.gt.0) ih1 = -max(ih1,ih2)
+      ihole(1,1) = ih1
+      ihole(1,2) = ih2
+! set global error flag if needed
+      ierr1(1) = -ih1
+      call PPIMAX(ierr1,iwork1,1)
+      nh = -ierr1(1)
+      if (nh.lt.0) ihole(1,1) = nh
+      return
+      end
+!-----------------------------------------------------------------------
       function ranorm()
 ! this program calculates a random number y from a gaussian distribution
 ! with zero mean and unit variance, according to the method of
@@ -1063,5 +1715,245 @@
       isc = r3*asc
       r1 = r3 - dble(isc)*bsc
       randum = (dble(r1) + dble(r2)*asc)*asc
+      return
+      end
+!-----------------------------------------------------------------------
+      function DLDISTR1(x,anlx,anxi,shift,intg)
+! this function calculates either a density function or its integral
+! for a linear density profile.  Used in initializing particle
+! coordinates.  The three parameters are redundant, and one can set one
+! of them arbitrarily.  A convenient choice is to set  anxi = 1/Lx,
+! anlx = NH - NL, shift = (1 - NL)/(NH - NL), where NL is the density
+! at the left, and NH at the right compared to the average density
+! if intg = 0, n(x) = 1. + anlx*(x*anxi - shift)
+! if intg = 1, n(x) = x + .5*anlx*x*(x*anxi - 2.*shift)
+      implicit none
+      integer intg
+      double precision x, anlx, anxi, shift
+! local data
+      double precision DLDISTR1, f
+      if (intg.eq.0) then
+         f = 1.0d0 + anlx*(x*anxi - shift)
+      else if (intg.eq.1) then
+         if (anxi.eq.0.0d0) then
+            f = x
+         else
+            f = x + 0.5d0*anlx*x*(x*anxi - 2.0d0*shift)
+         endif
+      else
+         f = -1.0d0
+      endif
+      if (f.lt.0.0d0) write (*,*) 'DLDISTR1 Error: f = ', f
+      DLDISTR1 = f
+      return
+      end
+!-----------------------------------------------------------------------
+      function DSDISTR1(x,ans,dkx,phase,intg)
+! this function calculates either a density function or its integral
+! for a sinusoidal density profile.  Used in initializing particle
+! coordinates.
+! if intg = 0, n(x) = 1.0 + ans*sin(dkx*x - phase)
+! if intg = 1, n(x) = x - (ans/dkx)*(cos(dkx*x - phase) - cos(phase))
+      implicit none
+      integer intg
+      double precision x, ans, dkx, phase
+! local data
+      double precision DSDISTR1, f
+      if (intg.eq.0) then
+         f = 1.0d0 + ans*sin(dkx*x - phase)
+      else if (intg.eq.1) then
+         if (dkx.eq.0.0d0) then
+            f = x - ans*sin(phase)*x
+         else
+            f = x - (ans/dkx)*(cos(dkx*x - phase) - cos(phase))
+         endif
+      else
+         f = -1.0d0
+      endif
+      if (f.lt.0.0d0) write (*,*) 'DSDISTR1 Error: f = ', f
+      DSDISTR1 = f
+      return
+      end
+!-----------------------------------------------------------------------
+      function DGDISTR1(x,ang,wi,x0,intg)
+! this function calculates either a density function or its integral
+! for a gaussian density profile.  Used in initializing particle
+! coordinates.
+! if intg = 0, n(x) = 1.0 + ang*exp(-((x-x0)*wi)**2/2.)
+! if intg = 1, n(x) = x + (ang*sqrt(pi/2)/wi)*
+!                         (erf((x-x0)*wi/sqrt(2)) + erf(x0*wi/sqrt(2)))
+      implicit none
+      integer intg
+      double precision x, ang, x0, wi
+! local data
+      double precision DGDISTR1, f, sqrt2i, sqtpih, aw, t, derfn
+      external derfn
+      data sqrt2i, sqtpih /0.7071067811865476,1.253314137397325/
+      save sqrt2i, sqtpih
+      aw = wi*sqrt2i
+      t = (x - x0)*aw
+      if (intg.eq.0) then
+         if (abs(t).lt.8.0d0) then
+            f = 1.0d0 + ang*exp(-t**2)
+         else
+            f = 1.0d0
+         endif
+      else if (intg.eq.1) then
+         if (wi.eq.0.0d0) then
+            f = (1.0d0 + ang)*x
+         else
+            f = x + (ang*sqtpih/wi)*(derfn(t) + derfn(x0*aw))
+         endif
+      else
+         f = -1.0d0
+      endif
+      if (f.lt.0.0d0) write (*,*) 'DGDISTR1 Error: f = ', f
+      DGDISTR1 = f
+      return
+      end
+!-----------------------------------------------------------------------
+      function DHDISTR1(x,anh,wi,x0,intg)
+! this function calculates either a density function or its integral
+! for a hyperbolic secant squared density profile.  Used in initializing
+! particle coordinates.
+! if intg = 0, n(x) = 1.0 + anh*sech((x-x0)*wi)**2
+! if intg = 1, n(x) = x + (anh/wi)*(tanh((x-x0)*wi) + tanh(x0*wi))
+      implicit none
+      integer intg
+      double precision x, anh, x0, wi
+! local data
+      double precision DHDISTR1, f, g, t, u
+      t = (x - x0)*wi
+      if (intg.eq.0) then
+         if (abs(t).lt.32.0d0) then
+            u = exp(-abs(t))
+            f = 1.0d0 + anh*(2.0d0*u/(1.0d0 + u*u))**2
+         else
+            f = 1.0d0
+         endif
+      else if (intg.eq.1) then
+         if (wi.eq.0.0d0) then
+            f = (1.0d0 + anh)*x
+         else
+            if (abs(t).lt.32.0d0) then
+               u = exp(-abs(t))**2
+               f = (1.0d0 - u)/(1.0d0 + u)
+            else
+               f = 1.0d0
+            endif
+            if (t.lt.0.0d0) f = -f
+            t = x0*wi
+            if (abs(t).lt.32.0d0) then
+               u = exp(-abs(t))**2
+               g = (1.0d0 - u)/(1.0d0 + u)
+            else
+               g = 1.0d0
+            endif
+            if (t.lt.0.0d0) g = -g
+            f = x + (anh/wi)*(f + g)
+         endif
+      else
+         f = -1.0d0
+      endif
+      if (f.lt.0.0d0) write (*,*) 'DHDISTR1 Error: f = ', f
+      DHDISTR1 = f
+      return
+      end
+!-----------------------------------------------------------------------
+      function DEDISTR1(x,ane,wi,x0,intg)
+! this function calculates either a density function or its integral
+! for an exponential density profile.  Used in initializing particle
+! coordinates.
+! if intg = 0, n(x) = 1.0 + ane*exp((x-x0)*wi)
+! if intg = 1, n(x) = x + (ane/wi)*(exp((x-x0)*wi) - exp(-x0*wi)
+      implicit none
+      integer intg
+      double precision x, ane, x0, wi
+! local data
+      double precision DEDISTR1, f, t
+      t = (x - x0)*wi
+      if (intg.eq.0) then
+         if (t.gt.(-64.0d0)) then
+            f = 1.0d0 + ane*exp(t)
+         else
+            f = 1.0d0
+         endif
+      else if (intg.eq.1) then
+         if (wi.eq.0.0d0) then
+            f = (1.0d0 + ane)*x
+         else
+            f = x0*wi
+            if (f.gt.64) then
+               f = 0.0d0
+            else
+               f = exp(-f)
+            endif
+            f = x + (ane/wi)*(exp(t) - f)
+         endif
+      else
+         f = -1.0d0
+      endif
+      if (f.lt.0.0d0) write (*,*) 'DEDISTR1 Error: f = ', f
+      DEDISTR1 = f
+      return
+      end
+!-----------------------------------------------------------------------
+      function DGDISTR0(x,ang,wi,x0,intg)
+! this function calculates either a density function or its integral
+! for a gaussian density profile.  Used in initializing particle
+! coordinates.  No background density
+! if intg = 0, n(x) = ang*exp(-((x-x0)*wi)**2/2.)
+! if intg = 1, n(x) = (ang*sqrt(pi/2)/wi)*
+!                         (erf((x-x0)*wi/sqrt(2)) + erf(x0*wi/sqrt(2)))
+      implicit none
+      integer intg
+      double precision x, ang, x0, wi
+! local data
+      double precision DGDISTR0, f, sqrt2i, sqtpih, aw, t, derfn
+      external derfn
+      data sqrt2i, sqtpih /0.7071067811865476,1.253314137397325/
+      save sqrt2i, sqtpih
+      aw = wi*sqrt2i
+      t = (x - x0)*aw
+      if (intg.eq.0) then
+         if (abs(t).lt.8.0d0) then
+            f = ang*exp(-t**2)
+         else
+            f = 0.0d0
+         endif
+      else if (intg.eq.1) then
+         if (wi.eq.0.0d0) then
+            f = ang*x
+         else
+            f = (ang*sqtpih/wi)*(derfn(t) + derfn(x0*aw))
+         endif
+      else
+         f = -1.0d0
+      endif
+      if (f.lt.0.0d0) write (*,*) 'DGDISTR0 Error: f = ', f
+      DGDISTR0 = f
+      return
+      end
+!-----------------------------------------------------------------------
+      function derfn(x)
+! this function calculates the real error function, according to the
+! formulae given in Abramowitz and Stegun, Handbook of Mathematical
+! Functions, p. 299.  Error is < 1.5 x 10-7.
+      implicit none
+      double precision x
+! local data
+      double precision derfn, p, a1, a2, a3, a4, a5, t, f
+      data p, a1, a2 /0.3275911,0.254829592,-0.284496736/
+      data a3, a4, a5 /1.421413741,-1.453152027,1.061405429/
+      save p, a1, a2, a3, a4, a5
+      f = abs(x)
+      t = 1.0d0/(1.0d0 + p*f)
+      if (f.le.8.0d0) then
+         derfn = 1.0d0 - t*(a1 + t*(a2 + t*(a3 + t*(a4 + t*a5))))       &
+     &                    *exp(-x*x)
+      else
+         derfn = 1.0d0
+      endif
+      if (x.lt.0.0d0) derfn = -derfn
       return
       end
