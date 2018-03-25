@@ -1,0 +1,77 @@
+<!--- $Id: FAQ.html,v 3.6 2005-02-03 11:43:22+01 fred Exp $ --->
+<HTML>
+<HEAD>
+<BASE HREF="http://www.thp.Uni-Duisburg.de/Ygl/FAQ.html">
+
+<TITLE>Ygl Frequently Asked Questions</TITLE>
+</HEAD>
+
+<BODY>
+<H1> <IMG SRC="Smile.gif" ALIGN=MIDDLE>
+<A HREF="ReadMe.html">Ygl</A> Frequently Asked Questions </H1>
+
+<H4>
+<FONT SIZE=4>&copy;</FONT>opyright 1993-2005 by
+<A HREF="/~fred/">Fred Hucht &lt;fred(AT)thp.Uni-Duisburg.de&gt;</A>
+</H4>
+<P>
+
+<DL COMPACT>
+<DT> <B>Q 1:</B>
+<DD> We have an SGI Indigo on which we run a number of softwares that
+use GL and which are provided to us as binaries. Since we have an X
+terminal networked to this station we would be interested in using it
+to run these softwares. Do you think that <CITE>Ygl</CITE>
+could be used for such a purpose ? 
+<DT> <B>A 1:</B>
+<DD> I don't think this is possible. Normally you must have the source of
+the GL application and relink it with libYgl.a instead of
+libgl.a. This relink will fail if the application uses routines that
+are not implemented in <CITE>Ygl</CITE>, ie. all 3D stuff,
+object stuff and so on. There is one known case where you don't need
+the sources: 
+<BR>
+You have shared libraries and both libgl.a and libYgl.a are shared
+libs (True under AIX3). Then you can make a directory eg. ~/lib and
+prepend ~/lib to the libpath. Under AIX3 this is done by setting the
+environment variable LIBPATH to <TT>"~/lib:/usr/lib"</TT>, under Linux
+the variable is called LD_LIBRARY_PATH. Then move libYgl.a to
+~/lib/libgl.a and try to run your application. If you get errors like
+"symbol xxx in yyy is undefined" the application requires routines
+that are not part of Ygl. If you are lucky the program runs. 
+<P><DT> <B>Q 2:</B>
+<DD> I have installed Linux + XFree86 on a PC486. If i run programs 
+on remote machines, everything goes all right as long as the program
+(run on SGI machines) does not use GL. Otherwise, an error message is
+displayed:
+
+<PRE>
+dlg error (protocol): remote machine not DGL capable - machinename:0
+dgl error (default init): default dglopen(machinename:0,4) returned -13
+</PRE>
+
+Do you think that <CITE>Ygl</CITE> can do the trick and make my
+machine "DGL capable" ? 
+
+<DT> <B>A 2:</B>
+<DD> No. You need distributed GL (DGL). DGL is an old extension to GL
+to make GL networkable. As far as I know, DGL only runs on SGIs (both
+client and server). There is only a small chance that you can solve
+your problem with Ygl (see A1).
+
+<P><DT> <B>Q 3:</B>
+<DD> When using <CITE>Ygl</CITE> together with C++ under HP-UX
+(i.e. with the compiler <TT>CC</TT>), the float versions of the
+drawing commands apparently don't do anything and functions like
+<TT>ortho2()</TT> keep complaining about zero height/width. What's
+wrong? 
+
+<DT> <B>A 3:</B>
+<DD> <CITE>Ygl</CITE> is written (and thus compiled) in ANSI C. For a
+proper communication between C++ and ANSI C (especially
+float &lt;-&gt; double) you have to use the option <TT>+a1</TT>
+(contributed by Lothar Brendel &lt;l.brendel@uni-duisburg.de&gt;)
+
+</DL>
+</BODY>
+</HTML>

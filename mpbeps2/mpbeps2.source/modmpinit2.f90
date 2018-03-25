@@ -3,10 +3,13 @@
       module modmpinit2
 !
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpinit2.f
+! mnextran2 skips over nextrand groups of random numbers in order to
+!           initialize different random ensembles
+!           calls NEXTRAN2
 ! mpdcomp2 determines spatial decomposition for uniform distribution
 !          calls PDNICOMP2L
 ! mpudistr2 calculates initial particle co-ordinates with uniform
-!           density for 2d  code
+!           density for 2d code
 !           calls PUDISTR2
 ! mfdistr2 calculates initial particle co-ordinates with various density
 !          profiles for 2d code
@@ -23,6 +26,10 @@
 ! mpvrdistr2h calculates initial particle momenta with maxwell-juttner
 !             distribution with drift for 2-1/2d code
 !             calls PVRDISTR2H
+! mpvbdistr2h calculates initial particle velocities in 2-1/2d for
+!             magnetized plasma with maxwellian velocity with drift in
+!             Bparallel direction and ring distribution in Bperp
+!             calls PVBDISTR2H
 ! mpdblkp2 finds the maximum number of particles in each tile
 !          calls PPDBLKP2L
 ! mpfedges2 finds new 1d partitions from initial analytic distribution
@@ -37,12 +44,22 @@
 !             calls mpvdistr2h or mpvrdistr2h
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: may 15, 2017
+! update: march 23, 2018
 !
       use libmpinit2_h
       implicit none
 !
       contains
+!
+!-----------------------------------------------------------------------
+      subroutine mnextran2(nextrand,ndim,np)
+! for 2d code, this subroutine skips over nextrand groups of random
+! numbers in order to initialize different random ensembles
+      implicit none
+      integer, intent(in) :: nextrand, ndim, np
+! call low level procedure
+      call NEXTRAN2(nextrand,ndim,np)
+      end subroutine
 !
 !-----------------------------------------------------------------------
       subroutine mpdcomp2(edges,nyp,noff,nypmx,nypmn,ny,kstrt,nvp)
@@ -315,6 +332,33 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
+      subroutine mpvbdistr2h(part,nps,npp,vtr,vtz,vdr,vdz,omx,omy,omz,  &
+     &npx,npy,kstrt,nvp,irc)
+! calculates initial particle velocities in 2-1/2d
+! for magnetized plasma with maxwellian velocity with drift in Bparallel
+! direction and ring distribution in Bperp
+! irc = (0,1) = (no,yes) error condition exists
+      implicit none
+      integer, intent(in) :: nps, npp, npx, npy, kstrt, nvp
+      integer, intent(inout) :: irc
+      real, intent(in) :: vtr, vtz, vdr, vdz, omx, omy, omz
+      real, dimension(:,:), intent(inout) :: part
+! local data
+      integer :: idimp, npmax
+      irc = 0
+! extract dimensions
+      idimp = size(part,1); npmax = size(part,2)
+! call low level procedure
+      call PVBDISTR2H(part,nps,npp,vtr,vtz,vdr,vdz,omx,omy,omz,npx,npy, &
+     &kstrt,nvp,idimp,npmax,irc)
+      if (irc /= 0) then
+         if (kstrt==1) then
+            write (*,*) 'mpvbdistr2h:particle number error, irc=', irc
+         endif
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine mpdblkp2(part,kpic,npp,noff,nppmx,mx,my,mx1,irc)
 ! finds the maximum number of particles in each tile
       implicit none
@@ -406,10 +450,10 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine mpfholes2(part,edges,npp,iholep)
+      subroutine mpfholes2(part,edges,npp,iholep,ndim,nc)
 ! determines list of particles which are leaving this node
       implicit none
-      integer, intent(in) :: npp
+      integer, intent(in) :: npp, ndim, nc
       real, dimension(:,:), intent(in) :: part
       real, dimension(:), intent(in) :: edges
       integer, dimension(:), intent(inout) :: iholep
@@ -419,7 +463,12 @@
       idimp = size(part,1); npmax = size(part,2)
       idps = size(edges,1); ntmax = size(iholep,1) - 1
 ! call low level procedure
-      call PFHOLES2(part,edges,npp,iholep,idimp,npmax,idps,ntmax)
+      if ((nc==1).or.((nc==2).and.(idimp > (ndim+2)))) then
+         call PFHOLES2(part,edges,npp,iholep,ndim,nc,idimp,npmax,idps,  &
+     &ntmax)
+      else
+         write (*,*) 'mpfholes2 error: nc, idimp=', nc, idimp
+      endif
       end subroutine
 !
 !-----------------------------------------------------------------------

@@ -1,0 +1,11 @@
+ &input2
+ IDRUN = 14
+ INDX =   8, INDY =   8, NPX =  1536, NPY =  1536
+ NTW = 1, NTV = 20, NVEREC = 0
+ NTT = 20, NST = 3, VTSX = 3.0, DVTX = 0.1, NTREC = 0
+ TEND =  10000.000, DT =   0.200
+ VTX =   1.000, VTY =   1.000
+ VX0 =   0.000, VY0 =   0.000
+ MZF = 0, NEXTRAND = 0
+ NPLOT = 3
+ /

@@ -6,14 +6,21 @@
 ! PPEXIT terminates parallel processing.
 ! PPABORT aborts parallel processing.
 ! PWTIMERA performs parallel local wall clock timing.
+! PPCOMM_T creates a transposed communicator
 ! PPSUM performs parallel sum of a real vector.
 ! PPDSUM performs parallel sum of a double precision vector.
 ! PPIMAX performs parallel maximum of an integer vector.
 ! PPDMAX performs parallel maximum of a double precision vector.
 ! PPDSCAN performs parallel prefix reduction of a double precision
 !         vector
+! PPDSCAN_T performs parallel prefix reduction of a double precision
+!           vector with transposed communicator
 ! PPBICAST broadcasts integer data from node 0
 ! PPBDCAST broadcasts double precision data from node 0
+! PPBICASTY performs a segmented broadcast of integer data in y
+! PPBICASTYR performs a reverse segmented broadcast of integer data in y
+! PPBICASTZ performs a segmented broadcast of integer data in z
+! PPBICASTZR performs a reverse segmented broadcast of integer data in z
 ! PPISHFTR2 moves first part of an integer array to the right in y, and
 !           second part of an integer array to the right in z.
 ! PPNCGUARD32L copies data to guard cells in y and z for scalar data,
@@ -52,9 +59,34 @@
 !            direct access binary file with 2D spatial decomposition
 ! PPVREAD32 reads real 3d vector data f from a direct access binary file
 !           and distributes it with 2D spatial decomposition
+! PPWRPART3 collects distributed particle data part and writes to a
+!           fortran unformatted file with spatial decomposition
+! PPRDPART3 reads particle data part from a fortran unformatted file and
+!           distributes it with spatial decomposition
+! PPWRDATA3 collects distributed periodic real 3d scalar data f and
+!           writes to a fortran unformatted file
+! PPRDDATA3 reads periodic real 3d scalar data f from a fortran
+!           unformatted file and distributes it
+! PPWRVDATA3 collects distributed periodic real 3d vector data f and
+!            writes to a fortran unformatted file
+! PPRDVDATA3 reads periodic real 3d vector data f from a fortran
+!            unformatted file and distributes it
+! PPWRVCDATA3 collects distributed periodic complex 3d vector data f and
+!             writes to a fortran unformatted file with spatial
+!             decomposition
+! PPRDVCDATA3 reads periodic complex 3d vector data f from a fortran
+!             unformatted file and distributes it with spatial
+!             decomposition
+! PPARTT3 collects distributed test particle data
+! PPADJFVS3 adjusts 3d velocity distribution in different regions of
+!           space, so that partial regions have equal grid points
+! PPWRNCOMP3 collects distributed non-uniform partition information and
+!            writes to a fortran unformatted file
+! PPWRVNDATA3 collects distributed real 3d vector non-uniform data f and
+!             writes to a fortran unformatted file
 ! written by viktor k. decyk, ucla
 ! copyright 1995, regents of the university of california
-! update: may 10, 2017
+! update: March 21, 2018
       module mpplib3
       use mpi
       implicit none
@@ -69,21 +101,27 @@
 ! mcplx = default datatype for complex type
 ! mdouble = default double precision type
 ! lworld = MPI_COMM_WORLD communicator
-      integer :: nproc, lgrp, mreal, mint, mcplx, mdouble, lworld
+! mgrp = transposed communicator
+      integer :: nproc, lgrp, mreal, mint, mcplx, mdouble, lworld, mgrp
 ! msum = MPI_SUM
 ! mmax = MPI_MAX
       integer :: msum, mmax
       save
 !
       private
-      public :: PPINIT2, PPEXIT, PPABORT, PWTIMERA
-      public :: PPSUM, PPDSUM, PPMAX, PPIMAX, PPDMAX, PPDSCAN
-      public :: PPBICAST, PPBDCAST
+      public :: lstat, nproc, lgrp, mreal, mint, mcplx, mdouble, lworld
+      public :: mgrp
+      public :: PPINIT2, PPEXIT, PPABORT, PWTIMERA, PPCOMM_T
+      public :: PPSUM, PPDSUM, PPMAX, PPIMAX, PPDMAX, PPDSCAN, PPDSCAN_T
+      public :: PPBICAST, PPBDCAST, PPBICASTZ, PPBICASTZR
       public :: PPISHFTR2, PPNCGUARD32L, PPNAGUARD32L, PPNACGUARD32L
       public :: PPFYMOVE32, PPFZMOVE32
       public :: PPTPOS3A, PPTPOS3B, PPNTPOS3A, PPNTPOS3B
       public :: PPMOVE32, PPPMOVE32
       public :: PPWRITE32, PPREAD32, PPVWRITE32, PPVREAD32
+      public :: PPWRPART3, PPRDPART3, PPWRDATA3, PPRDDATA3
+      public :: PPWRVDATA3, PPRDVDATA3, PPWRVCDATA3, PPRDVCDATA3
+      public :: PPARTT3, PPADJFVS3, PPWRNCOMP3, PPWRVNDATA3
 !
       contains
 !
@@ -220,6 +258,26 @@
          dtime = MPI_WTIME()
          time = real(dtime - jclock)
       endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPCOMM_T(nvpy,nvpz)
+! this subroutine creates a transposed communicator
+! nvpy/nvpz = number of real or virtual processors in y/z
+      integer, intent(in) :: nvpy, nvpz
+! local data
+      integer idproc, js, ks, new, ierr
+! lgrp = current communicator
+! mgrp = transposed communicator
+! find current processor id
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! js/ks = old processor co-ordinates in y/z => idproc = js + nvpy*ks
+      ks = idproc/nvpy
+      js = idproc - nvpy*ks
+! new processor id
+      new = ks + nvpz*js
+! create a new communicator based on color and key
+      call MPI_COMM_SPLIT(lgrp,1,new,mgrp,ierr)
       end subroutine
 !
 !-----------------------------------------------------------------------
@@ -381,6 +439,32 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
+      subroutine PPDSCAN_T(f,g,nxp)
+! this subroutine performs a parallel prefix reduction of a vector,
+! that is: f(j,k) = sum over k of f(j,k), where the sum is over k values
+! less than idproc.  using transposed communicator mgrp
+! f = input and output double precision data
+! g = scratch double precision array
+! nxp = number of data values in vector
+      implicit none
+      integer, intent(in) :: nxp
+      double precision, dimension(nxp), intent(inout) :: f, g
+! lgrp = current communicator
+! mdouble = default double precision type
+! msum = MPI_SUM
+! local data
+      integer :: j, ierr
+! return if only one processor
+      if (nproc==1) return
+! performs a parallel prefixm sum
+       call MPI_SCAN(f,g,nxp,mdouble,msum,mgrp,ierr)
+! copy output from scratch array
+      do j = 1, nxp
+         f(j) = g(j)
+      enddo
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine PPBICAST(if,nxp)
 ! this subroutine broadcasts integer data from node 0
 ! if = input and output integer data
@@ -416,6 +500,76 @@
       if (nproc==1) return
 ! broadcast integer
       call MPI_BCAST(f,nxp,mdouble,0,lgrp,ierr)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPBICASTZ(if,nxp,nvpy,nvpz)
+! this subroutine performs a segmented broadcast of integer data in z
+! data from the first node in each z row is broadcast to all the other
+! nodes in that row
+! if = input and output integer data
+! nxp = number of data values
+! nvpy/nvpz = number of real or virtual processors in y/z
+      implicit none
+      integer, intent(in) :: nxp, nvpy, nvpz
+      real, dimension(nxp), intent(inout) :: if
+! lgrp = current communicator
+! mint = default datatype for integerss
+! local data
+      integer :: i, idproc, js, ks, id, ltag, ierr
+      integer, dimension(lstat) :: istatus
+! find processor id
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+      ks = idproc/nvpy
+      js = idproc - nvpy*ks
+      ltag = nxp + 3
+! return if only one processor
+      if (nproc==1) return
+      if (ks > 0) then
+            call MPI_RECV(if,nxp,mint,js,ltag,lgrp,istatus,ierr)
+      else if (ks==0) then
+         do i = 2, nvpz
+            id = js + nvpy*(i - 1)
+            call MPI_SEND(if,nxp,mint,id,ltag,lgrp,ierr)
+         enddo
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPBICASTZR(if,nxp,nvpy,nvpz)
+! this subroutine performs a reverse segmented broadcast of integer data
+! in z. data from the last node in each z row is broadcast to all the
+! other nodes in that row
+! if = input and output integer data
+! nxp = number of data values
+! nvpy/nvpz = number of real or virtual processors in y/z
+      implicit none
+      integer, intent(in) :: nxp, nvpy, nvpz
+      real, dimension(nxp), intent(inout) :: if
+! lgrp = current communicator
+! mint = default datatype for integerss
+! local data
+      integer :: i, idproc, js, ks, joff, nvpz1, id, ltag, ierr
+      integer, dimension(lstat) :: istatus
+! find processor id
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+      ks = idproc/nvpy
+      js = idproc - nvpy*ks
+      nvpz1 = nvpz - 1
+      joff = js + nvpy*nvpz1
+      ltag = nxp + 4
+! return if only one processor
+      if (nproc==1) return
+      if (ks < nvpz1) then
+         call MPI_RECV(if,nxp,mint,joff,ltag,lgrp,istatus,ierr)
+      else if (ks==nvpz1) then
+         do i = 1, nvpz1
+            id = js + nvpy*(i - 1)
+            call MPI_SEND(if,nxp,mint,id,ltag,lgrp,ierr)
+         enddo
+      endif
       end subroutine
 !
 !-----------------------------------------------------------------------
@@ -1953,7 +2107,7 @@
 !
 !-----------------------------------------------------------------------
       subroutine PPMOVE32(part,edges,npp,sbufr,sbufl,rbufr,rbufl,ihole, &
-     &ny,nz,kstrt,nvpy,nvpz,idimp,npmax,idps,nbmax,ntmax,info)
+     &ny,nz,kstrt,nvpy,nvpz,nc,idimp,npmax,idps,nbmax,ntmax,info)
 ! this subroutine moves particles into appropriate spatial regions
 ! ihole array is calculated in particle push procedure
 ! with periodic boundary conditions and 2D spatial decomposition
@@ -1975,6 +2129,7 @@
 ! ny/nz = system length in y/z direction
 ! kstrt = starting data block number
 ! nvpy/nvpz = number of real or virtual processors in y/z
+! nc = (1,2) = (normal,tagged) partitioned co-ordinate to sort by
 ! idimp = size of phase space = 6
 ! npmax = maximum number of particles in each partition.
 ! idps = number of particle partition boundaries = 4
@@ -1987,7 +2142,7 @@
 ! info(4:5) = maximum number of buffer overflows in y/z
 ! info(6:7) = maximum number of particle passes required in y/z
       implicit none
-      integer, intent(in) :: ny, nz, kstrt, nvpy, nvpz, idimp, npmax
+      integer, intent(in) :: ny, nz, kstrt, nvpy, nvpz, nc, idimp, npmax
       integer, intent(in) :: idps, nbmax, ntmax
       integer, intent(inout) :: npp
       real, dimension(idimp,npmax), intent(inout) :: part
@@ -2001,15 +2156,26 @@
 ! mreal = default datatype for reals
 ! local data
 ! iy/iz = partitioned co-ordinates
-      integer, parameter :: iy = 2, iz = 3
+!     integer, parameter :: iy = 2, iz = 3
       integer :: i, j, n, js, ks, ic, nvp, iter, nps, kl, kr, j1, j2
       integer :: ih, jh, nh, j3, joff, jin, nbsize, nter, mter, itermax
-      integer :: itg, ierr
+      integer :: itg, iy, iz, ierr
       real :: an, xt
       integer, dimension(4) :: msid
       integer, dimension(lstat) :: istatus
       integer, dimension(2) :: kb, jsl, jsr, jss
       integer, dimension(5) :: ibflg, iwork
+      if ((nc.lt.1).or.(nc.gt.2)) return
+! determine co-ordinate to sort by
+      if (nc.eq.1) then
+         iy = 2
+         iz = 3
+      else if (idimp.gt.6) then
+         iy = 7
+         iz = 7
+      else
+         return
+      endif
 ! js/ks = processor co-ordinates in y/z=> idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
@@ -3191,6 +3357,854 @@
       irc = nrc(1)
       end subroutine
 !
+!-----------------------------------------------------------------------
+      subroutine PPWRPART3(part,npp,idimp,npmax,iunit,iscr)
+! this subroutine collects distributed particle data part and writes to
+! a fortran unformatted file with spatial decomposition
+! part = input data to be written
+! npp = number of particles in partition
+! idimp = size of phase space = 6
+! npmax = maximum number of particles in each partition
+! iunit = fortran unit number
+! iscr = unused unit number available for scratch file
+      implicit none
+      integer, intent(in) :: npp, idimp, npmax, iunit, iscr
+      real, intent(inout), dimension(idimp,npmax) :: part
+! lgrp = current communicator
+! mint = default datatype for integers
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, igo, ndp, id, i, j, k, ierr
+      integer :: msid
+      integer, dimension(lstat) :: istatus
+      igo = 1
+! this segment is used for shared memory computers
+!     write (unit=iunit) ((part(j,k),j=1,idimp),k=1,npp)
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first write particle data for node 0 to scratch array
+         if (nvp > 1) then
+            open(unit=iscr,form='unformatted',status='scratch')
+            if (npp > 0) then
+               write (iscr) ((part(j,k),j=1,idimp),k=1,npp)
+            endif
+         endif
+! write particle data for node 0 to restart file
+         write (unit=iunit) npp
+         if (npp > 0) then
+            write (unit=iunit)  ((part(j,k),j=1,idimp),k=1,npp)
+         endif
+! then write data from remaining nodes
+         do i = 2, nvp
+         id = i - 1
+! send go signal to sending node
+         call MPI_SEND(igo,1,mint,id,98,lgrp,ierr)
+         call MPI_IRECV(part,idimp*npmax,mreal,id,99,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_GET_COUNT(istatus,mreal,ndp,ierr)
+         ndp = ndp/idimp
+         write (unit=iunit) ndp
+         if (ndp > 0) then
+            write (unit=iunit) ((part(j,k),j=1,idimp),k=1,ndp)
+         endif
+         enddo
+! read back particle data for node 0 from scratch array
+         if (nvp > 1) then
+            rewind iscr
+            if (npp > 0) then
+               read (iscr) ((part(j,k),j=1,idimp),k=1,npp)
+            endif
+            close (iscr)
+         endif
+! other nodes send data to node 0 after receiving go signal
+      else
+         call MPI_IRECV(igo,1,mint,0,98,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         ndp = idimp*npp
+         call MPI_SEND(part,ndp,mreal,0,99,lgrp,ierr)
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPRDPART3(part,npp,idimp,npmax,iunit,iscr,irc)
+! this subroutine reads particle data part from a fortran unformatted
+! file and distributes it with spatial decomposition
+! part = output data to be read
+! npp = number of particles in partition
+! idimp = size of phase space = 6
+! npmax = maximum number of particles in each partition
+! iunit = fortran unit number
+! iscr = unused unit number available for scratch file
+! irc = error indicator
+! input: all except part, npp, irc, output: part, npp, irc
+      implicit none
+      integer, intent(in) :: idimp, npmax, iunit, iscr
+      integer, intent(inout) :: npp, irc
+      real, intent(inout), dimension(idimp,npmax) :: part
+! lgrp = current communicator
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, ndp, id, i, j, k, ios, ierr
+      integer, dimension(1) :: nrc, iwrk1
+      integer, dimension(lstat) :: istatus
+      nrc(1) = 0
+! this segment is used for shared memory computers
+!     read (unit=iunit,iostat=ios) (((part(j,k),j=1,idimp),k=1,npp)
+!     if (ios /= 0) nrc(1) = 1
+!     nrec = nrec + 1
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first read data for node 0
+         read (unit=iunit,iostat=ios) npp
+         if (ios /= 0) nrc(1) = 1
+         if (npp > 0) then
+            read (unit=iunit,iostat=ios) ((part(j,k),j=1,idimp),k=1,npp)
+         endif
+         if (ios /= 0) nrc(1) = 1
+! then write particle data for node 0 to scratch array
+         if (nvp > 1) then
+            open(unit=iscr,form='unformatted',status='scratch')
+            if (npp > 0) then
+               write (iscr) ((part(j,k),j=1,idimp),k=1,npp)
+            endif
+         endif
+! then read data on node 0 to send to remaining nodes
+         do i = 2, nvp
+            id = i - 1
+            read (unit=iunit,iostat=ios) ndp
+            if (ios /= 0) nrc(1) = 1
+            if (ndp > 0) then
+               read (unit=iunit,iostat=ios) ((part(j,k),j=1,idimp),     &
+     &k=1,ndp)
+               if (ios /= 0) then
+                  if (nrc(1) /= 0) nrc(1) = i
+               endif
+            endif
+! send data from node 0
+            ndp = idimp*ndp
+            call MPI_SEND(part,ndp,mreal,id,98,lgrp,ierr)
+         enddo
+! read back particle data for node 0 from scratch array
+         if (nvp > 1) then
+            rewind iscr
+            if (npp > 0) then
+               read (iscr) ((part(j,k),j=1,idimp),k=1,npp)
+            endif
+            close (iscr)
+         endif
+! other nodes receive data from node 0
+      else 
+         call MPI_RECV(part,idimp*npmax,mreal,0,98,lgrp,istatus,ierr)
+         call MPI_GET_COUNT(istatus,mreal,ndp,ierr)
+         npp = ndp/idimp
+      endif
+! check for error condition
+      call PPIMAX(nrc,iwrk1,1)
+      irc = nrc(1)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRDATA3(f,g,nxv,nypmx,nzpmx,iunit)
+! this subroutine collects distributed periodic real 3d scalar data f
+! and writes to a fortran unformatted file with spatial decomposition
+! f = input data to be written
+! g = scratch data
+! nxv = first dimension of data array f
+! nypmx = second dimension of data array f
+! nzpmx = third dimension of data array f
+! iunit = fortran unit number
+! input: all
+      implicit none
+      integer, intent(in) :: nxv, nypmx, nzpmx, iunit
+      real, intent(in), dimension(nxv,nypmx,nzpmx) :: f
+      real, intent(inout), dimension(nxv,nypmx,nzpmx) :: g
+! lgrp = current communicator
+! mint = default datatype for integers
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, igo, nyzp, id, i, j, k, l, ierr
+      integer :: msid
+      integer, dimension(lstat) :: istatus
+      nyzp = nxv*nypmx*nzpmx
+      igo = 1
+! this segment is used for shared memory computers
+!     write (unit=iunit) (((f(j,k,l),j=1,nxv),k=1,nypmx),l=1,nzpmx)
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first write data for node 0
+         write (unit=iunit) (((f(j,k,l),j=1,nxv),k=1,nypmx),l=1,nzpmx)
+! then write data from remaining nodes
+         do i = 2, nvp
+         id = i - 1
+! send go signal to sending node
+         call MPI_SEND(igo,1,mint,id,98,lgrp,ierr)
+         call MPI_IRECV(g,nyzp,mreal,id,99,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         write (unit=iunit) (((g(j,k,l),j=1,nxv),k=1,nypmx),l=1,nzpmx)
+         enddo
+! other nodes send data to node 0 after receiving go signal
+      else
+         call MPI_IRECV(igo,1,mint,0,98,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_SEND(f,nyzp,mreal,0,99,lgrp,ierr)
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPRDDATA3(f,g,nxv,nypmx,nzpmx,iunit,irc)
+! this subroutine reads periodic real 3d scalar data f from a fortran
+! unformatted file and distributes it with spatial decomposition
+! f = output data to be read
+! g = scratch data
+! nxv = first dimension of data array f
+! nypmx = second dimension of data array f
+! nzpmx = third dimension of data array f
+! iunit = fortran unit number
+! irc = error indicator
+! input: all, output: f, irc
+      implicit none
+      integer, intent(in) :: nxv, nypmx, nzpmx, iunit
+      integer, intent(inout) :: irc
+      real, intent(inout), dimension(nxv,nypmx,nzpmx) :: f, g
+! lgrp = current communicator
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, nyzp, id, i, j, k, l, ios, ierr
+      integer, dimension(1) :: nrc, iwrk1
+      integer, dimension(lstat) :: istatus
+      nyzp = nxv*nypmx*nzpmx
+      nrc(1) = 0
+! this segment is used for shared memory computers
+!     read (unit=iunit,iostat=ios) (((f(j,k,l),j=1,nxv),k=1,nypmx),     &
+!    &l=1,nzpmx)
+!     if (ios /= 0) nrc(1) = 1
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first read data for node 0
+         read (unit=iunit,iostat=ios) (((f(j,k,l),j=1,nxv),k=1,nypmx),  &
+     &l=1,nzpmx)
+         if (ios /= 0) nrc(1) = 1
+! then read data on node 0 to send to remaining nodes
+         do i = 2, nvp
+            id = i - 1
+            read (unit=iunit,iostat=ios) (((g(j,k,l),j=1,nxv),k=1,nypmx)&
+     &,l=1,nzpmx)
+            if (ios /= 0) then
+               if (nrc(1) /= 0) nrc(1) = i
+            endif
+! send data from node 0
+            call MPI_SEND(g,nyzp,mreal,id,98,lgrp,ierr)
+         enddo
+! other nodes receive data from node 0
+      else 
+         call MPI_RECV(f,nyzp,mreal,0,98,lgrp,istatus,ierr)
+      endif
+! check for error condition
+      call PPIMAX(nrc,iwrk1,1)
+      irc = nrc(1)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRVDATA3(f,g,ndim,nxv,nypmx,nzpmx,iunit)
+! this subroutine collects distributed periodic real 3d vector data f
+! and writes to a fortran unformatted file with spatial decomposition
+! f = input data to be written
+! g = scratch data
+! ndim = first dimension of data array f
+! nxv = second dimension of data array f
+! nypmx = third dimension of data array f
+! nzpmx = fourth dimension of data array f
+! iunit = fortran unit number
+! input: all
+      implicit none
+      integer, intent(in) :: ndim, nxv, nypmx, nzpmx, iunit
+      real, intent(in), dimension(ndim,nxv,nypmx,nzpmx) :: f
+      real, intent(inout), dimension(ndim,nxv,nypmx,nzpmx) :: g
+! lgrp = current communicator
+! mint = default datatype for integers
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, igo, nnyzp, id, i, j, k, l, n, ierr
+      integer :: msid
+      integer, dimension(lstat) :: istatus
+      nnyzp = ndim*nxv*nypmx*nzpmx
+      igo = 1
+! this segment is used for shared memory computers
+!     write (unit=iunit) ((((f(n,j,k,l),n=1,ndim),j=1,nxv),k=1,nypmx),  &
+!    &l=1,nzpmx)
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first write data for node 0
+         write (unit=iunit) ((((f(n,j,k,l),n=1,ndim),j=1,nxv),k=1,nypmx)&
+     &,l=1,nzpmx)
+! then write data from remaining nodes
+         do i = 2, nvp
+         id = i - 1
+! send go signal to sending node
+         call MPI_SEND(igo,1,mint,id,98,lgrp,ierr)
+         call MPI_IRECV(g,nnyzp,mreal,id,99,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         write (unit=iunit) ((((g(n,j,k,l),n=1,ndim),j=1,nxv),k=1,nypmx)&
+     &,l=1,nzpmx)
+         enddo
+! other nodes send data to node 0 after receiving go signal
+      else
+         call MPI_IRECV(igo,1,mint,0,98,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_SEND(f,nnyzp,mreal,0,99,lgrp,ierr)
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPRDVDATA3(f,g,ndim,nxv,nypmx,nzpmx,iunit,irc)
+! this subroutine reads periodic real 3d vector data f from a fortran
+! unformatted file and distributes it with spatial decomposition
+! f = output data to be read
+! g = scratch data
+! ndim = first dimension of data array f
+! nxv = second dimension of data array f
+! nypmx = third dimension of data array f
+! nzpmx = fourth dimension of data array f
+! iunit = fortran unit number
+! irc = error indicator
+! input: all, output: f, irc
+      implicit none
+      integer, intent(in) :: ndim, nxv, nypmx, nzpmx, iunit
+      integer, intent(inout) :: irc
+      real, intent(inout), dimension(ndim,nxv,nypmx,nzpmx) :: f, g
+! lgrp = current communicator
+! mreal = default datatype for reals
+! local data
+      integer :: nvp, idproc, nnyzp, id, i, j, k, l, n, ios, ierr
+      integer, dimension(1) :: nrc, iwrk1
+      integer, dimension(lstat) :: istatus
+      nnyzp = ndim*nxv*nypmx*nzpmx
+      nrc(1) = 0
+! this segment is used for shared memory computers
+!     read (unit=iunit,iostat=ios) ((((f(n,j,k,l),n=1,ndim),j=1,nxv),     &
+!    &k=1,nypmx),l=1,nzpmx)
+!     if (ios /= 0) nrc(1) = 1
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first read data for node 0
+         read (unit=iunit,iostat=ios) ((((f(n,j,k,l),n=1,ndim),j=1,nxv),&
+     &k=1,nypmx),l=1,nzpmx)
+         if (ios /= 0) nrc(1) = 1
+! then read data on node 0 to send to remaining nodes
+         do i = 2, nvp
+            id = i - 1
+            read (unit=iunit,iostat=ios) ((((g(n,j,k,l),n=1,ndim),      &
+     &j=1,nxv),k=1,nypmx),l=1,nzpmx)
+            if (ios /= 0) then
+               if (nrc(1) /= 0) nrc(1) = i
+            endif
+! send data from node 0
+            call MPI_SEND(g,nnyzp,mreal,id,98,lgrp,ierr)
+         enddo
+! other nodes receive data from node 0
+      else 
+         call MPI_RECV(f,nnyzp,mreal,0,98,lgrp,istatus,ierr)
+      endif
+! check for error condition
+      call PPIMAX(nrc,iwrk1,1)
+      irc = nrc(1)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRVCDATA3(f,g,ndim,nzv,kxypd,kyzpd,iunit)
+! this subroutine collects distributed periodic complex 2d vector data f
+! and writes to a fortran unformatted file with spatial decomposition
+! f = input data to be written
+! g = scratch data
+! ndim = first dimension of data array f
+! nzv = second dimension of data array f
+! kxypd = third dimension of data array f
+! kyzpd = fourth dimension of data array f
+! iunit = fortran unit number
+! input: all
+      implicit none
+      integer, intent(in) :: ndim, nzv, kxypd, kyzpd, iunit
+      complex, intent(in), dimension(ndim,nzv,kxypd,kyzpd) :: f
+      complex, intent(inout), dimension(ndim,nzv,kxypd,kyzpd) :: g
+! lgrp = current communicator
+! mint = default datatype for integers
+! mcplx = default datatype for complex type
+! local data
+      integer :: nvp, idproc, igo, nnxyp, id, i, j, k, l, n, ierr
+      integer :: msid
+      integer, dimension(lstat) :: istatus
+      nnxyp = ndim*nzv*kxypd*kyzpd
+      igo = 1
+! this segment is used for shared memory computers
+!     write (unit=iunit) ((((f(n,l,j,k),n=1,ndim),l=1,nzv),j=1,kxypd),  &
+!    &k=1,kyzpd)
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first write data for node 0
+         write (unit=iunit) ((((f(n,l,j,k),n=1,ndim),l=1,nzv),j=1,kxypd)&
+     &,k=1,kyzpd)
+! then write data from remaining nodes
+         do i = 2, nvp
+         id = i - 1
+! send go signal to sending node
+         call MPI_SEND(igo,1,mint,id,98,lgrp,ierr)
+         call MPI_IRECV(g,nnxyp,mcplx,id,99,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         write (unit=iunit) ((((g(n,l,j,k),n=1,ndim),l=1,nzv),j=1,kxypd)&
+     &,k=1,kyzpd)
+         enddo
+! other nodes send data to node 0 after receiving go signal
+      else
+         call MPI_IRECV(igo,1,mint,0,98,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_SEND(f,nnxyp,mcplx,0,99,lgrp,ierr)
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPRDVCDATA3(f,g,ndim,nzv,kxypd,kyzpd,iunit,irc)
+! this subroutine reads periodic complex 2d vector data f from a fortran
+! unformatted file and distributes it with spatial decomposition
+! f = output data to be read
+! g = scratch data
+! ndim = first dimension of data array f
+! nzv = second dimension of data array f
+! kxypd = third dimension of data array f
+! kyzpd = fourth dimension of data array f
+! iunit = fortran unit number
+! irc = error indicator
+! input: all, output: f, irc
+      implicit none
+      integer, intent(in) :: ndim, nzv, kxypd, kyzpd, iunit
+      integer, intent(inout) :: irc
+      complex, intent(inout), dimension(ndim,nzv,kxypd,kyzpd) :: f, g
+! lgrp = current communicator
+! mcplx = default datatype for complex type
+! local data
+      integer :: nvp, idproc, nnxyp, id, i, j, k, l, n, ios, ierr
+      integer, dimension(1) :: nrc, iwrk1
+      integer, dimension(lstat) :: istatus
+      nnxyp = ndim*nzv*kxypd*kyzpd
+      nrc(1) = 0
+! this segment is used for shared memory computers
+!     read (unit=iunit,iostat=ios) ((((f(n,l,j,k),n=1,ndim),l=1,nzv),   &
+!    &j=1,kxypd),k=1,kyzpd)
+!     if (ios /= 0) nrc(1) = 1
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first read data for node 0
+         read (unit=iunit,iostat=ios) ((((f(n,l,j,k),n=1,ndim),l=1,nzv),&
+     &j=1,kxypd),k=1,kyzpd)
+         if (ios /= 0) nrc(1) = 1
+! then read data on node 0 to send to remaining nodes
+         do i = 2, nvp
+            id = i - 1
+            read (unit=iunit,iostat=ios) ((((g(n,l,j,k),n=1,ndim),      &
+     &l=1,nzv),j=1,kxypd),k=1,kyzpd)
+            if (ios /= 0) then
+               if (nrc(1) /= 0) nrc(1) = i
+            endif
+! send data from node 0
+            call MPI_SEND(g,nnxyp,mcplx,id,98,lgrp,ierr)
+         enddo
+! other nodes receive data from node 0
+      else 
+         call MPI_RECV(f,nnxyp,mcplx,0,98,lgrp,istatus,ierr)
+      endif
+! check for error condition
+      call PPIMAX(nrc,iwrk1,1)
+      irc = nrc(1)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPARTT3(partt,numtp,nvpy,nvpz,idimp,nprobt,irc)
+! this subroutine collects distributed test particle data
+! collects in the order of z processor varying fastest
+! partt = tagged particle coordinates
+! numtp = number of test particles found on this node
+! nvpy/nvpz = number of real or virtual processors in y/z
+! idimp = size of phase space = 7
+! nprobt = number of test charges whose trajectories will be stored.
+! irc = error indicator
+! input: all, output: partt, irc
+      implicit none
+      integer, intent(in) :: numtp, nvpy, nvpz, idimp, nprobt
+      integer, intent(inout) :: irc
+      real, intent(inout), dimension(idimp,nprobt) :: partt
+! lgrp = current communicator
+! mreal = default datatype for reals
+! local data
+      integer :: idproc, noff, npbt, nntp, i, j, js, id, ltag, ierr
+      integer :: msid
+      integer, dimension(1) :: iwork
+      integer, dimension(lstat) :: istatus
+      nntp = idimp*numtp
+      ltag = nprobt
+      irc = 0
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+         noff = numtp + 1
+         npbt = idimp*(nprobt - numtp)
+         do j = 1, nvpy
+         js = j - 1
+         do i = 1, nvpz
+         id = js + nvpy*(i - 1)
+         if (id==0) cycle
+         call MPI_IRECV(partt(1,noff),npbt,mreal,id,ltag,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_GET_COUNT(istatus,mreal,nntp,ierr)
+         nntp = nntp/idimp
+         noff = noff + nntp
+         npbt = npbt - nntp
+         enddo
+         enddo
+! incorrect number of trajectories received
+         noff = noff - 1
+         if (noff.ne.nprobt) irc = noff - 1
+         iwork(1) = irc
+         call PPBICAST(iwork,1)
+         irc = iwork(1)
+! other nodes send data to node 0
+      else
+         call MPI_SEND(partt,nntp,mreal,0,ltag,lgrp,ierr)
+         call PPBICAST(iwork,1)
+         irc = iwork(1)
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPADJFVS3(fvs,gvs,hvs,noff,nyzp,nmv,mvy,mvz,nvpy,nxb,  &
+     &nyb,nzb,nybmx,nzbmx,nmvf,idds)
+! for 3d code, this subroutine adjusts 3d velocity distribution, in
+! different regions of space, so that partial regions have equal amounts
+! of spatial grid points
+! input: all except gvs, hvs, output: fvs, gvs, hvs
+! fvs = spatially resolved distribution function
+! gvs/hvs = scratch arrays
+! noff(1:2) = lowermost global gridpoint in y/z in particle partition
+! nyzp(1:2) = number of primary (complete) gridpoints in y/z
+! mvy/mvz = number of grids in y/z for phase space aggregation
+! nvpy = number of real or virtual processors in y
+! nxb/nyb/nzb = number of segments in x/y/z for velocity distribution
+! nybmx/nzbmx = maximum size of nyb/nzb across processors
+! nmvf = first dimension of fvs
+! idds = dimensionality of domain decomposition = 2
+      implicit none
+      integer, intent(in) :: nmv, mvy, mvz, nvpy
+      integer, intent(in) :: nxb, nyb, nzb, nybmx, nzbmx, nmvf, idds
+      real, dimension(nmvf,3,nxb,nybmx+1,nzb+1), intent(inout) :: fvs
+      real, dimension(nmvf,3,nxb,nzbmx+1,2), intent(inout) :: gvs
+      real, dimension(nmvf,3,nxb,nyb), intent(inout) :: hvs
+      integer, dimension(idds), intent(in) :: noff, nyzp
+! local data
+      integer :: i, j, k, l, m, nps, idproc, nvp, ks, idm, ns, ne, id
+      integer :: nmv21, ndata, mdata
+      integer :: msid, ltag, ierr
+      integer, dimension(lstat) :: istatus
+      real, dimension(3) :: scale
+      nmv21 = 2*nmv + 1
+      nps = 3*nmvf*nxb
+      ltag = 3*nmvf
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! ks = processor co-ordinates in z
+      ks = idproc/nvpy
+! collect partial data in y
+      idm = nvpy*(ks + 1)
+! calculate remainders
+      ns = noff(1) - mvy*(noff(1)/mvy)
+      ne = noff(1) + nyzp(1)
+      ne = ne - mvy*(ne/mvy)
+      ndata = nps*(nzbmx+1)
+      mdata = nps*(nzb+1)
+      ltag = ltag + 1
+! buffer data in y
+      do m = 1, nzb+1
+      do k = 1, nxb
+      do j = 1, 3
+      do i = 1, nmvf
+      gvs(i,j,k,m,1) = fvs(i,j,k,1,m)
+      enddo
+      enddo
+      enddo
+      enddo
+! receive data from right if last region on this node has partial grid
+      if (ne > 0) then
+         id = idproc + 1
+         if (id < idm) then
+            call MPI_IRECV(gvs(1,1,1,1,2),ndata,mreal,id,ltag,lgrp,msid,&
+     &ierr)
+         endif
+      endif
+! send data to right if last region on previous node has partial grid
+      if (ns > 0) then
+         id = idproc - 1
+         if (id >= 0) then
+            call MPI_SEND(gvs(1,1,1,1,1),mdata,mreal,id,ltag,lgrp,ierr)
+         endif
+! save scale
+         do j = 1, 3
+         scale(j) = fvs(nmv21+1,j,1,1,1)
+         enddo
+! left shift data in y
+         do m = 1, nzb+1
+         do l = 1, nyb
+         do k = 1, nxb
+         do j = 1, 3
+         do i = 1, nmvf
+         fvs(i,j,k,l,m) = fvs(i,j,k,l+1,m)
+         enddo
+         enddo
+         enddo
+         enddo
+         enddo
+! restore scale
+         do j = 1, 3
+         fvs(nmv21+1,j,1,1,1) = scale(j)
+         enddo
+! zero out extra element
+         do m = 1, nzb+1
+         do k = 1, nxb
+         do j = 1, 3
+         do i = 1, nmvf
+         fvs(i,j,k,nyb+1,m) = 0.0
+         enddo
+         enddo
+         enddo
+         enddo
+      endif
+! receive data from right if last region on this node has partial grid
+      if (ne > 0) then
+         id = idproc + 1
+         if (id < idm) then
+            call MPI_WAIT(msid,istatus,ierr)
+            do m = 1, nzb+1
+            do k = 1, nxb
+            do j = 1, 3
+            do i = 1, nmvf
+            fvs(i,j,k,nyb,m) = fvs(i,j,k,nyb,m) + gvs(i,j,k,m,2)
+            enddo
+            enddo
+            enddo
+            enddo
+         endif
+      endif
+! collect partial data in z
+! calculate remainders
+      ns = noff(2) - mvz*(noff(2)/mvz)
+      ne = noff(2) + nyzp(2)
+      ne = ne - mvz*(ne/mvz)
+      ndata = nps*nyb
+      ltag = ltag + 1
+! receive data from above if last region on this node has partial grid
+      if (ne > 0) then
+         id = idproc + nvpy
+         if (id < nvp) then
+            call MPI_IRECV(hvs,ndata,mreal,id,ltag,lgrp,msid,ierr)
+         endif
+      endif
+! send data to above if last region on previous node has partial grid
+      if (ns > 0) then
+         id = idproc - nvpy
+         if (id >= 0) then
+            call MPI_SEND(fvs,ndata,mreal,id,ltag,lgrp,ierr)
+         endif
+! save scale
+         do j = 1, 3
+         scale(j) = fvs(nmv21+1,j,1,1,1)
+         enddo
+! left shift data in z
+         do m = 1, nzb
+         do l = 1, nyb
+         do k = 1, nxb
+         do j = 1, 3
+         do i = 1, nmvf
+         fvs(i,j,k,l,m) = fvs(i,j,k,l,m+1)
+         enddo
+         enddo
+         enddo
+         enddo
+         enddo
+! restore scale
+         do j = 1, 3
+         fvs(nmv21+1,j,1,1,1) = scale(j)
+         enddo
+! zero out extra element
+         do l = 1, nyb
+         do k = 1, nxb
+         do j = 1, 3
+         do i = 1, nmvf
+         fvs(i,j,k,l,nzb+1) = 0.0
+         enddo
+         enddo
+         enddo
+         enddo
+      endif
+! receive data from above if last region on this node has partial grid
+      if (ne > 0) then
+         id = idproc + nvpy
+         if (id < nvp) then
+            call MPI_WAIT(msid,istatus,ierr)
+            do l = 1, nyb
+            do k = 1, nxb
+            do j = 1, 3
+            do i = 1, nmvf
+            fvs(i,j,k,l,nzb) = fvs(i,j,k,l,nzb) + hvs(i,j,k,l)
+            enddo
+            enddo
+            enddo
+            enddo
+         endif
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRNCOMP3(nyp,nzp,nvpy,nvpz,iunit)
+! this subroutine collects distributed non-uniform partition information
+! and writes to a fortran unformatted file
+! nyp/nzp = actual data written for third/fourth dimension
+! nvpy/nvpz = number of real or virtual processors in y/z
+! iunit = fortran unit number
+! input: all
+      implicit none
+      integer, intent(in) :: nyp, nzp, nvpy, nvpz, iunit
+! lgrp = current communicator
+! mint = default datatype for integers
+! local data
+      integer :: i, nvp, idproc, id, ierr
+      integer, dimension(2) :: nyzp(2)
+      integer, dimension(lstat) :: istatus
+      nyzp(1) = nyp; nyzp(2) = nzp
+! this segment is used for shared memory computers
+!     write (unit=iunit) nvpy, nvpz, nyp, nzp
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first write data for node 0
+         write (unit=iunit) nvpy, nvpz
+         write (unit=iunit) nyzp
+! then write data from remaining nodes
+         do i = 2, nvp
+         id = i - 1
+         call MPI_RECV(nyzp,2,mint,id,97,lgrp,istatus,ierr)
+         write (unit=iunit) nyzp
+         enddo
+! other nodes send data to node 0
+      else
+         call MPI_SEND(nyzp,2,mint,0,97,lgrp,ierr)
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRVNDATA3(f,g,ndim,nxv,nyp,nzp,nypmx,nzpmx,iunit)
+! this subroutine collects distributed periodic real 3d vector
+! non-uniform data f and writes to a fortran unformatted file
+! f = input data to be written
+! g = scratch data
+! ndim = first dimension of data array f
+! nxv = second dimension of data array f
+! nyp/nzp = actual data written for third/fourth dimension
+! nypmx+1 = third dimension of data array f and g
+! nzpmx = fourth dimension of data array g
+! iunit = fortran unit number
+! input: all
+      implicit none
+      integer, intent(in) :: ndim, nxv, nyp, nzp, nypmx, nzpmx
+      integer, intent(in) :: iunit
+      real, intent(in), dimension(ndim,nxv,nypmx+1,nzp+1) :: f
+      real, intent(inout), dimension(ndim,nxv,nypmx+1,nzpmx) :: g
+! lgrp = current communicator
+! mint = default datatype for integers
+! mreal = default datatype for reals
+! local data
+      integer :: i, j, k, l, n
+      integer :: nvp, idproc, id, nps, mps, nnxyv, nnyzp, nnyzpx
+      integer :: msid, ierr
+      integer, dimension(lstat) :: istatus
+      nnxyv = ndim*nxv*(nypmx + 1)
+      nnyzp = nnxyv*nzp
+      nnyzpx = nnxyv*nzpmx
+! this segment is used for shared memory computers
+!     write (unit=iunit) ((((f(n,j,k,l),n=1,ndim),j=1,nxv),k=1,nyp),    &
+!    &l=1,nzp)
+! this segment is used for mpi computers
+! determine the rank of the calling process in the communicator
+      call MPI_COMM_RANK(lgrp,idproc,ierr)
+! determine the size of the group associated with a communicator
+      call MPI_COMM_SIZE(lgrp,nvp,ierr)
+! node 0 receives messages from other nodes
+      if (idproc==0) then
+! first write data for node 0
+         write (unit=iunit) ((((f(n,j,k,l),n=1,ndim),j=1,nxv),k=1,nyp), &
+     &l=1,nzp)
+! then write data from remaining nodes
+         do i = 2, nvp
+         id = i - 1
+         call MPI_RECV(nps,1,mint,id,98,lgrp,istatus,ierr)
+         call MPI_IRECV(g,nnyzpx,mreal,id,99,lgrp,msid,ierr)
+         call MPI_WAIT(msid,istatus,ierr)
+         call MPI_GET_COUNT(istatus,mreal,mps,ierr)
+         mps = mps/nnxyv
+         write (unit=iunit) ((((g(n,j,k,l),n=1,ndim),j=1,nxv),k=1,nps), &
+     &l=1,mps)
+         enddo
+! other nodes send data to node 0
+      else
+         call MPI_SEND(nyp,1,mint,0,98,lgrp,ierr)
+         call MPI_SEND(f,nnyzp,mreal,0,99,lgrp,ierr)
+      endif
+      end subroutine
+!
       end module
 !
 ! Make functions callable by Fortran77
@@ -3225,6 +4239,13 @@
       real, intent(inout) :: time
       double precision, intent(inout) :: dtime
       call SUB(icntrl,time,dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPCOMM_T(nvpy,nvpz)
+      use mpplib3, only: SUB => PPCOMM_T
+      integer, intent(in) :: nvpy, nvpz
+      call SUB(nvpy,nvpz)
       end subroutine
 !
 !-----------------------------------------------------------------------
@@ -3282,6 +4303,15 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
+      subroutine PPDSCAN_T(f,g,nxp)
+      use mpplib3, only: SUB => PPDSCAN_T
+      implicit none
+      integer, intent(in) :: nxp
+      double precision, dimension(nxp), intent(inout) :: f, g
+      call SUB(f,g,nxp)
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine PPBICAST(if,nxp)
       use mpplib3, only: SUB => PPBICAST
       implicit none
@@ -3297,6 +4327,24 @@
       integer, intent(in) :: nxp
       double precision, dimension(nxp), intent(inout) :: f
       call SUB(f,nxp)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPBICASTZ(if,nxp,nvpy,nvpz)
+      use mpplib3, only: SUB => PPBICASTZ
+      implicit none
+      integer, intent(in) :: nxp, nvpy, nvpz
+      real, dimension(nxp), intent(inout) :: if
+      call SUB(if,nxp,nvpy,nvpz)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPBICASTZR(if,nxp,nvpy,nvpz)
+      use mpplib3, only: SUB => PPBICASTZR
+      implicit none
+      integer, intent(in) :: nxp, nvpy, nvpz
+      real, dimension(nxp), intent(inout) :: if
+      call SUB(if,nxp,nvpy,nvpz)
       end subroutine
 !
 !-----------------------------------------------------------------------
@@ -3443,10 +4491,10 @@
 !
 !-----------------------------------------------------------------------
       subroutine PPMOVE32(part,edges,npp,sbufr,sbufl,rbufr,rbufl,ihole, &
-     &ny,nz,kstrt,nvpy,nvpz,idimp,npmax,idps,nbmax,ntmax,info)
+     &ny,nz,kstrt,nvpy,nvpz,nc,idimp,npmax,idps,nbmax,ntmax,info)
       use mpplib3, only: SUB => PPMOVE32
       implicit none
-      integer, intent(in) :: ny, nz, kstrt, nvpy, nvpz, idimp, npmax
+      integer, intent(in) :: ny, nz, kstrt, nvpy, nvpz, nc, idimp, npmax
       integer, intent(in) :: idps, nbmax, ntmax
       integer, intent(inout) :: npp
       real, dimension(idimp,npmax), intent(inout) :: part
@@ -3456,7 +4504,7 @@
       integer, dimension(ntmax+1,2), intent(inout) :: ihole
       integer, dimension(7), intent(inout) :: info
       call SUB(part,edges,npp,sbufr,sbufl,rbufr,rbufl,ihole,ny,nz,kstrt,&
-     &nvpy,nvpz,idimp,npmax,idps,nbmax,ntmax,info)
+     &nvpy,nvpz,nc,idimp,npmax,idps,nbmax,ntmax,info)
       end subroutine
 !
 !-----------------------------------------------------------------------
@@ -3528,3 +4576,124 @@
      &,irc)
       end subroutine
 !
+!-----------------------------------------------------------------------
+      subroutine PPWRPART3(part,npp,idimp,npmax,iunit,iscr)
+      use mpplib3, only: SUB => PPWRPART3
+      implicit none
+      integer, intent(in) :: npp, idimp, npmax, iunit, iscr
+      real, intent(inout), dimension(idimp,npmax) :: part
+      call SUB(part,npp,idimp,npmax,iunit,iscr)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPRDPART3(part,npp,idimp,npmax,iunit,iscr,irc)
+      use mpplib3, only: SUB => PPRDPART3
+      implicit none
+      integer, intent(in) :: idimp, npmax, iunit, iscr
+      integer, intent(inout) :: npp, irc
+      real, intent(inout), dimension(idimp,npmax) :: part
+      call SUB(part,npp,idimp,npmax,iunit,iscr,irc)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRDATA3(f,g,nxv,nypmx,nzpmx,iunit)
+      use mpplib3, only: SUB => PPWRDATA3
+      implicit none
+      integer, intent(in) :: nxv, nypmx, nzpmx, iunit
+      real, intent(in), dimension(nxv,nypmx,nzpmx) :: f
+      real, intent(inout), dimension(nxv,nypmx,nzpmx) :: g
+      call SUB(f,g,nxv,nypmx,nzpmx,iunit)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPRDDATA3(f,g,nxv,nypmx,nzpmx,iunit,irc)
+      use mpplib3, only: SUB => PPRDDATA3
+      implicit none
+      integer, intent(in) :: nxv, nypmx, nzpmx, iunit
+      integer, intent(inout) :: irc
+      real, intent(inout), dimension(nxv,nypmx,nzpmx) :: f, g
+      call SUB(f,g,nxv,nypmx,nzpmx,iunit,irc)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRVCDATA3(f,g,ndim,nzv,kxypd,kyzpd,iunit)
+      use mpplib3, only: SUB => PPWRVCDATA3
+      implicit none
+      integer, intent(in) :: ndim, nzv, kxypd, kyzpd, iunit
+      complex, intent(in), dimension(ndim,nzv,kxypd,kyzpd) :: f
+      complex, intent(inout), dimension(ndim,nzv,kxypd,kyzpd) :: g
+      call SUB(f,g,ndim,nzv,kxypd,kyzpd,iunit)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPRDVCDATA3(f,g,ndim,nzv,kxypd,kyzpd,iunit,irc)
+      use mpplib3, only: SUB => PPRDVCDATA3
+      implicit none
+      integer, intent(in) :: ndim, nzv, kxypd, kyzpd, iunit
+      integer, intent(inout) :: irc
+      complex, intent(inout), dimension(ndim,nzv,kxypd,kyzpd) :: f, g
+      call SUB(f,g,ndim,nzv,kxypd,kyzpd,iunit,irc)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRVDATA3(f,g,ndim,nxv,nypmx,nzpmx,iunit)
+      use mpplib3, only: SUB => PPWRVDATA3
+      implicit none
+      integer, intent(in) :: ndim, nxv, nypmx, nzpmx, iunit
+      real, intent(in), dimension(ndim,nxv,nypmx,nzpmx) :: f
+      real, intent(inout), dimension(ndim,nxv,nypmx,nzpmx) :: g
+      call SUB(f,g,ndim,nxv,nypmx,nzpmx,iunit)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPRDVDATA3(f,g,ndim,nxv,nypmx,nzpmx,iunit,irc)
+      use mpplib3, only: SUB => PPRDVDATA3
+      implicit none
+      integer, intent(in) :: ndim, nxv, nypmx, nzpmx, iunit
+      integer, intent(inout) :: irc
+      real, intent(inout), dimension(ndim,nxv,nypmx,nzpmx) :: f, g
+      call SUB(f,g,ndim,nxv,nypmx,nzpmx,iunit,irc)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPARTT3(partt,numtp,nvpy,nvpz,idimp,nprobt,irc)
+      use mpplib3, only: SUB => PPARTT3
+      implicit none
+      integer, intent(in) :: numtp, nvpy, nvpz, idimp, nprobt
+      integer, intent(inout) :: irc
+      real, intent(inout), dimension(idimp,nprobt) :: partt
+      call SUB(partt,numtp,nvpy,nvpz,idimp,nprobt,irc)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPADJFVS3(fvs,gvs,hvs,noff,nyzp,nmv,mvy,mvz,nvpy,nxb,  &
+     &nyb,nzb,nybmx,nzbmx,nmvf,idds)
+      use mpplib3, only: SUB => PPADJFVS3
+      implicit none
+      integer, intent(in) :: nmv, mvy, mvz, nvpy
+      integer, intent(in) :: nxb, nyb, nzb, nybmx, nzbmx, nmvf, idds
+      real, dimension(nmvf,3,nxb,nyb+1,nzb+1), intent(inout) :: fvs
+      real, dimension(nmvf,3,nxb,nzbmx+1,2), intent(inout) :: gvs
+      real, dimension(nmvf,3,nxb,nyb), intent(inout) :: hvs
+      integer, dimension(idds), intent(in) :: noff, nyzp
+      call SUB(fvs,gvs,hvs,noff,nyzp,nmv,mvy,mvz,nvpy,nxb,nyb,nzb,nybmx,&
+     &nzbmx,nmvf,idds)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRNCOMP3(nyp,nzp,nvpy,nvpz,iunit)
+      use mpplib3, only: SUB => PPWRNCOMP3
+      implicit none
+      integer, intent(in) :: nyp, nzp, nvpy, nvpz, iunit
+      call SUB(nyp,nzp,nvpy,nvpz,iunit)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPWRVNDATA3(f,g,ndim,nxv,nyp,nzp,nypmx,nzpmx,iunit)
+      use mpplib3, only: SUB => PPWRVNDATA3
+      implicit none
+      integer, intent(in) :: ndim, nxv, nyp, nzp, nypmx, nzpmx, iunit
+      real, intent(in), dimension(ndim,nxv,nyp,nzp) :: f
+      real, intent(inout), dimension(ndim,nxv,nypmx,nzpmx) :: g
+      call SUB(f,g,ndim,nxv,nyp,nzp,nypmx,nzpmx,iunit)
+      end subroutine

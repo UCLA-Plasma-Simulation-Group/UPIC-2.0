@@ -17,7 +17,7 @@
 ! MPPSWAPC2N swaps components for multiple ffts
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: march 23, 2017
+! update: february 26, 2018
 !-----------------------------------------------------------------------
       subroutine WPFFT2RINIT(mixup,sct,indx,indy,nxhyd,nxyhd)
 ! this subroutine calculates tables needed by a two dimensional
@@ -405,7 +405,7 @@
       ani = 0.5/(real(nx)*real(ny))
       nrxb = nxhy/nxh
       nrx = nxy/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,s,t,t1)
       do 60 i = kypi, kypt
 ! bit-reverse array elements in x
@@ -455,7 +455,7 @@
 ! forward fourier transform
    70 nrxb = nxhy/nxh
       nrx = nxhy/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,s,t,t1)
       do 130 i = kypi, kypt
 ! scramble coefficients
@@ -568,7 +568,7 @@
 ! inverse fourier transform
       nryb = nxhy/ny
       nry = nxy/ny
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,s,t)
       do 50 i = kxpi, kxpt
 ! bit-reverse array elements in y
@@ -621,7 +621,7 @@
          g(k,1) = g(k,1) + s
    80    continue
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,s,t)
       do 130 i = kxpi, kxpt
 ! bit-reverse array elements in y
@@ -722,7 +722,7 @@
       ani = 0.5/(real(nx)*real(ny))
       nrxb = nxhy/nxh
       nrx = nxy/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,at1,s,t,t1,t2)
       do 90 i = kypi, kypt
 ! swap complex components
@@ -788,7 +788,7 @@
 ! forward fourier transform
   100 nrxb = nxhy/nxh
       nrx = nxy/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,at1,s,t,t1,t2)
       do 190 i = kypi, kypt
 ! scramble coefficients
@@ -916,7 +916,7 @@
 ! inverse fourier transform
       nryb = nxhy/ny
       nry = nxy/ny
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,s,t1,t2)
       do 50 i = kxpi, kxpt
 ! bit-reverse array elements in y
@@ -980,7 +980,7 @@
    90    continue
   100    continue
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,s,t1,t2)
       do 150 i = kxpi, kxpt
 ! bit-reverse array elements in y
@@ -1087,7 +1087,7 @@
       ani = 0.5/(real(nx)*real(ny))
       nrxb = nxhy/nxh
       nrx = nxy/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,at1,at2,s,t,t1,t2,t3)
       do 90 i = kypi, kypt
 ! swap complex components
@@ -1161,7 +1161,7 @@
 ! forward fourier transform
   100 nrxb = nxhy/nxh
       nrx = nxy/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,at1,at2,s,t,t1,t2,t3)
       do 190 i = kypi, kypt
 ! scramble coefficients
@@ -1297,7 +1297,7 @@
 ! inverse fourier transform
       nryb = nxhy/ny
       nry = nxy/ny
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,s,t1,t2,t3)
       do 50 i = kxpi, kxpt
 ! bit-reverse array elements in y
@@ -1367,7 +1367,7 @@
    90    continue
   100    continue
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,j1,j2,s,t1,t2,t3)
       do 150 i = kxpi, kxpt
 ! bit-reverse array elements in y
@@ -1484,7 +1484,7 @@
       nrx = nxy/nxh
 ! swap complex components
       call MPPSWAPC2N(f,ss,isign,nxh,kypi,kypt,nxvh,kypd,ndim)
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,jj,j1,j2,s,t,t1)
       do 100 i = kypi, kypt
 ! bit-reverse array elements in x
@@ -1542,7 +1542,7 @@
 ! forward fourier transform
   110 nrxb = nxhy/nxh
       nrx = nxy/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,jj,j1,j2,s,t,t1)
       do 210 i = kypi, kypt
 ! scramble coefficients
@@ -1665,7 +1665,7 @@
 ! inverse fourier transform
       nryb = nxhy/ny
       nry = nxy/ny
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,jj,j1,j2,s,t1)
       do 70 i = kxpi, kxpt
 ! bit-reverse array elements in y
@@ -1727,7 +1727,7 @@
   110    continue
   120    continue
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,m,ns,ns2,km,kmr,k1,k2,jj,j1,j2,s,t1)
       do 190 i = kxpi, kxpt
 ! bit-reverse array elements in y

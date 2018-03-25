@@ -5,9 +5,11 @@
  NPXB =   192, NPYB =   192, NPZB =   192
  NTW = 1
  NTP = 5, MODESXP = 41, MODESYP = 41, MODESZP = 41, NPREC = 0
+ NTV = 5, NVFT = 1, NVEREC = 0
+ NTS = 5, NSEREC = 0
  TEND =  100.000, DT =   0.200
  VTX =   1.000, VTY =   1.000, VTZ = 1.000
  VX0 =   0.000, VY0 =   0.000, VZ0 =   0.000
- VDX =   0.000, VDY =   0.000, VDZ =   5.000
  VTDX =   0.500, VTDY =   0.500, VTDZ =   0.500
+ VDX =   5.000, VDY =   0.000, VDZ =   0.000
  /

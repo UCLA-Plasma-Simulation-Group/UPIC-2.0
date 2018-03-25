@@ -8,7 +8,7 @@
 ! writnml2 writes final diagnostic metafile to unit iudm
 ! written by viktor k. decyk, ucla
 ! copyright 2011, regents of the university of california
-! update: May 4, 2017
+! update: March 12, 2018
 !
       implicit none
 !
@@ -34,7 +34,10 @@
 ! ndim = number of velocity dimensions = 2 or 3
       integer :: ndim = 3
 ! nvdist = velocity distribution type
-! nvdist = (1,2) = (maxwellian/juttner,waterbag) distribution
+! nvdist = (1,2,3) = (maxwellian/juttner,waterbag,ring) distribution
+! for nvdist=2, maximum velocity in x/y/z is (vtx/vty/vtz)*sqrt(3)
+! for nvdist=3, x component of thermal velocity (vtx) and drift (vdx)
+! are used to set radial thermal velocity (vtr)  and ring radius (vdr)
       integer :: nvdist = 1
 ! treverse = (0,1) = (no,yes) reverse simulation at end back to start
       integer :: treverse = 0
@@ -160,35 +163,57 @@
 ! dw = frequency increment used in power spectrum
       real :: wmin = 0.0, wmax = 2.0, dw = 0.01
 !
+! Fluid Moments Diagnostic Parameter:
+! ntfm = number of time steps between fluid moments diagnostic
+! ndfm = (0,1,2,3) = process (nothing,electrons,ions,both)
+! npro = (1,2,3,4) = (density,momentum,momentum flux,energy flux)
+! if npro = n is selected, all profiles less than n are also calculated
+      integer :: ntfm = 0, ndfm = 1, npro = 2
+! nferec = current record number for electron fluid moments writes
+! nfirec = current record number for ion fluid moments writes
+!          (0 for beginnning of file, -1 to disable writes)
+      integer :: nferec = -1, nfirec = -1
+!
 ! Velocity-Space Diagnostic Parameter:
 ! ntv = number of time steps between velocity-space diagnostic
-! ndv = (0,1,2,3) = display (nothing,electrons,ions,both)
+! ndv = (0,1,2,3) = process (nothing,electrons,ions,both)
 ! nmv = number of segments in v for velocity distribution
       integer :: ntv = 0, ndv = 3, nmv = 40
-!
-! Phase-Space Diagnostic
-! nts = number of time steps between phase space diagnostic
-! nds = (0,1,2,3) = display (nothing,electrons,ions,both)
-! nsxv = component(s) for phase-space display(s), if nts > 0
-! 1 = x-vx, 2 = x-vy, 3 = x-vx and x-vy, 4 = x-vz, 5 = x-vx and x-vz,
-! 6 = x-vy and x-vz, 7 = x-vx and x-vy and x-vz
-! nsvv = component(s) for phase-space display(s), if nts > 0
-! 1 = vx-vy, 2 = vx-vz, 3 = vx-vy and vx-vz, 4 = vy-vz,
-! 5 = vx-vy and vy-vz, 6 = vx-vy, vx-vz, and vy-vz
-! ntsc = (0,1) = (no,yes) color beam particles
-      integer :: nts = 0, nds = 3, nsxv = 1, nsvv = 0, ntsc = 0
+! nvft = (1,2,3,4,5) = (cartesian,energy,cartesian+energy,cylindrical,
+!        (cylindrical+energy) 1d distribution functions
+!        for cylindrical, z axis is along the external magnetic field
+      integer :: nvft = 1
+! nverec = current record number for electron velocity distribution writes
+! nvirec = current record number for ion velocity distribution writes
+!          (0 for beginnning of file, -1 to disable writes)
+      integer :: nverec = -1, nvirec = -1
 !
 ! Trajectory Diagnostic Parameters:
 ! ntt = number of time steps between trajectory diagnostic.
-! nst = type of test particle distribution, if ntt > 0
+! ndt = (0,1,2) = process (nothing,electrons,ions)
+! nst = type of test particle distribution:
 ! 1 = uniformly distribution in real space
 ! 2 = uniform distribution in velocity space
 ! 3 = velocity slice at vtsx +- dvtx/2
 ! nprobt = number of test charges whose trajectories will be stored.
-      integer :: ntt = 0, nst = 0, nprobt = 0
+      integer :: ntt = 0, ndt = 1, nst = 0, nprobt = 0
 ! vtsx = center of velocity slice if nst = 3
 ! dvtx = width of velocity slice if nst = 3
       real :: vtsx = 0.0, dvtx = 0.1
+! ntrec = current record number for trajectory writes
+!          (0 for beginnning of file, -1 to disable writes)
+      integer :: ntrec = -1
+!
+! Phase-Space Diagnostic
+! nts = number of time steps between phase space diagnostic
+! nds = (0,1,2,3) = display (nothing,electrons,ions,both)
+      integer :: nts = 0, nds = 3
+! mvx/mvy = number of grids in x/y for phase space aggregation
+      integer :: mvx = 3, mvy = 3
+! nserec = current record number for electron phase space writes
+! nsirec = current record number for ion phase space writes
+!          (0 for beginnning of file, -1 to disable writes)
+      integer :: nserec = -1, nsirec = -1
 !
 ! ntm = number of time steps between momentum diagnostic
 !     integer :: ntm = 0
@@ -226,50 +251,56 @@
      &tend, dt, ax, ay, nextrand, mzf, ndprof, ampdx, scaledx, shiftdx, &
      &ampdy, scaledy, shiftdy, amodex, freq, trmp, toff, el0, er0, ntw, &
      &ndw, ntde, modesxde, modesyde, nderec, ntp, ndp, modesxp, modesyp,&
-     &nprec, ntel, modesxel, modesyel, nelrec, wmin, wmax, dw, ntv, ndv,&
-     &nmv, nts, nds, nsxv, nsvv, ntsc, ntt, nst, nprobt, vtsx, dvtx,    &
-     &movion, emf, nustrt, ntr, idrun0, nplot, ndstyle, nvpp, imbalance,&
-     &monitor
+     &nprec, ntel, modesxel, modesyel, nelrec, wmin, wmax, dw, ntfm,    &
+     &ndfm, npro, nferec, nfirec, ntv, ndv, nmv, nvft, nverec, nvirec,  &
+     &ntt, ndt, nst, nprobt, vtsx, dvtx, ntrec, nts, nds, mvx, mvy,     &
+     &nserec, nsirec, movion, emf, nustrt, ntr, idrun0, nplot, ndstyle, &
+     &nvpp, imbalance, monitor
 !
 ! equivalence data to simplify MPI broadcast
-      integer, parameter :: lnin2 = 89
+      integer, parameter :: lnin2 = 100
       double precision, dimension(lnin2) :: ddin2
       private :: lnin2, ddin2
-      equivalence (ddin2(1),idrun), (ddin2(2),idcode), (ddin2(3),indx)
-      equivalence (ddin2(4),indy), (ddin2(5),mx), (ddin2(6),my)
-      equivalence (ddin2(7),npx), (ddin2(8),npy), (ddin2(9),npxb)
-      equivalence (ddin2(10),npyb), (ddin2(11),qme), (ddin2(12),vtx)
-      equivalence (ddin2(13),vty), (ddin2(14),vtz), (ddin2(15),vx0)
-      equivalence (ddin2(16),vy0), (ddin2(17),vz0), (ddin2(18),vdx)
-      equivalence (ddin2(19),vdy), (ddin2(20),vdz), (ddin2(21),vtdx)
-      equivalence (ddin2(22),vtdy), (ddin2(23),vtdz)
-      equivalence (ddin2(24),relativity), (ddin2(25),ci)
-      equivalence (ddin2(26),xtras), (ddin2(27),ndim)
-      equivalence (ddin2(28),nvdist), (ddin2(29),treverse)
-      equivalence (ddin2(30),tend), (ddin2(31),dt), (ddin2(32),ax)
-      equivalence (ddin2(33),ay), (ddin2(34),nextrand), (ddin2(35),mzf)
-      equivalence (ddin2(36),ndprof), (ddin2(37),ampdx)
-      equivalence (ddin2(38),scaledx), (ddin2(39),shiftdx)
-      equivalence (ddin2(40),ampdy), (ddin2(41),scaledy)
-      equivalence (ddin2(42),shiftdy), (ddin2(43),amodex)
-      equivalence (ddin2(44),freq), (ddin2(45),trmp), (ddin2(46),toff)
-      equivalence (ddin2(47),el0), (ddin2(48),er0), (ddin2(49),ntw)
-      equivalence (ddin2(50),ndw), (ddin2(51),ntde)
-      equivalence (ddin2(52),modesxde), (ddin2(53),modesyde)
-      equivalence (ddin2(54),nderec), (ddin2(55),ntp), (ddin2(56),ndp)
-      equivalence (ddin2(57),modesxp), (ddin2(58),modesyp)
-      equivalence (ddin2(59),nprec), (ddin2(60),ntel)
-      equivalence (ddin2(61),modesxel), (ddin2(62),modesyel)
-      equivalence (ddin2(63),nelrec), (ddin2(64),wmin), (ddin2(65),wmax)
-      equivalence (ddin2(66),dw), (ddin2(67),ntv), (ddin2(68),ndv)
-      equivalence (ddin2(69),nmv), (ddin2(70),nts), (ddin2(71),nds)
-      equivalence (ddin2(72),nsxv), (ddin2(73),nsvv), (ddin2(74),ntsc)
-      equivalence (ddin2(75),ntt), (ddin2(76),nst), (ddin2(77),nprobt)
-      equivalence (ddin2(78),vtsx), (ddin2(79),dvtx), (ddin2(80),movion)
-      equivalence (ddin2(81),emf), (ddin2(82),nustrt), (ddin2(83),ntr)
-      equivalence (ddin2(84),idrun0), (ddin2(85),nplot)
-      equivalence (ddin2(86),ndstyle), (ddin2(87),nvpp)
-      equivalence (ddin2(88),imbalance), (ddin2(89),monitor)
+!     equivalence (ddin2(1),idrun), (ddin2(2),idcode), (ddin2(3),indx)
+!     equivalence (ddin2(4),indy), (ddin2(5),mx), (ddin2(6),my)
+!     equivalence (ddin2(7),npx), (ddin2(8),npy), (ddin2(9),npxb)
+!     equivalence (ddin2(10),npyb), (ddin2(11),qme), (ddin2(12),vtx)
+!     equivalence (ddin2(13),vty), (ddin2(14),vtz), (ddin2(15),vx0)
+!     equivalence (ddin2(16),vy0), (ddin2(17),vz0), (ddin2(18),vdx)
+!     equivalence (ddin2(19),vdy), (ddin2(20),vdz), (ddin2(21),vtdx)
+!     equivalence (ddin2(22),vtdy), (ddin2(23),vtdz)
+!     equivalence (ddin2(24),relativity), (ddin2(25),ci)
+!     equivalence (ddin2(26),xtras), (ddin2(27),ndim)
+!     equivalence (ddin2(28),nvdist), (ddin2(29),treverse)
+!     equivalence (ddin2(30),tend), (ddin2(31),dt), (ddin2(32),ax)
+!     equivalence (ddin2(33),ay), (ddin2(34),nextrand), (ddin2(35),mzf)
+!     equivalence (ddin2(36),ndprof), (ddin2(37),ampdx)
+!     equivalence (ddin2(38),scaledx), (ddin2(39),shiftdx)
+!     equivalence (ddin2(40),ampdy), (ddin2(41),scaledy)
+!     equivalence (ddin2(42),shiftdy), (ddin2(43),amodex)
+!     equivalence (ddin2(44),freq), (ddin2(45),trmp), (ddin2(46),toff)
+!     equivalence (ddin2(47),el0), (ddin2(48),er0), (ddin2(49),ntw)
+!     equivalence (ddin2(50),ndw), (ddin2(51),ntde)
+!     equivalence (ddin2(52),modesxde), (ddin2(53),modesyde)
+!     equivalence (ddin2(54),nderec), (ddin2(55),ntp), (ddin2(56),ndp)
+!     equivalence (ddin2(57),modesxp), (ddin2(58),modesyp)
+!     equivalence (ddin2(59),nprec), (ddin2(60),ntel)
+!     equivalence (ddin2(61),modesxel), (ddin2(62),modesyel)
+!     equivalence (ddin2(63),nelrec), (ddin2(64),wmin), (ddin2(65),wmax)
+!     equivalence (ddin2(66),dw), (ddin2(67),ntfm), (ddin2(68),ndfm)
+!     equivalence (ddin2(69),npro), (ddin2(70),nferec)
+!     equivalence (ddin2(71),nfirec), (ddin2(72),ntv), (ddin2(73),ndv)
+!     equivalence (ddin2(74),nmv), (ddin2(75),nvft), (ddin2(76),nverec)
+!     equivalence (ddin2(77),nvirec), (ddin2(78),ntt), (ddin2(79),ndt)
+!     equivalence (ddin2(80),nst), (ddin2(81),nprobt), (ddin2(82),vtsx)
+!     equivalence (ddin2(83),dvtx), (ddin2(84),ntrec), (ddin2(85),nts)
+!     equivalence (ddin2(86),nds), (ddin2(87),mvx), (ddin2(88),mvy)
+!     equivalence (ddin2(89),nserec), (ddin2(90),nsirec)
+!     equivalence (ddin2(91),movion), (ddin2(92),emf)
+!     equivalence (ddin2(93),nustrt), (ddin2(94),ntr)
+!     equivalence (ddin2(95),idrun0), (ddin2(96),nplot)
+!     equivalence (ddin2(97),ndstyle), (ddin2(98),nvpp)
+!     equivalence (ddin2(99),imbalance), (ddin2(100),monitor)
 !
 ! Electromagnetic Namelist
 ! External Magnetic Field Parameters:
@@ -339,20 +370,20 @@
       integer, parameter :: lnin2b = 29
       double precision, dimension(lnin2b) :: ddin2b
       private :: lnin2b, ddin2b
-      equivalence (ddin2b(1),omx), (ddin2b(2),omy), (ddin2b(3),omz)
-      equivalence (ddin2b(4),ntje), (ddin2b(5),modesxje)
-      equivalence (ddin2b(6),modesyje), (ddin2b(7),njerec)
-      equivalence (ddin2b(8),nta), (ddin2b(9),nda), (ddin2b(10),modesxa)
-      equivalence (ddin2b(11),modesya), (ddin2b(12),narec)
-      equivalence (ddin2b(13),ntet), (ddin2b(14),ndet)
-      equivalence (ddin2b(15),modesxet), (ddin2b(16),modesyet)
-      equivalence (ddin2b(17),netrec), (ddin2b(18),ntb)
-      equivalence (ddin2b(19),modesxb), (ddin2b(20),modesyb)
-      equivalence (ddin2b(21),nbrec), (ddin2b(22),ntar)
-      equivalence (ddin2b(23),ndar), (ddin2b(24),modesxar)
-      equivalence (ddin2b(25),modesyar), (ddin2b(26),narrec)
-      equivalence (ddin2b(27),wrmin), (ddin2b(28),wrmax)
-      equivalence (ddin2b(29),dwr)
+!     equivalence (ddin2b(1),omx), (ddin2b(2),omy), (ddin2b(3),omz)
+!     equivalence (ddin2b(4),ntje), (ddin2b(5),modesxje)
+!     equivalence (ddin2b(6),modesyje), (ddin2b(7),njerec)
+!     equivalence (ddin2b(8),nta), (ddin2b(9),nda), (ddin2b(10),modesxa)
+!     equivalence (ddin2b(11),modesya), (ddin2b(12),narec)
+!     equivalence (ddin2b(13),ntet), (ddin2b(14),ndet)
+!     equivalence (ddin2b(15),modesxet), (ddin2b(16),modesyet)
+!     equivalence (ddin2b(17),netrec), (ddin2b(18),ntb)
+!     equivalence (ddin2b(19),modesxb), (ddin2b(20),modesyb)
+!     equivalence (ddin2b(21),nbrec), (ddin2b(22),ntar)
+!     equivalence (ddin2b(23),ndar), (ddin2b(24),modesxar)
+!     equivalence (ddin2b(25),modesyar), (ddin2b(26),narrec)
+!     equivalence (ddin2b(27),wrmin), (ddin2b(28),wrmax)
+!     equivalence (ddin2b(29),dwr)
 !
 ! Darwin Namelist
 ! ndc = number of corrections in darwin iteration
@@ -365,7 +396,7 @@
       integer, parameter :: lnin2d = 1
       double precision, dimension(lnin2d) :: ddin2d
       private :: lnin2d, ddin2d
-      equivalence (ddin2d(1),ndc)
+!     equivalence (ddin2d(1),ndc)
 !
 ! Ion Namelist
 ! Background Ion Parameters:
@@ -435,24 +466,23 @@
       integer, parameter :: lnion2 = 38
       double precision, dimension(lnion2) :: ddion2
       private :: lnion2, ddion2
-      equivalence (ddion2(1),npxi), (ddion2(2),npyi), (ddion2(3),npxbi)
-      equivalence (ddion2(4),npybi), (ddion2(5),qmi), (ddion2(6),rmass)
-      equivalence (ddion2(7),rtempxi), (ddion2(8),rtempyi)
-      equivalence (ddion2(9),rtempzi), (ddion2(10),vxi0)
-      equivalence (ddion2(11),vyi0), (ddion2(12),vzi0)
-      equivalence (ddion2(13),vdxi), (ddion2(14),vdyi)
-      equivalence (ddion2(15),vdzi), (ddion2(16),rtempdxi)
-      equivalence (ddion2(17),rtempdyi), (ddion2(18),rtempdzi)
-      equivalence (ddion2(19),ndprofi), (ddion2(20),ampdxi)
-      equivalence (ddion2(21),scaledxi), (ddion2(22),shiftdxi)
-      equivalence (ddion2(23),ampdyi), (ddion2(24),scaledyi)
-      equivalence (ddion2(25),shiftdyi), (ddion2(26),ntdi)
-      equivalence (ddion2(27),nddi), (ddion2(28),modesxdi)
-      equivalence (ddion2(29),modesydi), (ddion2(30),ndirec)
-      equivalence (ddion2(31),ntji), (ddion2(32),ndji)
-      equivalence (ddion2(33),modesxji), (ddion2(34),modesyji)
-      equivalence (ddion2(35),njirec), (ddion2(36),wimin)
-      equivalence (ddion2(37),wimax), (ddion2(38),dwi)
+!     equivalence (ddion2(1),npxi), (ddion2(2),npyi), (ddion2(3),npxbi)
+!     equivalence (ddion2(4),npybi), (ddion2(5),qmi), (ddion2(6),rmass)
+!     equivalence (ddion2(7),rtempxi), (ddion2(8),rtempyi)
+!     equivalence (ddion2(9),rtempzi), (ddion2(10),vxi0)
+!     equivalence (ddion2(11),vyi0), (ddion2(12),vzi0)
+!     equivalence (ddion2(13),vdxi), (ddion2(14),vdyi)
+!     equivalence (ddion2(15),vdzi), (ddion2(16),rtempdxi)
+!     equivalence (ddion2(17),rtempdyi), (ddion2(18),rtempdzi)
+!     equivalence (ddion2(19),ndprofi), (ddion2(20),ampdxi)
+!     equivalence (ddion2(21),scaledxi), (ddion2(22),shiftdxi)
+!     equivalence (ddion2(23),ampdyi), (ddion2(24),scaledyi)
+!     equivalence (ddion2(25),shiftdyi), (ddion2(26),ntdi)
+!     equivalence (ddion2(27),nddi), (ddion2(28),modesxdi)
+!     equivalence (ddion2(29),modesydi), (ddion2(30),ndirec)
+!     equivalence (ddion2(31),ntji), (ddion2(32),ndji)
+!     equivalence (ddion2(33),modesxji), (ddion2(34),modesyji)
+!     equivalence (ddion2(37),wimax), (ddion2(38),dwi)
 !
 ! Output namelists
 !
@@ -516,12 +546,50 @@
       namelist /vpotr2d/ idrun, indx, indy, ntar, modesxar, modesyar,   &
      &ndim, omx, omy, omz, ci, narrec, nvp, t0, tend, dt, ceng, farname
 !
+! Namelist output for fluid moments diagnostic
+! nprd = dimension of fluid moment arrays fmse and fmsi
+      integer :: nprd = 0
+! ffename/ffiname = file name for electron/ion fluid moments diagnostic
+      character(len=32) :: ffename = 'fmer2.0', ffiname = 'fmir2.0'
+! define namelist
+      namelist /fm2d/ idrun, indx, indy, ntfm, npro, ndim, nprd, nferec,&
+     &nfirec, nvp, t0, tend, dt, ceng, ffename, ffiname
+!
+! Namelist output for velocity-space diagnostic
+! nfvd = dimension of velocity distribution arrays fv and fvi
+! nfed = dimension of energy distribution arrays fe and fei
+      integer :: nfvd = 0, nfed = 0
+! fvename/fviname = file name for electron/ion velocity-space diagnostic
+      character(len=32) :: fvename = 'fve2.0', fviname = 'fvi2.0'
+! define namelist
+      namelist /fv2d/ idrun, indx, indy, ntv, nmv, nvft, ndim, nfvd,    &
+     &nfed, omx, omy, omz, nverec, nvirec, nvp, t0, tend, dt, fvename,  &
+     &fviname
+!
+! Namelist output for trajectory diagnostic
+! ndimp = size of phase space trajectories
+      integer :: ndimp = 0
+! ftname = file name for trajectory diagnostic
+      character(len=32) :: ftname = 'tr2.0'
+! define namelist
+      namelist /tr2d/ idrun, indx, indy, ntt, ndt, nst, nmv, ndim,      &
+     &ndimp, nprobt, ntrec, nvp, t0, tend, dt, ftname
+!
+! Namelist output for phase space diagnostic
+! nsxb/nsyb = number of segments in x/y for global velocity distribution
+      integer :: nsxb = 0, nsyb= 0
+! fsename/fsiname = file name for electron/ion phase space diagnostic
+      character(len=32) :: fsename = 'pse2.0', fsiname = 'psi2.0'
+! define namelist
+      namelist /ps2d/ idrun, indx, indy, nts, nmv, ndim, nsxb, nsyb,    &
+     &nserec, nsirec, nvp, t0, tend, dt, fsename, fsiname
+!
 ! Namelist output for ion density diagnostic
 ! fdname = file name for ion density diagnostic
       character(len=32) :: fdiname = 'denik2.0'
 ! define namelist
       namelist /deni2d/ idrun, indx, indy, ntdi, modesxdi, modesydi,    &
-     &ndirec, nvp, t0, tend, dt, ceng, fdiname 
+     &ndirec, nvp, t0, tend, dt, ceng, fdiname
 !
 ! Namelist output for ion current diagnostic
 ! fjiname = file name for ion current diagnostic
@@ -620,6 +688,23 @@
       if (ntar > 0) then
          write (iudm,vpotr2d)
       endif
+! fluid moments diagnostic
+      if (ntfm > 0) then
+         write (iudm,fm2d)
+      endif
+! velocity-space diagnostic
+      if (ntv > 0) then
+         write (iudm,fv2d)
+      endif
+! trajectory diagnostic
+      if (ntt > 0) then
+         write (iudm,tr2d)
+      endif
+! phase space diagnostic
+      if (nts > 0) then
+         write (iudm,ps2d)
+      endif
+! ion parameters
       if (movion==1) then
 ! write out ion input parameters
          write (iudm,ions2)

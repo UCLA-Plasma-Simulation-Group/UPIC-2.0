@@ -48,7 +48,7 @@
 !              unpacked array and stores them into a packed array
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: april 26, 2017
+! update: february 15, 2018
 !-----------------------------------------------------------------------
       subroutine MPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz,  &
      &kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
@@ -124,7 +124,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -163,8 +163,8 @@
    40 sum1 = 0.0d0
       if (kstrt.gt.(nvpy*nvpz)) go to 160
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,wp)
+!$OMP PARALLEL                                                          &
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,wp)     &
 !$OMP& REDUCTION(+:sum1)
       do 60 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
@@ -215,7 +215,7 @@
 !$OMP END PARALLEL
 ! mode numbers kx = 0, nx/2
       sum2 = 0.0d0
-!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,at1,at3,at4,zt1,zt2,wp)
+!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,at1,at3,at4,zt1,zt2,wp)         &
 !$OMP& REDUCTION(+:sum2)
       do 90 k = 1, kyzps
       k1 = k + koff
@@ -272,7 +272,7 @@
       sum2 = 0.0d0
 ! keep ky = 0
       if (ks.eq.0) then
-!$OMP PARALLEL DO PRIVATE(j,l,l1,dkx,at1,at2,at4,zt1,zt2,wp)
+!$OMP PARALLEL DO PRIVATE(j,l,l1,dkx,at1,at2,at4,zt1,zt2,wp)            &
 !$OMP& REDUCTION(+:sum2)
          do 110 j = 1, kxyps
          dkx = dnx*real(j + joff)
@@ -674,7 +674,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -688,8 +688,8 @@
       sum1 = 0.0d0
       if (kstrt.gt.(nvpy*nvpz)) go to 120
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,zt3,wp)
+!$OMP PARALLEL                                                          &
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,zt3,wp) &
 !$OMP& REDUCTION(+:sum1)
       do 20 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
@@ -754,7 +754,7 @@
 !$OMP END PARALLEL
 ! mode numbers kx = 0, nx/2
       sum2 = 0.0d0
-!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,at1,at3,at4,zt1,zt2,zt3,wp)
+!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,at1,at3,at4,zt1,zt2,zt3,wp)     &
 !$OMP& REDUCTION(+:sum2)
       do 50 k = 1, kyzps
       k1 = k + koff
@@ -824,7 +824,7 @@
       sum2 = 0.0d0
 ! keep ky = 0
       if (ks.eq.0) then
-!$OMP PARALLEL DO PRIVATE(j,l,l1,dkx,at1,at2,at4,zt1,zt2,zt3,wp)
+!$OMP PARALLEL DO PRIVATE(j,l,l1,dkx,at1,at2,at4,zt1,zt2,zt3,wp)        &
 !$OMP& REDUCTION(+:sum2)
          do 70 j = 1, kxyps
          dkx = dnx*real(j + joff)
@@ -1015,7 +1015,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -1035,10 +1035,9 @@
 ! calculate the electromagnetic fields
       if (kstrt.gt.(nvpy*nvpz)) go to 120
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkz,dky,dkx,afdt,zt1,zt2,zt3,zt4,zt5,zt6
-!$OMP& ,zt7,zt8,zt9,ws,wp)
-!$OMP& REDUCTION(+:sum1,sum2)
+!$OMP PARALLEL                                                          &
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkz,dky,dkx,afdt,zt1,zt2,zt3,zt4,zt5,zt6&
+!$OMP& ,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum1,sum2)
       do 20 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
       j = kk - kxyps*k
@@ -1175,9 +1174,8 @@
 ! mode numbers kx = 0, nx/2
       sum3 = 0.0d0
       sum4 = 0.0d0
-!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dkz,dky,afdt,zt1,zt2,zt3,zt4,zt5,zt6
-!$OMP& ,zt7,zt8,zt9,ws,wp)
-!$OMP& REDUCTION(+:sum3,sum4)
+!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dkz,dky,afdt,zt1,zt2,zt3,zt4,zt5,zt6&
+!$OMP& ,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum3,sum4)
       do 50 k = 1, kyzps
       k1 = k + koff
       if ((k1.gt.0).and.(k1.ne.nyh)) then
@@ -1313,9 +1311,8 @@
       sum4 = 0.0d0
 ! keep ky = 0
       if (ks.eq.0) then
-!$OMP PARALLEL DO PRIVATE(j,l,k1,l1,dkz,dkx,afdt,zt1,zt2,zt3,zt4,zt5,zt6
-!$OMP& ,zt7,zt8,zt9,ws,wp)
-!$OMP& REDUCTION(+:sum3,sum4)
+!$OMP PARALLEL DO PRIVATE(j,l,k1,l1,dkz,dkx,afdt,zt1,zt2,zt3,zt4,zt5,zt6&
+!$OMP& ,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum3,sum4)
          do 70 j = 1, kxyps
          dkx = dnx*real(j + joff)
          ws = 0.0d0
@@ -1537,7 +1534,7 @@
       nzh = max(1,nz/2)
       nz2 = nz + 2
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       kxyps = min(kxyp,max(0,nxh-kxyp*js))
@@ -1811,7 +1808,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -1825,8 +1822,8 @@
       sum1 = 0.0d0
       if (kstrt.gt.(nvpy*nvpz)) go to 120
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,zt3,wp)
+!$OMP PARALLEL                                                          &
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,zt3,wp) &
 !$OMP& REDUCTION(+:sum1)
       do 20 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
@@ -1889,7 +1886,7 @@
 !$OMP END PARALLEL
 ! mode numbers kx = 0, nx/2
       sum2 = 0.0d0
-!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,at1,at3,at4,zt1,zt2,zt3,wp)
+!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,at1,at3,at4,zt1,zt2,zt3,wp)     &
 !$OMP& REDUCTION(+:sum2)
       do 50 k = 1, kyzps
       k1 = k + koff
@@ -1957,7 +1954,7 @@
       sum2 = 0.0d0
 ! keep ky = 0
       if (ks.eq.0) then
-!$OMP PARALLEL DO PRIVATE(j,l,l1,dkx,at1,at2,at4,zt1,zt2,zt3,wp)
+!$OMP PARALLEL DO PRIVATE(j,l,l1,dkx,at1,at2,at4,zt1,zt2,zt3,wp)        &
 !$OMP& REDUCTION(+:sum2)
          do 70 j = 1, kxyps
          dkx = dnx*real(j + joff)
@@ -2142,8 +2139,8 @@
 ! calculate transverse part of current
       if (kstrt.gt.(nvpy*nvpz)) return
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,zt1,zt2,zt3, 
+!$OMP PARALLEL                                                          &
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,zt1,zt2,zt3, &
 !$OMP& zt4,zt5)
       do 20 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
@@ -2212,7 +2209,7 @@
 !$OMP END DO
 !$OMP END PARALLEL
 ! mode numbers kx = 0, nx/2
-!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,dkz,dky2,at1,zt1,zt2,zt3,zt4,zt5
+!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,dkz,dky2,at1,zt1,zt2,zt3,zt4,zt5&
 !$OMP& )
       do 50 k = 1, kyzps
       k1 = k + koff
@@ -2462,8 +2459,8 @@
 ! calculate transverse part of current
       if (kstrt.gt.(nvpy*nvpz)) return
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,zt1,zt2,zt3, 
+!$OMP PARALLEL                                                          &
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,zt1,zt2,zt3, &
 !$OMP& zt4,zt5)
       do 20 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
@@ -2532,7 +2529,7 @@
 !$OMP END DO
 !$OMP END PARALLEL
 ! mode numbers kx = 0, nx/2
-!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,dkz,dky2,at1,zt1,zt2,zt3,zt4,zt5
+!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,dkz,dky2,at1,zt1,zt2,zt3,zt4,zt5&
 !$OMP& )
       do 50 k = 1, kyzps
       k1 = k + koff
@@ -2785,7 +2782,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -3291,7 +3288,7 @@
       nz2 = nz + 2
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -3512,7 +3509,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -3525,8 +3522,8 @@
       sum1 = 0.0d0
       if (kstrt.gt.(nvpy*nvpz)) go to 120
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,wp)
+!$OMP PARALLEL                                                          &
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,wp)     &
 !$OMP& REDUCTION(+:sum1)
       do 20 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
@@ -3579,7 +3576,7 @@
 !$OMP END PARALLEL
 ! mode numbers kx = 0, nx/2
       sum2 = 0.0d0
-!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,at1,at3,at4,zt1,zt2,wp)
+!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,at1,at3,at4,zt1,zt2,wp)         &
 !$OMP& REDUCTION(+:sum2)
       do 50 k = 1, kyzps
       k1 = k + koff
@@ -3638,7 +3635,7 @@
       sum2 = 0.0d0
 ! keep ky = 0
       if (ks.eq.0) then
-!$OMP PARALLEL DO PRIVATE(j,l,l1,dkx,at1,at2,at4,zt1,zt2,wp)
+!$OMP PARALLEL DO PRIVATE(j,l,l1,dkx,at1,at2,at4,zt1,zt2,wp)            &
 !$OMP& REDUCTION(+:sum2)
          do 70 j = 1, kxyps
          dkx = dnx*real(j + joff)
@@ -3774,7 +3771,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -3950,7 +3947,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -4164,7 +4161,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -4406,7 +4403,7 @@
       dnz = 6.28318530717959/real(nz)
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -4418,8 +4415,8 @@
 ! calculate vector potential
       if (kstrt.gt.(nvpy*nvpz)) return
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,at2,at3,at4, 
+!$OMP PARALLEL                                                          &
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,at2,at3,at4, &
 !$OMP& zt1,zt2,zt3)
       do 20 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
@@ -4473,7 +4470,7 @@
 !$OMP END DO
 !$OMP END PARALLEL
 ! mode numbers kx = 0, nx/2
-!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,dky2,dkz,at1,at3,at4,zt1,zt2,zt3
+!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dky,dky2,dkz,at1,at3,at4,zt1,zt2,zt3&
 !$OMP& )
       do 50 k = 1, kyzps
       k1 = k + koff
@@ -4718,7 +4715,7 @@
       afc2 = affp*ci*ci
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -4730,8 +4727,8 @@
 ! calculate the radiative vector potential
       if (kstrt.gt.(nvpy*nvpz)) return
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,at2,zt1,zt2,
+!$OMP PARALLEL                                                          &
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,at2,zt1,zt2, &
 !$OMP& zt3)
       do 20 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
@@ -4995,7 +4992,7 @@
       nz2 = nz + 2
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -5279,7 +5276,7 @@
       nz2 = nz + 2
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -5540,7 +5537,7 @@
       nz2 = nz + 2
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -5718,7 +5715,7 @@
       nz2 = nz + 2
       zero = cmplx(0.0,0.0)
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -5887,7 +5884,7 @@
 ! modes stored: kx = (kxyp*js+(0,1,...kxyp-1)),
 ! and ky = (kyzp*ks+(0,1,...kyzp-1)), when ks < nvpy/2
 ! and ky = (kyzp*(ks-nvpy+1)-(kyzp-1,...,1,0)-1), when ks >= nvpy/2
-! where js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! where js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
 ! and kz=(0,+-1,+-2,...,+-(NZ/2-1),NZ/2)
 ! except kx = NX/2 is stored at location kxyp+1 when js=0,
 ! and ky = NY/2 is stored at location 1 when ks=nvp/2.
@@ -5925,7 +5922,7 @@
       lmax = min0(modesz,nzh)
       j1 = kxyp + 1
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -6105,7 +6102,7 @@
 ! modes stored: kx = (kxyp*js+(0,1,...kxyp-1)),
 ! and ky = (kyzp*ks+(0,1,...kyzp-1)), when ks < nvpy/2
 ! and ky = (kyzp*(ks-nvpy+1)-(kyzp-1,...,1,0)-1), when ks >= nvpy/2
-! where js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! where js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
 ! and kz=(0,+-1,+-2,...,+-(NZ/2-1),NZ/2)
 ! except kx = NX/2 is stored at location kxyp+1 when js=0,
 ! and ky = NY/2 is stored at location 1 when ks=nvp/2.
@@ -6144,7 +6141,7 @@
       lmax = min0(modesz,nzh)
       j1 = kxyp + 1
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -6407,7 +6404,7 @@
 ! modes stored: kx = (kxyp*js+(0,1,...kxyp-1)),
 ! and ky = (kyzp*ks+(0,1,...kyzp-1)), when ks < nvpy/2
 ! and ky = (kyzp*(ks-nvpy+1)-(kyzp-1,...,1,0)-1), when ks >= nvpy/2
-! where js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! where js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
 ! and kz=(0,+-1,+-2,...,+-(NZ/2-1),NZ/2)
 ! except kx = NX/2 is stored at location kxyp+1 when js=0,
 ! and ky = NY/2 is stored at location 1 when ks=nvp/2.
@@ -6447,7 +6444,7 @@
       lmax = min0(modesz,nzh)
       j1 = kxyp + 1
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js
@@ -6664,7 +6661,7 @@
 ! modes stored: kx = (kxyp*js+(0,1,...kxyp-1)),
 ! and ky = (kyzp*ks+(0,1,...kyzp-1)), when ks < nvpy/2
 ! and ky = (kyzp*(ks-nvpy+1)-(kyzp-1,...,1,0)-1), when ks >= nvpy/2
-! where js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! where js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
 ! and kz=(0,+-1,+-2,...,+-(NZ/2-1),NZ/2)
 ! except kx = NX/2 is stored at location kxyp+1 when js=0,
 ! and ky = NY/2 is stored at location 1 when ks=nvp/2.
@@ -6705,7 +6702,7 @@
       lmax = min0(modesz,nzh)
       j1 = kxyp + 1
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       joff = kxyp*js

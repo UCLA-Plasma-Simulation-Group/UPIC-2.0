@@ -1,0 +1,17 @@
+ &input2
+ IDRUN = 23
+ INDX =   8, INDY =   8, NPX =  1536, NPY =  1536
+ NTW = 1
+ NTP = 0, MODESXP = 41, MODESYP = 41, NPREC = 0
+ TEND =  500.000, DT =   0.04, CI = 0.1
+ VTX =   1.000, VTY =   1.000, VTZ = 1.000
+ VX0 =   0.000, VY0 =   0.000, VZ0 =   0.000
+ WMIN = 0.0, WMAX = 2.0, DW = 0.01
+ NPLOT = 3
+ /
+ &input2b
+ OMX = 0.0, OMY = 0.0, OMZ = 0.4
+ NTET = 5, MODESXET = 41, MODESYET = 41, NETREC = 0
+ NTAR = 0, MODESXAR = 41, MODESYAR = 41, NARREC = 0
+ WRMIN = 0.0, WRMAX = 8.0, DWR = 0.01
+ /

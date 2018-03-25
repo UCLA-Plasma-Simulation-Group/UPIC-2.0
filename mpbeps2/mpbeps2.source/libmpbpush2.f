@@ -19,7 +19,7 @@
 !                leaving each tile
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: january 25, 2017
+! update: fbruary 26, 2018
 !-----------------------------------------------------------------------
       subroutine PPGBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ek,&
      &idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
@@ -28,7 +28,7 @@
 ! interpolation in space, with magnetic field. Using the Boris Mover.
 ! OpenMP version using guard cells, for distributed data
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 119 flops/particle, 1 divide, 29 loads, 5 stores
 ! input: all, output: ppart, ek
 ! velocity equations used are:
@@ -139,10 +139,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,dxp,dyp,amx,amy,  
-!$OMP& dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,
-!$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,sum1,sfxy,sbxy)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,dxp,dyp,amx,amy,  &
+!$OMP& dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,&
+!$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,sum1,sfxy,sbxy)               &
 !$OMP& REDUCTION(+:sum2)
       do 60 k = 1, mxyp1
       noffp = (k - 1)/mx1
@@ -285,7 +285,7 @@
 ! also determines list of particles which are leaving this tile
 ! OpenMP version using guard cells, for distributed data
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 119 flops/particle, 1 divide, 29 loads, 5 stores
 ! input: all except ncl, ihole, irc, output: ppart, ncl, ihole, ek, irc
 ! velocity equations used are:
@@ -397,12 +397,11 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,ih,nh,mnoff,x,y,dxp,dyp,amx,
-!$OMP& amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1, 
-!$OMP& rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,edgelx,edgely,edgerx,
-!$OMP& edgery,sum1,sfxy,sbxy)
-!$OMP& REDUCTION(+:sum2)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,ih,nh,mnoff,x,y,dxp,dyp,amx,&
+!$OMP& amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1, &
+!$OMP& rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,edgelx,edgely,edgerx,    &
+!$OMP& edgery,sum1,sfxy,sbxy) REDUCTION(+:sum2)
       do 70 k = 1, mxyp1
       noffp = (k - 1)/mx1
       moffp = my*noffp
@@ -588,7 +587,7 @@
 ! Using the Boris Mover.
 ! OpenMP version using guard cells, for distributed data
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 131 flops/particle, 4 divides, 2 sqrts, 25 loads, 5 stores
 ! input: all, output: ppart, ek
 ! momentum equations used are:
@@ -705,12 +704,11 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,dxp,dyp,amx,amy,
-!$OMP& dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,
-!$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,qtmg,dtg,sum1,sfxy,
-!$OMP& sbxy)
-!$OMP& REDUCTION(+:sum2)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,dxp,dyp,amx,amy,  &
+!$OMP& dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,&
+!$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,qtmg,dtg,sum1,sfxy,   &
+!$OMP& sbxy) REDUCTION(+:sum2)
       do 60 k = 1, mxyp1
       noffp = (k - 1)/mx1
       moffp = my*noffp
@@ -862,7 +860,7 @@
 ! also determines list of particles which are leaving this tile
 ! OpenMP version using guard cells, for distributed data
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 131 flops/particle, 4 divides, 2 sqrts, 25 loads, 5 stores
 ! input: all except ncl, ihole, irc, output: ppart, ncl, ihole, ek, irc
 ! momentum equations used are:
@@ -980,12 +978,11 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,ih,nh,mnoff,x,y,dxp,dyp,amx,
-!$OMP& amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,
-!$OMP& rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,edgelx,edgely,edgerx,
-!$OMP& edgery,p2,gami,qtmg,dtg,sum1,sfxy,sbxy)
-!$OMP& REDUCTION(+:sum2)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,ih,nh,mnoff,x,y,dxp,dyp,amx,&
+!$OMP& amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1, &
+!$OMP& rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,edgelx,edgely,edgerx,    &
+!$OMP& edgery,p2,gami,qtmg,dtg,sum1,sfxy,sbxy) REDUCTION(+:sum2)
       do 70 k = 1, mxyp1
       noffp = (k - 1)/mx1
       moffp = my*noffp

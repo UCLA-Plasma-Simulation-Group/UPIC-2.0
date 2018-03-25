@@ -1,0 +1,23 @@
+
+    Ygl: Run 2d-GL programs with standard X11 routines.
+    (C) Fred Hucht 1993-95
+    EMail: fred@thp.Uni-Duisburg.DE
+
+Several people asked how to run applications that expect GL with Ygl.
+
+You can do this without relinking the app if you have shared libraries
+and if the app does only require the routines emulated by Ygl:
+
+With /usr/lib/libYgl.a, make a symbolic link like the following:
+
+$ ln -s /usr/lib/libYgl.a /tmp/libgl.a
+
+Then find out how to reset the shared libraries search path on your
+OS; under AIX 3.2 (ksh) do:
+
+$ export LIBPATH=/tmp:/lib:/usr/lib
+
+Now you can try to start the application. If you receive error
+messages like "symbol xyz in ksh is undefined", than it won't work,
+because the application uses GL routines xyz that are not emulated by
+Ygl... 

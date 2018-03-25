@@ -66,3 +66,17 @@ make clobber
 The Fortran version can be compiled to run with double precision by
 changing the Makefile (for gfortran, set the compiler options to:
 OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8)
+
+There is a simple built-in graphics library available which is normally
+used for debugging.  It is shut off by default, but is available for
+either Textronix or X11 devices.
+
+To turn it on for Fortran, search for the string: Fortran Graphics in
+the Makefile, and comment out the symbol GOBJS for No graphics and
+uncomment it either for Tektronix or X11.  The X11 option requires that
+the library Ygl is installed and the symbol
+LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11.  To display from
+a remove server, you should login to the server with the command ssh -X.
+
+To run with Tektronix, open the window xterm -t before executing the
+codes.

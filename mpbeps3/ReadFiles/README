@@ -2,11 +2,11 @@
 by Viktor K. Decyk
 copyright 1994-2017, regents of the university of california
 
-This code is a sample program which illustrate how to read periodic
-fields which have been written using simple Fortran IO by the mpbeps3
-suite of PIC codes.  It is designed for Linux but will also compile for
-Mac OS X.  The default compiler used is gfortran, but other compiler
-flags are commented out.
+These codes are sample programs which illustrate how to read various
+diagnostics written using simple Fortran IO by the mpbeps3 suite of PIC
+codes.  It is designed for Linux but will also compile for Mac OS X.
+The default compiler used is gfortran, but other compiler flags are
+commented out.
 
 No warranty for proper operation of this software is given or implied.
 Software or information may be copied, distributed, and used at own
@@ -17,9 +17,11 @@ acknowledgement is requested.
 The makefile is setup to use gfortran with Linux.  It should also work
 with MacOS X.
 
-The executables created are called preadf3 and pvreadf3.
+Six Fortran executables can be created, called preadf3, pvreadf3,
+pflreadf3, fvreadf3, ptreadf3, and psreadf3, to read scalar, vector,
+fluid, velocity, trajectory or phase space data.
 
-To compile the programs, execute:
+To compile all the programs, execute:
 
 make
 
@@ -27,7 +29,8 @@ To compile just one, execute:
 
 make program_name
 
-where program_name is either: preadf3 or pvreadf3
+where program_name is either: preadf3, pvreadf3, pflreadf3, pfvreadf3,
+ptreadf3, or psreadf3
 
 To execute, type the name of the executable:
 
@@ -37,3 +40,12 @@ The Fortran version can be compiled to run with double precision by
 changing the Makefile (for gfortran, set the compiler options to:
 OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8).  This is necessary if
 if the code which wrote the data was compiled with double precision.
+
+There are also 6 Python scripts available.  They require a dynamic
+library, libcmfield3.
+
+To compile this libraries, execute:
+
+make python
+
+This currently only works in single precision.

@@ -53,7 +53,6 @@
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -no-vec -Wall -std=c99
 
-#LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
 #LEGACY = -nofor_main
 
 # Makefile gfortran compiler with Linux
@@ -73,7 +72,6 @@ CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
 
 LOPTS = -lgomp
-LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
 LEGACY =
 
 # Makefile PGI compiler with Linux

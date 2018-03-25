@@ -3,21 +3,22 @@
 ! written for 2D MPI/OpenMP PIC codes
 ! written by Viktor K. Decyk, UCLA
       program preadf2
-      use in2, only: idrun, indx, indy, nvp, tend, dt, ci,              &
-     &pot2d, ntp, fpname, modesxp, modesyp, nprec,                      &
-     &dene2d, ntde, fdename, modesxde, modesyde, nderec,                &
-     &deni2d, ntdi, fdiname, modesxdi, modesydi, ndirec
+      use in2, only: idrun, indx, indy, nvp, tend, dt
+      use cmfield2
       use graf2
 !
       implicit none
       integer, parameter :: ns = 3
       integer :: iudm = 19, ius = 11
-      integer :: i, n, m, nx, ny, kyp, kyb, nyv, lrec, nrec, ios, ierr
-      integer :: nplot = 1
+      integer :: i, n, m, ii, it, nx, ny, kyp, kyb, nyv, nrec, ierr
+      integer :: modesx, modesy
+      integer :: nplot = 1, nts = 0
+      real :: time
+! nscalars = table of available diagnostics
       integer, dimension(ns) :: nscalars = 0
       real, dimension(:,:), allocatable :: sfield
-      character(len=16), dimension(ns) :: dname = (/'potential       ', &
-     &'electron density','ion density     '/)
+      character(len=16), dimension(ns) :: dname = (/'POTENTIAL       ', &
+     &'ELECTRON DENSITY','ION DENSITY     '/)
       character(len=10) :: cdrun
       character(len=32) :: fname
 !
@@ -26,24 +27,10 @@
       write (cdrun,'(i10)') idrun
       cdrun = adjustl(cdrun)
       fname = 'diag2.'//cdrun
-      open(unit=iudm,file=fname,form='formatted',status='old')
+      call ffopen2(iudm,fname)
 !
 ! determine which scalar diagnostics are available
-      do n = 1, ns
-      select case(n)
-! load metadata for potential data
-      case (1)
-         read (iudm,pot2d,iostat=ios)
-! load metadata for electron density data
-      case (2)
-         read (iudm,dene2d,iostat=ios)
-! load metadata for ion density data
-      case (3)
-         read (iudm,deni2d,iostat=ios)
-      end select
-      if (ios==0) nscalars(n) = 1
-      rewind iudm
-      enddo
+      call readsdiags2(iudm,nscalars)
 !
 ! select diagnostic
       m = sum(nscalars)
@@ -80,17 +67,8 @@
 !
       write (*,*) trim(dname(n)), ' diagnostic selected'
 !
-      select case(n)
-      case (1)
-         read (iudm,pot2d,iostat=ios)
-         fname = fpname; nrec = nprec
-      case (2)
-         read (iudm,dene2d,iostat=ios)
-         fname = fdename; nrec = nderec
-      case (3)
-         read (iudm,deni2d,iostat=ios)
-         fname = fdiname; nrec = ndirec
-      end select
+! return parameters for selected scalar diagnostic
+      call sdiagparams2(iudm,n,nts,modesx,modesy,nrec,fname)
 !
 ! nx/ny = number of global grid points in x/y direction
       nx = 2**indx; ny = 2**indy
@@ -103,35 +81,35 @@
 !
 ! allocate scalar array
       allocate(sfield(nx,nyv))
-! open direct access file for scalar field
-      inquire(iolength=lrec) sfield(1,1); lrec = lrec*nx*nyv
-      open(unit=ius,file=fname,form='unformatted',access='direct',      &
-     &recl=lrec,status='old')
+      dt = dt*real(nts)
+!
+! open stream file for scalar field
+      call fsopen2(ius,fname)
 !
 ! nrec = number of complete records
       nrec = nrec/kyb
       write (*,*) 'records found: nrec = ', nrec
 !
 ! open graphics device
-      ierr = open_graphs(nplot)
+      ierr = open_graphs2(nplot)
 ! set palette to color wheel
-      call STPALIT(2)
+      call set_palit(2)
 !
 ! read and display data
-      do i = 1, nrec
-         read (unit=ius,rec=i) sfield
-         call dscaler2(sfield,trim(dname(n)),i,999,0,1,nx,ny,ierr)
+      do ii = 1, nrec
+! read real scalar field
+         call fread2(ius,sfield,nx,nyv)
+         it = nts*(ii - 1)
+         time = dt*real(ii - 1)
+! show time
+         write (*,*) 'it,time=',it,time
+! display real space data
+         call dscaler2(sfield,trim(dname(n)),it,999,0,1,nx,ny,ierr)
          if (ierr==1) exit
       enddo
 !
-      call close_graphs
+      call closeff2(iudm)
+      call closeff2(ius)
+      call close_graphs2()
 !
       end program
-!
-! unneeded function in input2mod.f90
-      subroutine PPBDCAST(f,nxp)
-      implicit none
-      integer, intent(in) :: nxp
-      double precision, dimension(nxp), intent(inout) :: f
-      end subroutine
-!

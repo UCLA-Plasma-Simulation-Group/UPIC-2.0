@@ -14,7 +14,7 @@
 ! PPPRSTOR2L restores particle coordinates from ppbuff
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: january 26, 2017
+! update: february 26, 2018
 !-----------------------------------------------------------------------
       subroutine PPPORDER2LA(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,   &
      &ncll,nclr,noff,nyp,idimp,nppmx,nx,ny,mx,my,mx1,myp1,npbmx,ntmax,  &
@@ -82,8 +82,8 @@
 ! find and count particles leaving tiles and determine destination
 ! update ppart, ihole, ncl
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(j,k,noffp,moffp,nppp,nn,mm,ih,nh,ist,dx,dy,edgelx,edgely,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(j,k,noffp,moffp,nppp,nn,mm,ih,nh,ist,dx,dy,edgelx,edgely,&
 !$OMP& edgerx,edgery)
       do 30 k = 1, mxyp1
       noffp = (k - 1)/mx1
@@ -164,8 +164,7 @@
 !
 ! buffer particles that are leaving tile: update ppbuff, ncl
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,isum,ist,nh,ip,j1,ii)
+!$OMP PARALLEL DO PRIVATE(i,j,k,isum,ist,nh,ip,j1,ii)
       do 80 k = 1, mxyp1
 ! find address offset for ordered ppbuff array
       isum = 0
@@ -320,8 +319,7 @@
       mxyp1 = mx1*myp1
 ! buffer particles that are leaving tile: update ppbuff, ncl
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,isum,ist,nh,ip,j1,ii)
+!$OMP PARALLEL DO PRIVATE(i,j,k,isum,ist,nh,ip,j1,ii)
       do 40 k = 1, mxyp1
 ! find address offset for ordered ppbuff array
       isum = 0
@@ -477,8 +475,8 @@
       any = real(ny)
 ! copy incoming particles from buffer into ppart: update ppart, kpic
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,ii,kk,nppp,kx,ky,kl,kr,kxl,kxr,ih,nh,ncoff,noff,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,ii,kk,nppp,kx,ky,kl,kr,kxl,kxr,ih,nh,ncoff,noff,   &
 !$OMP& moff,ist,j1,ip,dx,dy,ks)
       do 60 k = 1, mxyp1
       nppp = kpic(k)
@@ -612,8 +610,7 @@
          return
       endif
 ! fill up remaining holes in particle array with particles from bottom
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,nppp,ih,nh,j1,j2,ip)
+!$OMP PARALLEL DO PRIVATE(i,j,k,nppp,ih,nh,j1,j2,ip)
       do 100 k = 1, mxyp1
       ih = ihole(2,1,k)
       if (ih.lt.0) then
@@ -791,8 +788,7 @@
       integer i, j, k, nh, j1, ist, ii
 ! restores particles that are leaving tile: update ppart, ncl
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,nh,j1,ist,ii)
+!$OMP PARALLEL DO PRIVATE(i,j,k,nh,j1,ist,ii)
       do 40 k = 1, mxyp1
 ! find restore address offset for ordered ppbuff array
       do 10 j = 1, 7

@@ -1,7 +1,7 @@
 c general 1d gks graphics library
 c written by viktor k. decyk, ucla
 c copyright 1994, regents of the university of california
-c update: april 30, 2013
+c update: february 26, 2013
       subroutine GROPEN
 c this subroutine opens gks and activates standard workstation
 c colors and maximum size of display surface are also set
@@ -144,8 +144,12 @@ c kprime = table of color indices for prime colors
      1,nclsp,ifrg,isx,isy,kprime(8)
       dimension reds(8), greens(8), blues(8)
 c background = black, foreground = white
-      data reds /0.,1.,0.,1.,1.,0.,1.,0./
-      data greens /0.,1.,0.,0.,1.,1.,0.,1./
+c     data reds /0.,1.,0.,1.,1.,0.,1.,0./
+c     data greens /0.,1.,0.,0.,1.,1.,0.,1./
+c     data blues /0.,1.,1.,0.,0.,1.,1.,0./
+c 2=cyan, 3=green, 4=yellow, 5=blue, 6=red, 7=magenta
+      data reds /0.,1.,0.,0.,1.,1.,0.,1./
+      data greens /0.,1.,1.,1.,1.,0.,0.,0./
       data blues /0.,1.,1.,0.,0.,1.,1.,0./
 c background = white, foreground = black
 c     data reds /1.,0.,0.,1.,1.,0.,1.,0./
@@ -236,8 +240,12 @@ c lupt = (0,1) = (no,yes) pixel lookup table needed
       dimension redx(256), greenx(256), bluex(256)
       save /movicm/
 c prime colors, background = black, foreground = white
-      data redp /0.,1.,0.,1.,1.,0.,1.,0./
-      data greenp /0.,1.,0.,0.,1.,1.,0.,1./
+c     data redp /0.,1.,0.,1.,1.,0.,1.,0./
+c     data greenp /0.,1.,0.,0.,1.,1.,0.,1./
+c     data bluep /0.,1.,1.,0.,0.,1.,1.,0./
+c 2=cyan, 3=green, 4=yellow, 5=blue, 6=red, 7=magenta
+      data redp /0.,1.,0.,0.,1.,1.,0.,1./
+      data greenp /0.,1.,1.,1.,1.,0.,0.,0./
       data bluep /0.,1.,1.,0.,0.,1.,1.,0./
 c prime colors, background = black, foreground = white
 c     data redp /1.,0.,0.,1.,1.,0.,1.,0./

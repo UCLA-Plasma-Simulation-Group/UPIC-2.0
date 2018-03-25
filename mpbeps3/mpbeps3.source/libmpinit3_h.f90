@@ -147,6 +147,18 @@
       end interface
 !
       interface
+         subroutine PVBDISTR32(part,nps,npp,vtr,vtz,vdr,vdz,omx,omy,omz,&
+     &npx,npy,npz,kstrt,nvpy,nvpz,idimp,npmax,ierr)
+         implicit none
+         integer, intent(in) :: nps, npp, npx, npy, npz, kstrt
+         integer, intent(in) :: nvpy, nvpz, idimp, npmax
+         integer, intent(inout) :: ierr
+         real, intent(in) :: vtr, vtz, vdr, vdz, omx, omy, omz
+         real, dimension(idimp,npmax), intent(inout) :: part
+         end subroutine
+      end interface
+!
+      interface
          subroutine PPDBLKP3L(part,kpic,npp,noff,nppmx,idimp,npmax,mx,my&
      &,mz,mx1,myp1,mxyzp1,idds,irc)
          implicit none
@@ -191,10 +203,10 @@
       end interface
 !
       interface
-         subroutine PFHOLES32(part,edges,npp,ihole,idimp,npmax,idps,    &
+         subroutine PFHOLES32(part,edges,npp,ihole,nc,idimp,npmax,idps, &
      &ntmax)
          implicit none
-         integer, intent(in) :: npp, idimp, npmax, idps, ntmax
+         integer, intent(in) :: npp, nc, idimp, npmax, idps, ntmax
          real, dimension(idimp,npmax), intent(in) :: part
          real, dimension(idps), intent(in) :: edges
          integer, dimension(ntmax+1,2), intent(inout) :: ihole

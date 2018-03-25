@@ -1,7 +1,7 @@
 c Null general 2d gks graphics library
 c written by viktor k. decyk, ucla
 c copyright 1996, regents of the university of california
-c update: february 8, 2017
+c update: january 8, 2017
 c-----------------------------------------------------------------------
       subroutine CARPET(f,label,isc,ist,nx,ny,nxv,chr,ntc,irc)
 c this subroutine displays an array f as a color raster image.

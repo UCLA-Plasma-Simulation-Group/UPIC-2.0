@@ -40,7 +40,7 @@
 !             interpolation
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: may 16, 2017
+! update: february 15, 2018
 !-----------------------------------------------------------------------
       subroutine PPPMOVIN3L(part,ppart,kpic,npp,noff,nppmx,idimp,npmax, &
      &mx,my,mz,mx1,myp1,mxyzp1,idds,irc)
@@ -234,8 +234,8 @@
       mxyp1 = mx1*myp1
       mxyzp1 = mxyp1*mzp1
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,ist,edgelx,edgely, 
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,ist,edgelx,edgely, &
 !$OMP& edgelz,edgerx,edgery,edgerz,dx,dy,dz)
       do 20 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -282,7 +282,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 90 flops/particle, 30 loads, 6 stores
 ! input: all, output: part, ek
 ! equations used are:
@@ -387,9 +387,9 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,x,y,z
-!$OMP& ,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,sum1,sfxyz)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,x,y,z&
+!$OMP& ,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,sum1,sfxyz)       &
 !$OMP& REDUCTION(+:sum2)
       do 50 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -520,7 +520,7 @@
 ! OpenMP version using guard cells
 ! for distributed data, with 2D spatial decomposition
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 90 flops/particle, 30 loads, 6 stores
 ! input: all except ncl, ihole, irc, output: part, ncl, ihole, ek, irc
 ! equations used are:
@@ -616,10 +616,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,ih,nh,nn,mm,ll
-!$OMP& ,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,edgelx,     
-!$OMP& edgely,edgelz,edgerx,edgery,edgerz,sum1,sfxyz)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,ih,nh,nn,mm,ll&
+!$OMP& ,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,edgelx,     &
+!$OMP& edgely,edgelz,edgerx,edgery,edgerz,sum1,sfxyz)                   &
 !$OMP& REDUCTION(+:sum2)
       do 60 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -805,7 +805,7 @@
 ! OpenMP version using guard cells,
 ! for distributed data with 2D spatial decomposition
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 100 flops/particle, 1 divide, 1 sqrt, 30 loads, 6 stores
 ! input: all, output: part, ek
 ! equations used are:
@@ -917,11 +917,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,x,y,z
-!$OMP& ,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,acx,acy,acz,p2,dtg
-!$OMP& ,sum1,sfxyz)
-!$OMP& REDUCTION(+:sum2)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,x,y,z&
+!$OMP& ,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,acx,acy,acz,p2,dtg&
+!$OMP& ,sum1,sfxyz) REDUCTION(+:sum2)
       do 50 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
       k = l - mxyp1*loffp
@@ -1058,7 +1057,7 @@
 ! OpenMP version using guard cells,
 ! for distributed data with 2D spatial decomposition
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 100 flops/particle, 1 divide, 1 sqrt, 30 loads, 6 stores
 ! input: all except ncl, ihole, irc, output: part, ncl, ihole, ek, irc
 ! equations used are:
@@ -1161,10 +1160,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,ih, nh, nn,mm,
-!$OMP& ll,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,acx,acy,  
-!$OMP& acz,p2,dtg,edgelx,edgely,edgelz,edgerx,edgery,edgerz,sum1,sfxyz)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,ih, nh, nn,mm,&
+!$OMP& ll,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,acx,acy,  &
+!$OMP& acz,p2,dtg,edgelx,edgely,edgelz,edgerx,edgery,edgerz,sum1,sfxyz) &
 !$OMP& REDUCTION(+:sum2)
       do 60 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -1352,7 +1351,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 13 flops/particle, 6 loads, 3 stores
 ! input: all, output: part, ek
 ! equations used are:
@@ -1473,7 +1472,7 @@
 ! OpenMP version using guard cells
 ! for distributed data, with 2D spatial decomposition
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 13 flops/particle, 6 loads, 3 stores
 ! input: all except ncl, ihole, irc, output: part, ncl, ihole, ek, irc
 ! equations used are:
@@ -1531,9 +1530,9 @@
       anz = real(nz)
       sum2 = 0.0d0
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(j,k,l,noffp,moffp,loffp,nppp,ih,nh,nn,mm,ll,dx,dy,dz,    
-!$OMP& edgelx,edgely,edgelz,edgerx,edgery,edgerz,sum1)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(j,k,l,noffp,moffp,loffp,nppp,ih,nh,nn,mm,ll,dx,dy,dz,    &
+!$OMP& edgelx,edgely,edgelz,edgerx,edgery,edgerz,sum1)                  &
 !$OMP& REDUCTION(+:sum2)
       do 30 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -1657,7 +1656,7 @@
 ! OpenMP version using guard cells,
 ! for distributed data with 2D spatial decomposition
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 16 flops/particle, 1 divide, 1 sqrt, 6 loads, 3 stores
 ! input: all, output: part, ek
 ! equations used are:
@@ -1723,7 +1722,7 @@
          edgery = real(ny-1)
       endif
 ! loop over tiles
-!$OMP PARALLEL DO PRIVATE(j,l,nppp,dx,dy,dz,p2,gam,dtg,sum1)
+!$OMP PARALLEL DO PRIVATE(j,l,nppp,dx,dy,dz,p2,gam,dtg,sum1)            &
 !$OMP& REDUCTION(+:sum2)
       do 20 l = 1, mxyzp1
       nppp = kpic(l)
@@ -1791,7 +1790,7 @@
 ! OpenMP version using guard cells,
 ! for distributed data with 2D spatial decomposition
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 16 flops/particle, 1 divide, 1 sqrt, 6 loads, 3 stores
 ! input: all except ncl, ihole, irc, output: part, ncl, ihole, ek, irc
 ! equations used are: 
@@ -1857,9 +1856,9 @@
       anz = real(nz)
       sum2 = 0.0d0
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(j,k,l,noffp,moffp,loffp,nppp,ih, nh, nn,mm,ll,dx,dy,dz,  
-!$OMP& p2,gam,dtg,edgelx,edgely,edgelz,edgerx,edgery,edgerz,sum1)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(j,k,l,noffp,moffp,loffp,nppp,ih, nh, nn,mm,ll,dx,dy,dz,  &
+!$OMP& p2,gam,dtg,edgelx,edgely,edgelz,edgerx,edgery,edgerz,sum1)       &
 !$OMP& REDUCTION(+:sum2)
       do 30 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -1985,7 +1984,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data deposited in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 33 flops/particle, 11 loads, 8 stores
 ! input: all, output: q
 ! charge density is approximated by values at the nearest grid points
@@ -2039,8 +2038,8 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm&
 !$OMP& ,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,sq)
       do 150 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1

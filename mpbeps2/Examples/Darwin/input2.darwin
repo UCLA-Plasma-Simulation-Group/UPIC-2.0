@@ -9,11 +9,12 @@
  NPLOT = 3
  /
  &input2b
+ OMX = 0.0, OMY = 0.0, OMZ = 0.4
  NTA = 5, MODESXA = 41, MODESYA = 41, NAREC = 0
  NTET = 5, MODESXET = 41, MODESYET = 41, NETREC = 0
  NTB = 5, MODESXB = 41, MODESYB = 41, NBREC = 0
- OMX = 0.0, OMY = 0.0, OMZ = 0.4
  /
  &input2d
  NDC = 1
- / 
+ /
+ 

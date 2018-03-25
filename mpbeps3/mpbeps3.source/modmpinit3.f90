@@ -3,6 +3,9 @@
       module modmpinit3
 !
 ! Fortran90 wrappers to 3d MPI/OpenMP PIC library libmpinit3.f
+! mnextran3 skips over nextrand groups of random numbers in order to
+!           initialize different random ensembles
+!           calls NEXTRAN3
 ! mpdcomp3 determines spatial decomposition for uniform distribution
 !          calls PDNICOMP32L
 ! mpdistr3 calculates initial particle co-ordinates and velocities
@@ -25,6 +28,10 @@
 ! mpvrdistr3 calculates initial particle momenta with maxwell-juttner
 !            distribution with drift for 3d code
 !            calls PVRDISTR32
+! mpvbdistr3 calculates initial particle velocities in 2-1/2d for
+!            magnetized plasma with maxwellian velocity with drift in
+!            Bparallel direction and ring distribution in Bperp
+!            calls PVBDISTR32
 ! mpdblkp3 finds the maximum number of particles in each tile
 !          calls PPDBLKP3L
 ! mpfedges3 finds new 2d partitions from initial analytic distribution
@@ -40,12 +47,22 @@
 !            calls mpvdistr3 or mpvrdistr3
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: may 15, 2017
+! update: march 23, 2018
 !
       use libmpinit3_h
       implicit none
 !
       contains
+!
+!-----------------------------------------------------------------------
+      subroutine mnextran3(nextrand,ndim,np)
+! for 3d code, this subroutine skips over nextrand groups of random
+! numbers in order to initialize different random ensembles
+      implicit none
+      integer, intent(in) :: nextrand, ndim, np
+! call low level procedure
+      call NEXTRAN3(nextrand,ndim,np)
+      end subroutine
 !
 !-----------------------------------------------------------------------
       subroutine mpdcomp3(edges,nyzp,noff,nypmx,nzpmx,nypmn,nzpmn,ny,nz,&
@@ -269,6 +286,7 @@
       endif
       end subroutine
 !
+!-----------------------------------------------------------------------
       subroutine mpvrdistr3(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,&
      &npy,npz,kstrt,nvpy,nvpz,irc)
 ! calculates initial particle momenta in 3d
@@ -293,6 +311,34 @@
       endif
       end subroutine
 !
+!-----------------------------------------------------------------------
+      subroutine mpvbdistr3(part,nps,npp,vtr,vtz,vdr,vdz,omx,omy,omz,npx&
+     &,npy,npz,kstrt,nvpy,nvpz,irc)
+! calculates initial particle velocities in 3d
+! for magnetized plasma with maxwellian velocity with drift in Bparallel
+! direction and ring distribution in Bperp
+! irc = (0,1) = (no,yes) error condition exists
+      implicit none
+      integer, intent(in) :: nps, npp, npx, npy, npz, kstrt, nvpy, nvpz
+      integer, intent(inout) :: irc
+      real, intent(in) :: vtr, vtz, vdr, vdz, omx, omy, omz
+      real, dimension(:,:), intent(inout) :: part
+! local data
+      integer :: idimp, npmax
+      irc = 0
+! extract dimensions
+      idimp = size(part,1); npmax = size(part,2)
+! call low level procedure
+      call PVBDISTR32(part,nps,npp,vtr,vtz,vdr,vdz,omx,omy,omz,npx,npy, &
+     &npz,kstrt,nvpy,nvpz,idimp,npmax,irc)
+      if (irc /= 0) then
+         if (kstrt==1) then
+            write (*,*) 'mpvbdistr3:particle number error, irc=', irc
+         endif
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine mpdblkp3(part,kpic,npp,noff,nppmx,mx,my,mz,mx1,myp1,irc&
      &)
 ! finds the maximum number of particles in each tile
@@ -397,10 +443,10 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine mpfholes3(part,edges,npp,iholep)
+      subroutine mpfholes3(part,edges,npp,iholep,nc)
 ! determines list of particles which are leaving this node
       implicit none
-      integer, intent(in) :: npp
+      integer, intent(in) :: npp, nc
       real, dimension(:,:), intent(in) :: part
       real, dimension(:), intent(in) :: edges
       integer, dimension(:,:), intent(inout) :: iholep
@@ -410,7 +456,11 @@
       idimp = size(part,1); npmax = size(part,2)
       idps = size(edges,1); ntmax = size(iholep,1) - 1
 ! call low level procedure
-      call PFHOLES32(part,edges,npp,iholep,idimp,npmax,idps,ntmax)
+      if ((nc==1).or.((nc==2).and.(idimp > 6))) then
+         call PFHOLES32(part,edges,npp,iholep,nc,idimp,npmax,idps,ntmax)
+      else
+         write (*,*) 'mpfholes3 error: nc, idimp=', nc, idimp
+      endif
       end subroutine
 !
 !-----------------------------------------------------------------------

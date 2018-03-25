@@ -23,7 +23,7 @@
 !                linear interpolation
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: january 28, 2017
+! update: february 15, 2018
 !-----------------------------------------------------------------------
       subroutine PPGJPPOST32L(ppart,cu,kpic,noff,qm,dt,nppmx,idimp,nx,ny&
      &,nz,mx,my,mz,nxv,nypmx,nzpmx,mx1,myp1,mxyzp1,idds,ipbc)
@@ -33,7 +33,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data deposited in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 69 flops/particle, 30 loads, 27 stores
 ! input: all, output: ppart, cu
 ! current density is approximated by values at the nearest grid points
@@ -108,8 +108,8 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,mnoff,lnoff,nm,lm
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,mnoff,lnoff,nm,lm&
 !$OMP& ,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,scu)
       do 150 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -376,7 +376,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data deposited in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 69 flops/particle, 30 loads, 27 stores
 ! input: all except ncl, ihole, irc, output: ppart, cu, ncl, ihole, irc
 ! current density is approximated by values at the nearest grid points
@@ -452,9 +452,9 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,mnoff,lnoff,ih,nh
-!$OMP& ,nm,lm,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,edgelx
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,mnoff,lnoff,ih,nh&
+!$OMP& ,nm,lm,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,edgelx&
 !$OMP& ,edgely,edgelz,edgerx,edgery,edgerz,scu)
       do 160 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -772,7 +772,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data deposited in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 79 flops/particle, 1 divide, 1 sqrt, 30 loads, 27 stores
 ! input: all, output: ppart, cu
 ! current density is approximated by values at the nearest grid points
@@ -850,8 +850,8 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,mnoff,lnoff,nm,lm
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,mnoff,lnoff,nm,lm&
 !$OMP& ,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,p2,gami,scu)
       do 150 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -1125,7 +1125,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data deposited in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 79 flops/particle, 1 divide, 1 sqrt, 30 loads, 27 stores
 ! input: all except ncl, ihole, irc, output: ppart, cu, ncl, ihole, irc
 ! current density is approximated by values at the nearest grid points
@@ -1204,9 +1204,9 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,mnoff,lnoff,ih,nh
-!$OMP& ,nm,lm,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,edgelx
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,nn,mm,ll,mnoff,lnoff,ih,nh&
+!$OMP& ,nm,lm,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,dz,vx,vy,vz,edgelx&
 !$OMP& ,edgely,edgelz,edgerx,edgery,edgerz,p2,gami,scu)
       do 160 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -1530,7 +1530,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data deposited in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 121 flops/particle, 52 loads, 48 stores
 ! input: all, output: ppart, amu
 ! momentum flux is approximated by values at the nearest grid points
@@ -1593,9 +1593,9 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm
-!$OMP& ,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,vx,vy,vz,v1,v2,v3,v4,v5,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm&
+!$OMP& ,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,vx,vy,vz,v1,v2,v3,v4,v5,&
 !$OMP& v6,samu)
       do 150 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -1953,7 +1953,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data deposited in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 134 flops/particle, 1 divide, 52 loads, 48 stores
 ! input: all, output: ppart, amu
 ! momentum flux is approximated by values at the nearest grid points
@@ -2019,9 +2019,9 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm
-!$OMP& ,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,vx,vy,vz,v1,v2,v3,v4,v5,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm&
+!$OMP& ,x,y,z,dxp,dyp,dzp,amx,amy,amz,dx1,dx,dy,vx,vy,vz,v1,v2,v3,v4,v5,&
 !$OMP& v6,p2,gami2,samu)
       do 150 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1

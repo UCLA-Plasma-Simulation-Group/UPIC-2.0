@@ -2,13 +2,9 @@
 
 # Linkage rules
 
-#all : python
-
 all: fortran
 
 fbuild : fmpbeps3 fmpbbeps3 fmpdbeps3
-
-fnompi : fmbeps3 fmbbeps3 fmdbeps3
 
 fortran : fbuild
 	make cpexecs -C mpbeps3.source
@@ -35,6 +31,8 @@ fmpdbeps3 :
 nompi : fnompi
 	make cpmexecs -C mpbeps3.source
 
+fnompi : fmbeps3 fmbbeps3 fmdbeps3
+
 mbeps3 : fmbeps3
 	make cpmbeps3 -C mpbeps3.source
 
@@ -53,9 +51,6 @@ fmbbeps3 :
 fmdbeps3 :
 	make mdbeps3 -C mpbeps3.source
 
-#python :
-#	make python -C mpbeps3.source
-
 clean :
 	make clean -C mpbeps3.source
 
@@ -64,3 +59,32 @@ clobber: rclobber
 
 rclobber:
 	make clobber -C mpbeps3.source
+
+#Fortran ReadFiles
+readf : pfbuild
+	make cpexecs -C ReadFiles
+
+pfbuild :
+	make -C ReadFiles
+
+#Python ReadFiles
+pyreadf : pybuild
+	make cpyexecs -C ReadFiles
+
+pybuild :
+	make python -C ReadFiles
+
+readfclean :
+	make clean -C ReadFiles
+
+readfclobber: readfrclobber
+	rm -f preadf3 pvreadf3 pflreadf3 pfvreadf3 ptreadf3 psreadf3 \
+	      preadf3.py pvreadf3.py pflreadf3.py pfvreadf3.py ptreadf3.py \
+	      psreadf3.py
+
+readfrclobber:
+	make clobber -C ReadFiles
+
+list:
+	echo fortran mpbeps3 mpbbeps3 mpdbeps3 fnompi mbeps3 mbbeps3 mdbeps3 \
+	     readf clean clobber pybuild pyreadf readfclean readfclobber

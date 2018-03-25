@@ -61,7 +61,8 @@ To turn it on for Fortran, search for the string: Fortran Graphics in
 the Makefile, and comment out the symbol GOBJS and NGOBJS for No
 graphics and uncomment it either for Tektronix or X1. The X11 option
 requires that the library Ygl is installed and the symbol
-LGOPTS = -lYgl -L/usr/X11R6/lib -lX11.
+LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11.  To display from
+a remove server, you should login to the server with the command ssh -X.
 
 To run with Tektronix, open the window xterm -t before executing the
 codes.

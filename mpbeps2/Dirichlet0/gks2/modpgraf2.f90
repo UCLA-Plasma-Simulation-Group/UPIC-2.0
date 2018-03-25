@@ -3,13 +3,19 @@
       module pgraf2
 !
 ! Fortran90 interface to 2d PIC Fortran77 library plibgks2.f
+! open_pgraphs open graphics device
+!              calls GROPEN and SETNPLT
+! close_pgraphs close graphics device
+!               calls GRCLOSE
+! set_ppalit selects one from three available palettes
+!           calls STPALIT
 ! pdscaler2 displays 2d parallel scalar field in real space
 !           calls PCARPET or PCONTUR
 ! pdvector2 displays 2d parallel vector field in real space
 !           calls PCARPET or PCONTUR
 ! written by viktor k. decyk, ucla
 ! copyright 2000, regents of the university of california
-! update: february 8, 2017
+! update: november 9, 2017
 !
       use plibgks2, only: IPLTCOMM, PGRCLOSE, PCARPET, PCONTUR, PGRASP23
       implicit none
@@ -45,6 +51,15 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
+      subroutine set_ppalit(idpal)
+! selects one from three available palettes
+! idpal = palette id number: 1 = cold/hot, 2 = color wheel, 3 = rainbow
+      implicit none
+      integer, intent(in) :: idpal
+      call STPALIT(idpal)
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine pdscaler2(f,nyp,nvp,label,itime,isc,ist,idt,nx,ny,irc)
 ! displays 2d parallel scalar field in real space
 ! f = 2d parallel scalar field in real space
@@ -52,8 +67,15 @@
 ! nvp = number of real or virtual processors requested
 ! label = field label
 ! itime = current time step
-! isc = power of 2 scale of range of values of pot
+! isc = power of 2 scale of range of values of f
 ! ist = flag for choosing positive and/or negative values
+! the range of values of f are given by fmax and fmin.
+! if ist = 0, then fmax = 2**isc and fmin = -2**isc.
+! if ist = 1, then fmax = 2**isc and fmin = 0.
+! if ist = -1, then fmax = 0 and fmin = -2**isc.
+! if ist = 2, then fmax = fmin + 2**ir,
+! where fmin/fmax are the function minimum/maximum, 
+! and ir = power of 2 scale for (fmax - fmin)
 ! idt = (1,2,3) = display (color map,contour plot,both)
 ! nx/ny = system length in x/y direction
 ! irc = return code (0 = normal return)
@@ -165,6 +187,7 @@
 ! display i component
             call pdscaler2(pfvs,nyp,nvp,label//c,itime,isc,ist,idt,nx,ny&
      &,irc)
+            if (irc /= 0) exit
          enddo
       endif
 ! display sum of absolute values

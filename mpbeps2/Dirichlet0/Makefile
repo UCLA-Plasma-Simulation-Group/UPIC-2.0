@@ -54,6 +54,7 @@
 #CCOPTS = -O3 -no-vec -Wall -std=c99
 
 #LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
+#LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11
 #LEGACY = -nofor_main
 
 # Makefile gfortran compiler with Linux
@@ -74,6 +75,7 @@ CCOPTS = -O3 -std=c99
 
 LOPTS = -lgomp
 #LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
+#LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11
 LEGACY =
 
 # Makefile PGI compiler with Linux
@@ -133,22 +135,22 @@ nompi : m_dfields2
 
 mp_dfields2 : mp_dfields2.o libmpfield2.o libmpdfield2.o libmpfft2.o libmpfsct2.o \
               libmpgard2.o $(GOBJS) dtimer.o
-	$(MPIFC) $(OPTS90) $(LOPTS) $(LGOPTS) -o mp_dfields2 \
+	$(MPIFC) $(OPTS90) $(LOPTS) -o mp_dfields2 \
     mp_dfields2.o libmpfield2.o libmpdfield2.o libmpfft2.o libmpfsct2.o \
     libmpgard2.o modmpfield2.o modmpdfield2.o modmpfft2.o modmpfsct2.o \
     modmpgard2.o mpplib2.o mppmod2.o omplib.o omppflib2.o mpdplib2.o \
     libmpfield2_h.o libmpdfield2_h.o libmpfft2_h.o libmpfsct2_h.o libmpgard2_h.o \
-    $(GOBJS) dtimer.o
+    $(GOBJS) $(LGOPTS) dtimer.o
 
 #noMPI
 m_dfields2 : m_dfields2.o libmpfield2.o libmpdfield2.o libmpfft2.o libmpfsct2.o \
              libmpgard2.o noMPI.o $(NGOBJS) dtimer.o
-	$(FC90) $(OPTS90) $(LOPTS) $(LGOPTS) -o m_dfields2 \
+	$(FC90) $(OPTS90) $(LOPTS) -o m_dfields2 \
     m_dfields2.o libmpfield2.o libmpdfield2.o libmpfft2.o libmpfsct2.o \
     libmpgard2.o modmpfield2.o modmpdfield2.o modmpfft2.o modmpfsct2.o \
     modmpgard2.o nmpplib2.o nmppmod2.o omplib.o nomppflib2.o nmpdplib2.o \
     libmpfield2_h.o libmpdfield2_h.o libmpfft2_h.o libmpfsct2_h.o libmpgard2_h.o \
-    noMPI.o $(NGOBJS) dtimer.o
+    noMPI.o $(NGOBJS) $(LGOPTS) dtimer.o
 
 xtras.o : xtras.f90
 	$(FC90) $(OPTS90) -o xtras.o -c xtras.f90
@@ -257,8 +259,11 @@ plot10.o : gks2/plot10.f
 
 libplt10.o : gks2/libplt10.f
 	$(FC90) $(OPTS90) -o libplt10.o -c gks2/libplt10.f
-	
-libygl.o : gks2/libygl.f
+
+gks2/Ygl-4.2/libYgl.a :
+	make -C gks2/Ygl-4.2
+
+libygl.o : gks2/libygl.f gks2/Ygl-4.2/libYgl.a
 	$(FC90) $(OPTS90) -o libygl.o -c gks2/libygl.f
 
 libgks1.o : gks2/libgks1.f
@@ -290,7 +295,7 @@ nmodpgraf2.o : gks2/modpgraf2.f90 nplibgks2.o
 	$(FC90) $(OPTS90) -o nmodpgraf2.o -c gks2/modpgraf2.f90
 
 clean :
-	rm -f *.o *.mod
+	rm -f *.o *.mod gks2/Ygl-4.2/*.o
 
 clobber: clean
-	rm -f mp_dfields2 m_dfields2
+	rm -f mp_dfields2 m_dfields2 gks2/Ygl-4.2/*.a

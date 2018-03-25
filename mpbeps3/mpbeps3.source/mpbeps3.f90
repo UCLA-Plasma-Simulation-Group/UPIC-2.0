@@ -10,6 +10,7 @@
       use mppmod3
       use omplib
       use ompplib3
+      use mpsimul3
       implicit none
 !
 ! idimp = number of particle coordinates = 6
@@ -27,6 +28,7 @@
       integer :: n
       integer :: nx, ny, nz, nxh, nyh, nzh, nxe, nye, nze, nxeh
       integer :: nxyzh, nxhyz, mx1, ntime, nloop, isign, ierr
+      integer :: ntime0 = 0
       real :: qbme, affp, ws
       real :: qbmi, vtxi, vtyi, vtzi, vtdxi, vtdyi, vtdzi
       double precision :: npxyz, npxyzb, np, npxyzi, npxyzbi
@@ -44,12 +46,15 @@
       integer, dimension(2) :: irc2 = 0
 !
 ! declare scalars for diagnostics
-      integer :: it, mtw
-      integer :: itw
+      integer :: js, ks, kyps, kzps, kxyps, kyzps, nmv21, numtp, it
+      integer :: nyb, nybmx, nzb, nzbmx, mtw, mtv, mtt, itw, itv, itt
+      real :: eci, wk
 ! default Fortran unit numbers
       integer :: iuin = 8, iuot = 18, iudm = 19
+      integer :: iur = 17, iur0 = 27, iscr = 99
       integer :: iude = 10, iup = 11, iuel = 12
-      integer :: iudi = 20
+      integer :: iufe = 23, iuve = 25, iut = 28, iuse = 29
+      integer :: iudi = 20, iufi = 24, iuvi = 26, iusi = 30
 ! dimensions for fourier data
       integer :: modesxpd, modesz2de, modesz2p, modesz2el, modesz2di
       character(len=10) :: cdrun
@@ -72,7 +77,8 @@
       integer, dimension(:), allocatable :: mixup
 ! sct = sine/cosine table for FFT
       complex, dimension(:), allocatable :: sct
-      double precision, dimension(4) :: wtot, work
+      integer, dimension(2) :: itot
+      double precision, dimension(4) :: wtot
       integer, dimension(2) :: mterf
 !
 ! declare arrays for MPI code:
@@ -112,12 +118,39 @@
       complex, dimension(:,:,:), allocatable :: pott
 ! elt = store selected fourier modes for longitudinal efield
       complex, dimension(:,:,:,:), allocatable :: elt
+! fmse/fmsi = electron/ion fluid moments
+      real, dimension(:,:,:,:), allocatable :: fmse, fmsi
+! fv/fvi = global electron/ion velocity distribution functions
+      real, dimension(:,:), allocatable :: fv, fvi
+! fe/fei = global electron/ion energy distribution functions
+      real, dimension(:,:), allocatable :: fe, fei
+! sfv = electron/ion velocity distribution functions in tile
+      real, dimension(:,:,:), allocatable :: sfv
+! fvm/fvmi = electron/ion vdrift, vth, entropy for global distribution
+      real, dimension(:,:), allocatable :: fvm, fvmi
+! fvtm/fvtmi = time history of electron/ion vdrift, vth, and entropy
+!              for global distribution
+      real, dimension(:,:,:), allocatable :: fvtm, fvtmi
+! tedges(1:2) = back:front z boundaries of particle tags
+! tedges(3:4) = lower:upper y boundaries of particle tags
+      real, dimension(:), allocatable  :: tedges
+! iprobt = scratch array 
+      integer, dimension(:), allocatable :: iprobt
+! partt = particle trajectories tracked
+      real, dimension(:,:), allocatable :: partt
+! fvtp = velocity distribution function for test particles
+! fvmtp = vdrift, vth, and entropy for test particles
+      real, dimension(:,:), allocatable :: fvtp, fvmtp, fetp
+! partd = trajectory time history array
+      real, dimension(:,:,:), allocatable :: partd
+! fvs/fvsi = global electron/ion phase space distribution functions
+      real, dimension(:,:,:,:,:), allocatable :: fvs, fvsi
 !
 ! declare and initialize timing data
       real :: time
       integer, dimension(4) :: itime, ltime
       real :: tinit = 0.0, tloop = 0.0
-      real :: tdpost = 0.0, tguard = 0.0, ttp = 0.0, tfield = 0.0
+      real :: tdpost = 0.0, tguard = 0.0, tfield = 0.0
       real :: tpush = 0.0, tsort = 0.0, tmov = 0.0, tfmov = 0.0
       real :: tdiag = 0.0
       real, dimension(2) :: tfft = 0.0
@@ -158,6 +191,9 @@
 ! broadcast namelists to other nodes
       call sendnmls3()
 !
+! increase number of coordinates for particle tag
+      if (ntt > 0) idimp = idimp + 1
+!
 ! initialize scalars for standard code
 ! np = total number of particles in simulation
       npxyz =  dble(npx)*dble(npy)*dble(npz)
@@ -187,9 +223,9 @@
          vtxi = vtx/sqrt(rmass*rtempxi)
          vtyi = vty/sqrt(rmass*rtempyi)
          vtzi = vtz/sqrt(rmass*rtempzi)
-         vtdxi = vtx/sqrt(rmass*rtempdxi)
-         vtdyi = vty/sqrt(rmass*rtempdyi)
-         vtdzi = vtz/sqrt(rmass*rtempdzi)
+         vtdxi = vtdx/sqrt(rmass*rtempdxi)
+         vtdyi = vtdy/sqrt(rmass*rtempdyi)
+         vtdzi = vtdz/sqrt(rmass*rtempdzi)
       endif
 !
 ! obtain 2D partition (nvpy,nvpz) from nvp:
@@ -199,8 +235,7 @@
          if (kstrt==1) then
             write (*,*) 'FCOMP32 error: nvp,nvpy,nvpz=', nvp, nvpy, nvpz
          endif
-         call PPEXIT()
-         stop
+         call PPEXIT(); stop
       endif
 !
 ! initialize data for MPI code
@@ -223,8 +258,7 @@
      &,shiftdz,nypmx,nzpmx,nypmn,nzpmn,ny,nz,kstrt,nvpy,nvpz,ipbc,ndprof&
      &,ierr)
       if (ierr /= 0) then
-         call PPEXIT()
-         stop
+         call PPEXIT(); stop
       endif
 !
 ! check for unimplemented features
@@ -267,208 +301,266 @@
       allocate(qt(nze,kxyp,kyzp))
       allocate(fxyzt(ndim,nze,kxyp,kyzp))
       allocate(ffc(nzh,kxyp,kyzp),mixup(nxhyz),sct(nxyzh))
-      allocate(kpic(mxyzp1),iholep(ntmax+1,2))
+      allocate(kpic(mxyzp1),ncl(26,mxyzp1),iholep(ntmax+1,2))
+      if (movion==1) allocate(kipic(mxyzp1))
 !
 ! prepare fft tables
       call mpfft3_init(mixup,sct,indx,indy,indz)
 ! calculate form factors
       call mppois3_init(ffc,ax,ay,az,affp,nx,ny,nz,kstrt,nvpy,nvpz)
+! initialize different ensemble of random numbers
+      if (nextrand > 0) call mnextran3(nextrand,ndim,npmax+npimax)
 !
+! open restart files
+      if (kstrt==1) call open_restart3(iur,iur0,cdrun)
+!
+! new start
+      if (nustrt==1) then
 ! initialize electrons
-      nps = 1
-      npp = 0
+         nps = 1
+         npp = 0
 ! background electrons
-      if (npxyz > 0.0d0) then
+         if (npxyz > 0.0d0) then
 ! calculates initial electron co-ordinates and velocities with
 ! uniform density and maxwellian velocity with drift
-!        call mpdistr3(part,edges,npp,vtx,vty,vtz,vx0,vy0,vz0,npx,npy,  &
-!    &npz,nx,ny,nz,kstrt,ipbc,ierr)
+!           call mpdistr3(part,edges,npp,vtx,vty,vtz,vx0,vy0,vz0,npx,npy&
+!    &,npz,nx,ny,nz,kstrt,ipbc,ierr)
 ! calculates initial electron co-ordinates with various density profiles
-         call mpfdistr3(part,npp,ampdx,scaledx,shiftdx,ampdy,scaledy,   &
+            call mpfdistr3(part,npp,ampdx,scaledx,shiftdx,ampdy,scaledy,&
      &shiftdy,ampdz,scaledz,shiftdz,npx,npy,npz,nx,ny,nz,kstrt,nvpy,nvpz&
      &,ipbc,ndprof,ierr)
 ! initialize electron velocities or momenta
-         if (ierr==0) then
-            call wmpvdistr3(part,nps,npp,vtx,vty,vtz,vx0,vy0,vz0,ci,npx,&
-     &npy,npz,kstrt,nvpy,nvpz,relativity,ierr)
-         endif
+            if (ierr==0) then
+               call wmpvdistr3(part,nps,npp,vtx,vty,vtz,vx0,vy0,vz0,ci, &
+     &npx,npy,npz,kstrt,nvpy,nvpz,relativity,ierr)
+            endif
 ! check for background electron initialization error
-         if (ierr /= 0) then
-            call PPEXIT()
-            stop
+            if (ierr /= 0) then
+               call PPEXIT(); stop
+            endif
          endif
-      endif
 ! beam electrons
-      if (npxyzb > 0.0d0) then
-         nps = npp + 1
+         if (npxyzb > 0.0d0) then
+            nps = npp + 1
 ! calculates initial electron co-ordinates and velocities with
 ! uniform density and maxwellian velocity with drift
-!        call mpdistr3(part,edges,npp,vtdx,vtdy,vtdz,vdx,vdy,vdz,npxb,  &
-!    &npyb,npzb,nx,ny,nz,kstrt,ipbc,ierr)
+!           call mpdistr3(part,edges,npp,vtdx,vtdy,vtdz,vdx,vdy,vdz,npxb&
+!    &,npyb,npzb,nx,ny,nz,kstrt,ipbc,ierr)
 ! calculates initial electron co-ordinates with various density profiles
-         call mpfdistr3(part,npp,ampdx,scaledx,shiftdx,ampdy,scaledy,   &
+            call mpfdistr3(part,npp,ampdx,scaledx,shiftdx,ampdy,scaledy,&
      &shiftdy,ampdz,scaledz,shiftdz,npxb,npyb,npzb,nx,ny,nz,kstrt,nvpy, &
      &nvpz,ipbc,ndprof,ierr)
 ! initialize electron velocities or momenta
-         if (ierr==0) then
-            call wmpvdistr3(part,nps,npp,vtdx,vtdy,vtdz,vdx,vdy,vdz,ci, &
-     &npxb,npyb,npzb,kstrt,nvpy,nvpz,relativity,ierr)
-         endif
+            if (ierr==0) then
+               call wmpvdistr3(part,nps,npp,vtdx,vtdy,vtdz,vdx,vdy,vdz, &
+     &ci,npxb,npyb,npzb,kstrt,nvpy,nvpz,relativity,ierr)
+            endif
 ! check for beam electron initialization error
-         if (ierr /= 0) then
-            call PPEXIT()
-            stop
+            if (ierr /= 0) then
+               call PPEXIT(); stop
+            endif
          endif
-      endif
 !
 ! check if any electrons are in the wrong node
-      call mpfholes3(part,edges,npp,iholep)
-! iholep overflow
-      if (iholep(1,1) < 0) then
-         ntmax = -iholep(1,1)
-         ntmax = 1.5*ntmax
-         deallocate(iholep)
-         if (kstrt==1) then
-            write (*,*) 'reallocating electron iholep: ntmax=', ntmax
-         endif
-         allocate(iholep(ntmax+1,2))
-         call mpfholes3(part,edges,npp,iholep)
-         if (iholep(1,1) < 0) then
-            if (kstrt==1) write (*,*) 'iholep overflow: ntmax=', ntmax
-            call PPEXIT()
-            stop
-         endif
-      endif
-! more electrons to correct node
-      call ipmove3(part,edges,npp,iholep,ny,nz,tmov,kstrt,nvpy,nvpz,ierr&
-     &)
-      if (ierr /= 0) then
-         call PPEXIT()
-         stop
-      endif
-!
-! delete ipmove3 buffers, no longer needed
-      if (movion==0) then
-         deallocate(iholep)
-         call mppdelszbuf()
-      endif
-!
-! find number of electrons in each of mx, my, mz tiles:
-! updates kpic, nppmx
-      call mpdblkp3(part,kpic,npp,noff,nppmx,mx,my,mz,mx1,myp1,irc)
-!
-! allocate vector electron data
-      nppmx0 = (1.0 + xtras)*nppmx
-      ntmaxp = xtras*nppmx
-      npbmx = xtras*nppmx
-      nbmaxp = 0.25*mxzyp1*npbmx
-      allocate(ppart(idimp,nppmx0,mxyzp1))
-      allocate(ncl(26,mxyzp1),ihole(2,ntmaxp+1,mxyzp1))
-! copy ordered electron data for OpenMP: updates ppart and kpic
-      call mpmovin3(part,ppart,kpic,npp,noff,mx,my,mz,mx1,myp1,irc)
-!
-! sanity check for electrons
-      call mpcheck3(ppart,kpic,noff,nyzp,nx,mx,my,mz,mx1,myp1,irc)
-!
-! initialize background charge density: updates qi
-      if (movion==0) then
-         qi = 0.0
-         call mppost3(ppart,qi,kpic,noff,-qme,tdpost,mx,my,mz,mx1,myp1)
-         call wmpaguard3(qi,nyzp,tguard,nx,kstrt,nvpy,nvpz)
-      endif
-!
-! initialize ions
-      if (movion==1) then
-         allocate(kipic(mxyzp1))
-         nps = 1
-         nppi = 0
-! background ions
-         if (npxyzi > 0.0d0) then
-! calculates initial ion co-ordinates and velocities with
-! uniform density and maxwellian velocity with drift
-!           call mpdistr3(part,edges,nppi,vtxi,vtyi,vtzi,vxi0,vyi0,vzi0,&
-!    &npxi,npyi,npzi,nx,ny,nz,kstrt,ipbc,ierr)
-! calculates initial ion co-ordinates with various density profiles
-            call mpfdistr3(part,nppi,ampdxi,scaledxi,shiftdxi,ampdyi,   &
-     &scaledyi,shiftdyi,ampdzi,scaledzi,shiftdzi,npxi,npyi,npzi,nx,ny,nz&
-     &,kstrt,nvpy,nvpz,ipbc,ndprofi,ierr)
-! initialize ion velocities or momenta
-            if (ierr==0) then
-               call wmpvdistr3(part,nps,nppi,vtxi,vtyi,vtzi,vxi0,vyi0,  &
-     &vzi0,ci,npxi,npyi,npzi,kstrt,nvpy,nvpz,relativity,ierr)
-            endif
-! check for background ion initialization error
-            if (ierr /= 0) then
-               call PPEXIT()
-               stop
-            endif
-         endif
-! beam ions
-         if (npxyzbi > 0.0d0) then
-! calculates initial ion co-ordinates and velocities with
-! uniform density and maxwellian velocity with drift
-!           call mpdistr3(part,edges,nppi,vtdxi,vtdyi,vtdzi,vdxi,vdyi,  &
-!    &vdzi,npxbi,npybi,npzbi,nx,ny,nz,kstrt,ipbc,ierr)
-! calculates initial ion co-ordinates with various density profiles
-            call mpfdistr3(part,nppi,ampdxi,scaledxi,shiftdxi,ampdyi,   &
-     &scaledyi,shiftdyi,ampdzi,scaledzi,shiftdzi,npxbi,npybi,npzbi,nx,ny&
-     &,nz,kstrt,nvpy,nvpz,ipbc,ndprofi,ierr)
-! initialize ion velocities or momenta
-            if (ierr==0) then
-               call wmpvdistr3(part,nps,nppi,vtdxi,vtdyi,vtdzi,vdxi,vdyi&
-     &,vdzi,ci,npxbi,npybi,npzbi,kstrt,nvpy,nvpz,relativity,ierr)
-            endif
-! check for background ion initialization error
-            if (ierr /= 0) then
-               call PPEXIT()
-               stop
-            endif
-         endif
-!
-! check if any ions are in the wrong node
-         call mpfholes3(part,edges,nppi,iholep)
+         call mpfholes3(part,edges,npp,iholep,1)
 ! iholep overflow
          if (iholep(1,1) < 0) then
             ntmax = -iholep(1,1)
             ntmax = 1.5*ntmax
             deallocate(iholep)
             if (kstrt==1) then
-               write (*,*) 'reallocating ion iholep: ntmax=', ntmax
+               write (*,*) 'reallocating electron iholep: ntmax=', ntmax
             endif
             allocate(iholep(ntmax+1,2))
-            call mpfholes3(part,edges,nppi,iholep)
+            call mpfholes3(part,edges,npp,iholep,1)
             if (iholep(1,1) < 0) then
                if (kstrt==1) write (*,*) 'iholep overflow: ntmax=',ntmax
-               call PPEXIT()
-               stop
+               call PPEXIT(); stop
             endif
          endif
-! more ions to correct node
-         call ipmove3(part,edges,nppi,iholep,ny,nz,tmov,kstrt,nvpy,nvpz,&
-     &ierr)
+! more electrons to correct node
+         call ipmove3(part,edges,npp,iholep,ny,nz,tmov,kstrt,nvpy,nvpz,1&
+     &,ierr)
          if (ierr /= 0) then
-            call PPEXIT()
-            stop
+            call PPEXIT(); stop
          endif
 !
-! delete ipmove3 buffers, no longer needed
-         deallocate(iholep)
-         call mppdelszbuf()
+! find number of electrons in each of mx, my, mz tiles:
+! updates kpic, nppmx
+         call mpdblkp3(part,kpic,npp,noff,nppmx,mx,my,mz,mx1,myp1,irc)
+!
+! allocate vector electron data
+         nppmx0 = (1.0 + xtras)*nppmx
+         ntmaxp = xtras*nppmx
+         npbmx = xtras*nppmx
+         nbmaxp = 0.25*mxzyp1*npbmx
+         allocate(ppart(idimp,nppmx0,mxyzp1))
+         allocate(ihole(2,ntmaxp+1,mxyzp1))
+! copy ordered electron data for OpenMP: updates ppart and kpic
+         call mpmovin3(part,ppart,kpic,npp,noff,mx,my,mz,mx1,myp1,irc)
+!
+! sanity check for electrons
+         call mpcheck3(ppart,kpic,noff,nyzp,nx,mx,my,mz,mx1,myp1,irc)
+!
+! initialize background charge density: updates qi
+         if (movion==0) then
+            qi = 0.0
+            call mppost3(ppart,qi,kpic,noff,-qme,tdpost,mx,my,mz,mx1,   &
+     &myp1)
+            call wmpaguard3(qi,nyzp,tguard,nx,kstrt,nvpy,nvpz)
+         endif
+!
+! initialize ions
+         if (movion==1) then
+            nps = 1
+            nppi = 0
+! background ions
+            if (npxyzi > 0.0d0) then
+! calculates initial ion co-ordinates and velocities with
+! uniform density and maxwellian velocity with drift
+!              call mpdistr3(part,edges,nppi,vtxi,vtyi,vtzi,vxi0,vyi0,  &
+!    &vzi0,npxi,npyi,npzi,nx,ny,nz,kstrt,ipbc,ierr)
+! calculates initial ion co-ordinates with various density profiles
+               call mpfdistr3(part,nppi,ampdxi,scaledxi,shiftdxi,ampdyi,&
+     &scaledyi,shiftdyi,ampdzi,scaledzi,shiftdzi,npxi,npyi,npzi,nx,ny,nz&
+     &,kstrt,nvpy,nvpz,ipbc,ndprofi,ierr)
+! initialize ion velocities or momenta
+               if (ierr==0) then
+                  call wmpvdistr3(part,nps,nppi,vtxi,vtyi,vtzi,vxi0,vyi0&
+     &,vzi0,ci,npxi,npyi,npzi,kstrt,nvpy,nvpz,relativity,ierr)
+               endif
+! check for background ion initialization error
+               if (ierr /= 0) then
+                  call PPEXIT(); stop
+               endif
+            endif
+! beam ions
+            if (npxyzbi > 0.0d0) then
+! calculates initial ion co-ordinates and velocities with
+! uniform density and maxwellian velocity with drift
+!              call mpdistr3(part,edges,nppi,vtdxi,vtdyi,vtdzi,vdxi,vdyi&
+!    &,vdzi,npxbi,npybi,npzbi,nx,ny,nz,kstrt,ipbc,ierr)
+! calculates initial ion co-ordinates with various density profiles
+               call mpfdistr3(part,nppi,ampdxi,scaledxi,shiftdxi,ampdyi,&
+     &scaledyi,shiftdyi,ampdzi,scaledzi,shiftdzi,npxbi,npybi,npzbi,nx,ny&
+     &,nz,kstrt,nvpy,nvpz,ipbc,ndprofi,ierr)
+! initialize ion velocities or momenta
+               if (ierr==0) then
+                  call wmpvdistr3(part,nps,nppi,vtdxi,vtdyi,vtdzi,vdxi, &
+     &vdyi,vdzi,ci,npxbi,npybi,npzbi,kstrt,nvpy,nvpz,relativity,ierr)
+               endif
+! check for background ion initialization error
+               if (ierr /= 0) then
+                  call PPEXIT(); stop
+               endif
+            endif
+!
+! check if any ions are in the wrong node
+            call mpfholes3(part,edges,nppi,iholep,1)
+! iholep overflow
+            if (iholep(1,1) < 0) then
+               ntmax = -iholep(1,1)
+               ntmax = 1.5*ntmax
+               deallocate(iholep)
+               if (kstrt==1) then
+                  write (*,*) 'reallocating ion iholep: ntmax=', ntmax
+               endif
+               allocate(iholep(ntmax+1,2))
+               call mpfholes3(part,edges,nppi,iholep,1)
+               if (iholep(1,1) < 0) then
+                  if (kstrt==1) then
+                     write (*,*) 'iholep overflow: ntmax=', ntmax
+                  endif
+                  call PPEXIT(); stop
+               endif
+            endif
+! more ions to correct node
+            call ipmove3(part,edges,nppi,iholep,ny,nz,tmov,kstrt,nvpy,  &
+     &nvpz,1,ierr)
+            if (ierr /= 0) then
+               call PPEXIT(); stop
+            endif
 !
 ! find number of ions in each of mx, my, mz tiles:
 ! updates kipic, nppmx
-         call mpdblkp3(part,kipic,nppi,noff,nppmx,mx,my,mz,mx1,myp1,irc)
+            call mpdblkp3(part,kipic,nppi,noff,nppmx,mx,my,mz,mx1,myp1, &
+     &irc)
 !
 ! allocate vector ion data
-         nppmx1 = (1.0 + xtras)*nppmx
-         allocate(pparti(idimp,nppmx1,mxyzp1))
+            nppmx1 = (1.0 + xtras)*nppmx
+            allocate(pparti(idimp,nppmx1,mxyzp1))
+            if (.not.allocated(ihole)) then
+               ntmaxp = xtras*nppmx
+               npbmx = xtras*nppmx
+               nbmaxp = 0.25*mxzyp1*npbmx
+               allocate(ihole(2,ntmaxp+1,mxyzp1))
+            endif
 ! copy ordered ion data for OpenMP: updates pparti and kipic
-         call mpmovin3(part,pparti,kipic,nppi,noff,mx,my,mz,mx1,myp1,irc&
-     &)
+            call mpmovin3(part,pparti,kipic,nppi,noff,mx,my,mz,mx1,myp1,&
+     &irc)
 !
 ! sanity check for ions
-         call mpcheck3(pparti,kipic,noff,nyzp,nx,mx,my,mz,mx1,myp1,irc)
+            call mpcheck3(pparti,kipic,noff,nyzp,nx,mx,my,mz,mx1,myp1,  &
+     &irc)
+         endif
+!
+! restart to continue a run which was interrupted
+      else if (nustrt==2) then
+         write (*,*) 'nustrt = 2 not yet supported'
+         call PPEXIT(); stop
+!        nstart = ntime + 1
+! start a new run with data from a previous run
+      else if (nustrt==0) then
+! read in basic restart file for electrostatic code
+! read first part of data:
+! updates ntime, ntime0, part, npp, kpic, nppmx, ierr
+         call bread_restart3a(part,kpic,noff,tdiag,kstrt,iur0,iscr,ntime&
+     &,ntime0,npp,nppmx,mx1,myp1,ierr)
+         if (ierr /= 0) then
+            call PPEXIT(); stop
+         endif
+! allocate vector electron data
+         nppmx0 = (1.0 + xtras)*nppmx
+         ntmaxp = xtras*nppmx
+         npbmx = xtras*nppmx
+         nbmaxp = 0.25*mxzyp1*npbmx
+         allocate(ppart(idimp,nppmx0,mxyzp1))
+         allocate(ihole(2,ntmaxp+1,mxyzp1))
+! read second part of data:
+! updates ppart, kpic, part, nppi, kipic, nppmx, ierr
+         call bread_restart3b(part,ppart,kpic,kipic,noff,nyzp,tdiag,    &
+     &kstrt,iur0,iscr,npp,nppi,nppmx,nx,mx1,myp1,ierr)
+         if (ierr /= 0) then
+            call PPEXIT(); stop
+         endif
+! allocate vector ion data
+         if (movion==1) then
+            nppmx1 = (1.0 + xtras)*nppmx
+            allocate(pparti(idimp,nppmx1,mxyzp1))
+            if (.not.allocated(ihole)) then
+               ntmaxp = xtras*nppmx
+               npbmx = xtras*nppmx
+               nbmaxp = 0.25*mxzyp1*npbmx
+               allocate(ihole(2,ntmaxp+1,mxyzp1))
+            endif
+         endif
+! read third part of data: updates pparti, kipic, qi, ierr
+         call bread_restart3c(part,pparti,kipic,noff,nyzp,qi,tdiag,kstrt&
+     &,iur0,ntime,ntime0,nppi,nx,mx1,myp1,ierr)
+         if (ierr /= 0) then
+            call PPEXIT(); stop
+         endif
       endif
+!
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+      ks = (kstrt - 1)/nvpy
+      js = kstrt - nvpy*ks - 1
+! kyps/kzps = actual grids used in field partitions in y/z
+      kyps = min(kyp,max(0,ny-kyp*js))
+      kzps = min(kzp,max(0,nz-kzp*ks))
+! kxyps/kyzps = actual grids in each transposed field partition in x/y
+      kxyps = min(kxyp,max(0,nxh-kxyp*js))
+      kyzps = min(kyzp,max(0,ny-kyzp*ks))
 !
 ! allocate diagnostic arrays
 ! reverse simulation at end back to start
@@ -565,6 +657,298 @@
             if (nelrec==0) then
                call dafopenv3(vfield,nx,kyp,kzp,iuel,nelrec,            &
      &trim(felname))
+            endif
+         endif
+      endif
+!
+! initialize fluid moments diagnostic
+      if (ntfm > 0) then
+         nprd = 0
+         if (npro==1) then
+            nprd = 1
+         else if (npro==2) then
+            nprd = 4
+         else if (npro==3) then
+            nprd = 10
+         else if (npro==4) then
+            nprd = 14
+         endif
+! electron moments
+         if ((ndfm==1).or.(ndfm==3)) then
+            allocate(fmse(nprd,nxe,nypmx,nzpmx))
+! open file for real data: updates nferec and possibly iufe
+            if (kstrt==1) then
+               ffename = 'fmer3.'//cdrun
+               if (nferec==0) then
+                  call dafopenv3(fmse,nx,kyp,kzp,iufe,nferec,           &
+     &trim(ffename))
+               endif
+            endif
+         endif
+! ion moments
+         if (movion==1) then
+            if ((ndfm==2).or.(ndfm==3)) then
+               allocate(fmsi(nprd,nxe,nypmx,nzpmx))
+! open file for real data: updates nfirec and possibly iufi
+               if (kstrt==1) then
+                  ffiname = 'fmir3.'//cdrun
+                  if (nfirec==0) then
+                     call dafopenv3(fmsi,nx,kyp,kzp,iufi,nfirec,           &
+     &trim(ffiname))
+                  endif
+               endif
+            endif
+         endif
+      endif
+!
+! initialize velocity-space diagnostic
+      if (ntv > 0) then
+         nfvd = 0; nfed = 0
+         if ((nvft==1).or.(nvft==3)) then
+            nfvd = ndim
+         endif
+         if ((nvft==2).or.(nvft==3)) then
+            nfed = 1
+         endif
+         nmv21 = 2*nmv + 1
+         mtv = (nloop - 1)/ntv + 1; itv = 0
+         eci = ci; if (relativity==0) eci = 0.0
+         wk = 0.0
+! electron velocity diagnostic
+         if ((ndv==1).or.(ndv==3)) then
+! estimate maximum velocity or momentum
+            ws = 0.0
+            if (npxyz.gt.0.0d0) then
+               ws = 4.0*vtx+abs(vx0)
+               ws = max(ws,4.0*vty+abs(vy0))
+               ws = max(ws,4.0*vtz+abs(vz0))
+            endif
+            if (npxyzb.gt.0.0d0) then
+               ws = max(ws,4.0*vtdx+abs(vdx))
+               ws = max(ws,4.0*vtdy+abs(vdy))
+               ws = max(ws,4.0*vtdz+abs(vdz))
+            endif
+            allocate(fvm(ndim,3),sfv(nmv21+1,ndim,mxyzp1))
+            allocate(fv(nmv21+1,nfvd),fe(nmv21+1,nfed))
+            fvm = 0.0
+! open file for electron velocity data: updates nverec and possibly iuve
+            if (kstrt==1) then
+               fvename = 'fve3.'//cdrun
+               if (nverec==0) then
+                  call dafopenfv3(fvm,fv,fe,wk,iuve,nverec,             &
+     &trim(fvename))
+               endif
+            endif
+! cartesian distribution
+            if ((nvft==1).or.(nvft==3)) then
+               allocate(fvtm(mtv,ndim,3))
+               fvtm = 0.0
+! set velocity or momentum scale
+               fv(nmv21+1,:) = 2.0*ws
+            endif
+! energy distribution
+            if ((nvft==2).or.(nvft==3)) then
+! set energy scale for electrons
+               ws = ws*ws
+               fe(nmv21+1,:) = ws/(1.0 + sqrt(1.0 + ws*eci*eci))
+            endif
+         endif
+! ion velocity diagnostic
+         if (movion==1) then
+            if ((ndv==2).or.(ndv==3)) then
+               allocate(fvmi(ndim,3))
+               allocate(fvi(nmv21+1,nfvd),fei(nmv21+1,nfed))
+! estimate maximum ion velocity or momentum
+               ws = 0.0
+               if (npxyzi.gt.0.0d0) then
+                   ws = 4.0*vtxi+abs(vxi0)
+                   ws = max(ws,4.0*vtyi+abs(vyi0))
+                   ws = max(ws,4.0*vtzi+abs(vzi0))
+               endif
+               if (npxyzbi.gt.0.0d0) then
+                  ws = max(ws,4.0*vtdxi+abs(vdxi))
+                  ws = max(ws,4.0*vtdyi+abs(vdyi))
+                  ws = max(ws,4.0*vtdzi+abs(vdzi))
+               endif
+! open file for ion velocity data: updates nvirec and possibly iuvi
+               if (kstrt==1) then
+                  fviname = 'fvi3.'//cdrun
+                  if (nvirec==0) then
+                     call dafopenfv3(fvmi,fvi,fei,wk,iuvi,nvirec,       &
+     &trim(fviname))
+                  endif
+               endif
+! cartesian distribution
+               if ((nvft==1).or.(nvft==3)) then
+                  allocate(fvtmi(mtv,ndim,3))
+                  fvtmi = 0.0
+! set velocity or momentum scale
+                  fvi(nmv21+1,:) = 2.0*ws
+               endif
+! energy distribution
+               if ((nvft==2).or.(nvft==3)) then
+! set energy scale for ions
+                  ws = ws*ws
+                  fei(nmv21+1,1) = ws/(1.0 + sqrt(1.0 + ws*eci*eci))
+               endif
+            endif
+         endif
+      endif
+!
+! initialize trajectory diagnostic
+      if (ntt > 0) then
+         if ((ndt==2).and.(movion==0)) ndt = 0
+         if ((ndt==1).or.(ndt==2)) then
+            allocate(iprobt(nprobt),tedges(idps))
+         endif
+! electron trajectories
+         if (ndt==1) then
+! set particle tags: updates nprobt, tedges, ppart and possibly iprobt
+            call psetptraj3(ppart,tedges,kpic,iprobt,kstrt,nst,nvpy,nvpz&
+     &,vtx,vtsx,dvtx,np,nprobt,irc)
+! estimate maximum electron velocity or momentum
+            if (nst==3) then
+               ws = 0.0
+               if (npxyz.gt.0.0d0) then
+                  ws = 4.0*vtx+abs(vx0)
+                  ws = max(ws,4.0*vty+abs(vy0))
+                  ws = max(ws,4.0*vtz+abs(vz0))
+               endif
+               if (npxyzb.gt.0.0d0) then
+                  ws = max(ws,4.0*vtdx+abs(vdx))
+                  ws = max(ws,4.0*vtdy+abs(vdy))
+                  ws = max(ws,4.0*vtdz+abs(vdz))
+               endif
+            endif
+! ion trajectories
+         else if (ndt==2) then
+! set particle tags: updates nprobt, tedges, pparti and possibly iprobt
+            call psetptraj3(pparti,tedges,kipic,iprobt,kstrt,nst,nvpy,  &
+     &nvpz,vtxi,vtsx,dvtx,npi,nprobt,irc)
+! estimate maximum ion velocity or momentum
+            if (nst==3) then
+               ws = 0.0
+               if (npxyzi.gt.0.0d0) then
+                  ws = 4.0*vtxi+abs(vxi0)
+                  ws = max(ws,4.0*vtyi+abs(vyi0))
+                  ws = max(ws,4.0*vtzi+abs(vzi0))
+               endif
+               if (npxyzbi.gt.0.0d0) then
+                  ws = max(ws,4.0*vtdxi+abs(vdxi))
+                  ws = max(ws,4.0*vtdyi+abs(vdyi))
+                  ws = max(ws,4.0*vtzi+abs(vzi0))
+               endif
+            endif
+         endif
+! electron or ion trajectories
+         if ((ndt==1).or.(ndt==2)) then
+            if (nprobt.gt.16777215) then
+               write(*,*) 'nprobt overflow = ', nprobt
+               call PPEXIT(); stop
+            endif
+            ndimp = idimp
+            allocate(partt(idimp,nprobt))
+            ftname = 'tr3.'//cdrun
+            if ((nst==1).or.(nst==2)) then
+               mtt = (nloop - 1)/ntt + 1
+               itt = 0
+               allocate(partd(mtt,idimp,nprobt))
+               partd = 0.0
+! open file for trajectory data: updates ntrec and possibly iut
+               if (kstrt==1) then
+                  if (ntrec==0) then
+                     call dafopentr3(partt,iut,ntrec,trim(ftname))
+                  endif
+               endif
+            else if (nst==3) then
+               allocate(fvtp(2*nmv+2,ndim),fvmtp(ndim,3))
+               allocate(fetp(ndim,0))
+               fvtp(2*nmv+2,:) = 2.0*ws
+! open file for test particle diagnostic: updates ntrec and possibly iut
+               if (kstrt==1) then
+                  if (ntrec==0) then
+                     ws = 0.0
+                     call dafopenfv3(fvmtp,fvtp,fetp,ws,iut,ntrec,      &
+     &trim(ftname))
+                  endif
+               endif
+            endif
+         endif
+      endif
+!
+! initialize phase space diagnostic
+      if (nts > 0) then
+         nmv21 = 2*nmv + 1
+         mvx = min(mvx,nx); mvy = min(mvy,nypmn); mvz = min(mvz,nzpmn)
+         nsxb = (nx - 1)/mvx + 1; nsyb = (ny - 1)/mvy + 1
+         nszb = (nz - 1)/mvz + 1
+         nyb = (noff(1) + nyzp(1) - 1)/mvy - (noff(1) - 1)/mvy
+         nzb = (noff(2) + nyzp(2) - 1)/mvz - (noff(2) - 1)/mvz
+         if (js==0) nyb = nyb + 1
+         if (ks==0) nzb = nzb + 1
+         itot(1) = nyb; itot(2) = nzb
+         call mpimax(itot(:2),tdiag)
+         nybmx = itot(1); nzbmx = itot(2)
+! electron phase space diagnostic
+         if ((nds==1).or.(nds==3)) then
+! estimate maximum electron velocity or momentum
+            ws = 0.0
+            if (npxyz.gt.0.0d0) then
+               ws = 4.0*vtx+abs(vx0)
+               ws = max(ws,4.0*vty+abs(vy0))
+               ws = max(ws,4.0*vtz+abs(vz0))
+            endif
+            if (npxyzb.gt.0.0d0) then
+               ws = max(ws,4.0*vtdx+abs(vdx))
+               ws = max(ws,4.0*vtdy+abs(vdy))
+               ws = max(ws,4.0*vtdz+abs(vdz))
+            endif
+            allocate(fvs(nmv21+1,ndim,nsxb,nybmx+1,nzb+1))
+            fvs(nmv21+1,:,1,1,1) = 1.25*ws
+! open file for electron phase space data:
+! updates nserec and possibly iuse
+! opens a new fortran unformatted stream file
+            if (nserec==0) then
+               if (kstrt==1) then
+                  fsename = 'pse3.'//cdrun
+                  iuse =  get_funit(iuse)
+                  call fnopens3(iuse,trim(fsename))
+               endif
+! writes distributed non-uniform partition information
+               call mpwrncomp3(nyb,nzb,nvpy,nvpz,iuse)
+               nserec = 1
+            endif
+         endif
+! ion phase space diagnostic
+         if (movion==1) then
+            if ((nds==2).or.(nds==3)) then
+! estimate maximum ion velocity or momentum
+               ws = 0.0
+               if (npxyzi.gt.0.0d0) then
+                   ws = 4.0*vtxi+abs(vxi0)
+                   ws = max(ws,4.0*vtyi+abs(vyi0))
+                   ws = max(ws,4.0*vtzi+abs(vzi0))
+               endif
+               if (npxyzbi.gt.0.0d0) then
+                  ws = max(ws,4.0*vtdxi+abs(vdxi))
+                  ws = max(ws,4.0*vtdyi+abs(vdyi))
+                  ws = max(ws,4.0*vtdzi+abs(vdzi))
+               endif
+               allocate(fvsi(nmv21+1,ndim,nsxb,nybmx+1,nzb+1))
+               fvsi(nmv21+1,:,1,1,1) = 1.25*ws
+! open file for ion phase space data:
+! updates nsirec and possibly iusi
+! opens a new fortran unformatted stream file
+               if (nsirec==0) then
+                  if (kstrt==1) then
+                     fsiname = 'psi3.'//cdrun
+                     iusi =  get_funit(iusi)
+                     call fnopens3(iusi,trim(fsiname))
+                  endif
+! writes distributed non-uniform partition information
+                  call mpwrncomp3(nyb,nzb,nvpy,nvpz,iusi)
+                  nsirec = 1
+               endif
             endif
          endif
       endif
@@ -729,6 +1113,252 @@
          endif
       endif
 !
+! fluid moments diagnostic
+      if (ntfm > 0) then
+         it = ntime/ntfm
+         if (ntime==ntfm*it) then
+! calculate electron fluid moments
+            if ((ndfm==1).or.(ndfm==3)) then
+               call dtimer(dtime,itime,-1)
+               fmse = 0.0
+               call dtimer(dtime,itime,1)
+               tdiag = tdiag + real(dtime)
+               call wmgprofx3(ppart,fxyze,fmse,kpic,noff,nyzp,qbme,dt,ci&
+     &,tdiag,npro,nx,mx,my,mz,mx1,myp1,relativity)
+! add guard cells with OpenMP: updates fmse
+               call wmpnacguard3(fmse,nyzp,tdiag,nx,kstrt,nvpy,nvpz)
+! moves vector grid fmse from non-uniform to uniform partition
+               isign = -1
+               call mpfnmove3(fmse,noff,nyzp,isign,tdiag,kyp,kzp,ny,nz, &
+     &kstrt,nvpy,nvpz,mterf,irc)
+               if (irc /= 0) then
+                  call PPEXIT(); stop
+               endif
+! calculates fluid quantities from fluid moments
+               call mpfluidqs3(fmse,tdiag,npro,nx,ny,nz,kstrt,nvpy,kyp, &
+     &kzp)
+! write real space diagnostic output: updates nferec
+               call mpvwrite3(fmse,tdiag,nx,ny,nz,kyp,kzp,nvpy,iufe,    &
+     &nferec)
+!              call mpvread3(fmse,tdiag,nx,ny,nz,kyp,kzp,nvpy,iufe,     &
+!    &nferec,irc)
+            endif
+! calculate ion fluid moments
+            if (movion==1) then
+               if ((ndfm==2).or.(ndfm==3)) then
+                  call dtimer(dtime,itime,-1)
+                  fmsi = 0.0
+                  call dtimer(dtime,itime,1)
+                  tdiag = tdiag + real(dtime)
+                  call wmprofx3(pparti,fmsi,kipic,noff,ci,tdiag,npro,mx,&
+     &my,mz,mx1,myp1,relativity)
+                  call wmgprofx3(pparti,fxyze,fmsi,kipic,noff,nyzp,qbme,&
+     &dt,ci,tdiag,npro,nx,mx,my,mz,mx1,myp1,relativity)
+                  fmsi = rmass*fmsi
+! add guard cells with OpenMP: updates fmsi
+                  call wmpnacguard3(fmsi,nyzp,tdiag,nx,kstrt,nvpy,nvpz)
+! moves vector grid fmsi from non-uniform to uniform partition
+                  isign = -1
+                  call mpfnmove3(fmsi,noff,nyzp,isign,tdiag,kyp,kzp,ny, &
+     &nz,kstrt,nvpy,nvpz,mterf,irc)
+                  if (irc /= 0) then
+                     call PPEXIT(); stop
+                  endif
+! calculates fluid quantities from fluid moments: updates fmsi
+                  call mpfluidqs3(fmsi,tdiag,npro,nx,ny,nz,kstrt,nvpy,  &
+     &kyp,kzp)
+! write real space diagnostic output: updates nfirec
+                  call mpvwrite3(fmsi,tdiag,nx,ny,nz,kyp,kzp,nvpy,iufi, &
+     &nfirec)
+!                 call mpvread3(fmsi,tdiag,nx,ny,nz,kyp,kzp,nvpy,iufi,     &
+!    &nfirec,irc)
+               endif
+            endif
+         endif
+      endif
+!
+! velocity-space diagnostic
+      if (ntv > 0) then
+         it = ntime/ntv
+         if (ntime==ntv*it) then
+            if ((ndv==1).or.(ndv==3)) then
+! calculate electron cartesian distribution function and moments
+               if ((nvft==1).or.(nvft==3)) then
+                  call mpvpdist3(ppart,kpic,fv,sfv,fvm,tdiag,nvp,nmv)
+! store time history electron vdrift, vth, and entropy
+                  itv = itv + 1
+                  fvtm(itv,:,:) = fvm
+               endif
+! electron energy distribution
+               if ((nvft==2).or.(nvft==3)) then
+                  call mperpdist3(ppart,kpic,fe,sfv,eci,wk,tdiag,nmv)
+               endif
+! write electron velocity-space diagnostic output: updates nverec
+               if (kstrt==1) then
+                  call dafwritefv3(fvm,fv,fe,wk,tdiag,iuve,nverec)
+               endif
+            endif
+! ion distribution functions
+            if (movion==1) then
+               if ((ndv==2).or.(ndv==3)) then
+! calculate ion cartesian distribution function and moments
+                  if ((nvft==1).or.(nvft==3)) then
+                     call mpvpdist3(pparti,kipic,fvi,sfv,fvmi,tdiag,nvp,&
+     &nmv)
+! store time history of ion vdrift, vth, and entropy
+                     fvtmi(itv,:,:) = fvmi
+                  endif
+! ion energy distribution
+                  if ((nvft==2).or.(nvft==3)) then
+                     call mperpdist3(pparti,kipic,fei,sfv,eci,wk,tdiag, &
+     &nmv)
+                     wk = rmass*wk
+                  endif
+! write ion velocity-space diagnostic output: updates nvirec
+                  if (kstrt==1) then
+                     call dafwritefv3(fvmi,fvi,fei,wk,tdiag,iuvi,nvirec)
+                  endif
+               endif
+            endif
+         endif
+      endif
+!
+! trajectory diagnostic
+      if (ntt > 0) then
+         it = ntime/ntt
+         if (ntime==ntt*it) then
+            ierr = 0
+! copies tagged electrons in ppart to array partt: updates partt, numtp
+            if (ndt==1) then
+               call mptraj3(ppart,kpic,partt,tdiag,numtp,ierr)
+! copies tagged ions in ppart to array partt: updates partt, numtp
+            else if (ndt==2) then
+               if (movion==1) then
+                  call mptraj3(pparti,kipic,partt,tdiag,numtp,ierr)
+               endif
+            endif
+            if (ierr /= 0) then
+! partt overflow
+               if (ierr <  0) then
+                  deallocate(partt)
+                  nprobt = numtp
+                  allocate(partt(idimp,nprobt))
+                  ierr = 0
+! copies tagged electrons in ppart to array partt: updates partt, numtp
+                  if (ndt==1) then
+                     call mptraj3(ppart,kpic,partt,tdiag,numtp,ierr)
+! copies tagged ions in ppart to array partt: updates partt, numtp
+                  else if (ndt==2) then
+                     if (movion==1) then
+                        call mptraj3(pparti,kipic,partt,tdiag,numtp,ierr&
+    &)
+                     endif
+                  endif
+               endif
+               if (ierr /= 0) then
+                  call PPEXIT(); stop
+               endif
+            endif
+! electron or ion trajectories
+            if ((ndt==1).or.(ndt==2)) then
+! reorder tagged particles
+               if ((nst==1).or.(nst==2)) then
+! determines list of tagged particles leaving this node: updates iholep
+                  call mpfholes3(partt,tedges,numtp,iholep,2)
+! iholep overflow
+                  if (iholep(1,1) < 0) then
+                     ntmax = -iholep(1,1)
+                     ntmax = 1.5*ntmax
+                     deallocate(iholep)
+                     if (kstrt==1) then
+                        write (*,*) 'info:reallocating iholep:ntmax=',  &
+     &ntmax
+                     endif
+                     allocate(iholep(ntmax+1,2))
+                     call mpfholes3(partt,tedges,numtp,iholep,2)
+                     if (iholep(1,1) < 0) then
+                        if (kstrt==1) then
+                           write (*,*) 'iholep overflow: ntmax=', ntmax
+                           call PPEXIT(); stop
+                        endif
+                     endif
+                  endif
+! copies tagged particles: updates part
+                  call mpcpytraj3(partt,part,tdiag,numtp)
+! moves tagged electrons into original spatial region:
+! updates part, numtp
+                  call ipmove3(part,tedges,numtp,iholep,ny,nz,tmov,kstrt&
+     &,nvpy,nvpz,2,ierr)
+                  if (ierr /= 0) then
+                     call PPEXIT(); stop
+                  endif
+! reorders tagged particles: updates partt
+                  call mpordtraj3(part,partt,tedges,tdiag,numtp,ierr)
+! collects distributed test particle data onto node 0
+                  call mppartt3(partt,tdiag,numtp,nvpy,nvpz,ierr)
+                  if (ierr /= 0) then
+                     call PPEXIT(); stop
+                  endif
+! write trajectory diagnostic output: updates ntrec
+                  if (kstrt==1) then
+                     call dafwritetr3(partt,tdiag,iut,ntrec)
+                     itt = itt + 1
+                     partd(itt,:,:) = partt
+                  endif
+               else if (nst==3) then
+! calculate test particle distribution function and moments
+                  call mpvdist3(partt,fvtp,fvmtp,tdiag,numtp,nvp,nmv)
+! write test particle diagnostic output: updates ntrec
+                  if (kstrt==1) then
+                     ws = 0.0
+                     call dafwritefv3(fvmtp,fvtp,fetp,ws,tdiag,iut,ntrec)
+                  endif
+               endif
+            endif
+         endif
+      endif
+!
+! phase space diagnostic
+      if (nts > 0) then
+         it = ntime/nts
+         if (ntime==nts*it) then
+! electron phase space diagnostic
+            if ((nds==1).or.(nds==3)) then
+! calculates velocity distribution in different regions of space:
+! updates fvs
+               call mpvspdist3(ppart,kpic,fvs,noff,tdiag,nmv,mvx,mvy,mvz&
+     &,nyb)
+! adjusts 3d velocity distribution in different regions of space:
+! updates fvs
+               call mpadjfvs3(fvs,tdiag,noff,nyzp,nmv,mvy,mvz,nyb,nvpy, &
+     &nzbmx)
+! write phase space diagnostic output: updates nserec
+               if (nserec > 0) then
+                  call mpwrfvsdata3(fvs,tdiag,nyb,nzb,nzbmx,iuse)
+                  nserec = nserec + 1
+               endif
+            endif
+! ion phase space
+            if (movion==1) then
+               if ((nds==2).or.(nds==3)) then
+! calculates velocity distribution in different regions of space:
+! updates fvsi
+                  call mpvspdist3(pparti,kipic,fvsi,noff,tdiag,nmv,mvx, &
+     &mvy,mvz,nyb)
+! adjusts 3d velocity distribution in different regions of space:
+! updates fvsi
+                  call mpadjfvs3(fvsi,tdiag,noff,nyzp,nmv,mvy,mvz,nyb,  &
+     &nvpy,nzbmx)
+! write phase space diagnostic output: updates nsirec
+                  if (nsirec > 0) then
+                     call mpwrfvsdata3(fvsi,tdiag,nyb,nzb,nzbmx,iusi)
+                     nsirec = nsirec + 1
+                  endif
+               endif
+            endif
+         endif
+      endif
+!
 ! push electrons with OpenMP:
 ! updates ppart and wke, and possibly ncl, ihole, irc
       wke = 0.0
@@ -858,7 +1488,7 @@
             wtot(2) = wke
             wtot(3) = wki
             wtot(4) = we + wke
-            call PPDSUM(wtot,work,4)
+            call mpdsum(wtot,tdiag)
             we = wtot(1)
             wke = wtot(2)
             wki = wtot(3)
@@ -879,6 +1509,19 @@
             s(2) = s(2) + wke
             s(3) = min(s(3),dble(ws))
             s(4) = max(s(4),dble(ws))
+         endif
+      endif
+!
+! restart file
+      if (ntr > 0) then
+         it = n/ntr
+         if (n==ntr*it) then
+            call dtimer(dtime,itime,-1)
+! write out basic restart file for electrostatic code
+            call bwrite_restart3(part,ppart,pparti,qi,kpic,kipic,tdiag, &
+     &kstrt,iur,iscr,n,ntime0,irc)
+            call dtimer(dtime,itime,1)
+            tfield = tfield + real(dtime)
          endif
       endif
 !
@@ -951,6 +1594,33 @@
          if (ntel > 0) then
             nelrec = nelrec - 1; ceng = affp
          endif
+! fluid moments diagnostic
+         if (ntfm > 0) then
+            if ((ndfm==1).or.(ndfm==3)) nferec = nferec - 1
+            if (movion==1) then
+               if ((ndfm==2).or.(ndfm==3)) nfirec = nfirec - 1
+            endif
+            ceng = affp
+         endif
+! velocity-space diagnostic
+         if (ntv > 0) then
+            if ((ndv==1).or.(ndv==3)) nverec = nverec - 1
+            if (movion==1) then
+               if ((ndv==2).or.(ndv==3)) nvirec = nvirec - 1
+            endif
+         endif
+! trajectory diagnostic
+         if (ntt > 0) then
+            ntrec = ntrec - 1
+         endif
+! phase space diagnostic
+         if (nts > 0) then
+            if ((nds==1).or.(nds==3)) nserec = nserec - 1
+            if (movion==1) then
+               if ((nds==2).or.(nds==3)) nsirec = nsirec - 1
+            endif
+         endif
+! ion diagnostics
          if (movion==1) then
 ! ion density diagnostic
             if (ntdi > 0) then
@@ -959,8 +1629,11 @@
          endif
 ! write final diagnostic metafile
          call writnml3(iudm)
-         write (iuot,*) ' * * * q.e.d. * * *'
          close(unit=iudm)
+! close restart files
+         call close_restart3(iur,iur0)
+! close output file
+         write (iuot,*) ' * * * q.e.d. * * *'
          close(unit=iuot)
       endif
 !

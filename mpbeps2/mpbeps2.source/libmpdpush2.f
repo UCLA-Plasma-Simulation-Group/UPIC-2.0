@@ -15,7 +15,7 @@
 ! PPASCFGUARD2L add scaled vector field to extended periodic field
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 2, 2017
+! update: february 26, 2018
 !-----------------------------------------------------------------------
       subroutine PPFWPMINMX2(qe,nyp,qbme,wpmax,wpmin,nx,nxe,nypmx)
 ! calculates maximum and minimum plasma frequency.  assumes guard cells
@@ -37,7 +37,7 @@
       real at1
       wpmax = qbme*qe(1,1)
       wpmin = wpmax
-!$OMP PARALLEL DO PRIVATE(j,k)
+!$OMP PARALLEL DO PRIVATE(j,k)                                          &
 !$OMP& REDUCTION(max:wpmax), REDUCTION(min:wpmin)
       do 20 k = 1, nyp
       do 10 j = 1, nx
@@ -71,7 +71,7 @@
       real at1
       wpmax = qbme*qe(1,1) + qbmi*qi(1,1)
       wpmin = wpmax
-!$OMP PARALLEL DO PRIVATE(j,k)
+!$OMP PARALLEL DO PRIVATE(j,k)                                          &
 !$OMP& REDUCTION(max:wpmax), REDUCTION(min:wpmin)
       do 20 k = 1, nyp
       do 10 j = 1, nx
@@ -90,7 +90,7 @@
 ! acceleration density using first-order spline interpolation.
 ! OpenMP version using guard cells, for distributed data
 ! data read/written in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 194 flops/particle, 1 divide, 57 loads, 28 stores
 ! input: all, output: dcu, amu
 ! acceleration density is approximated by values at the nearest grid
@@ -210,10 +210,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,vx,vy,vz,v1,v2,v3,
-!$OMP& v4,dxp,dyp,amx,amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt, 
-!$OMP& omt,anorm,rot1,rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,sfxy,sbxy,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,vx,vy,vz,v1,v2,v3,&
+!$OMP& v4,dxp,dyp,amx,amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt, &
+!$OMP& omt,anorm,rot1,rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,sfxy,sbxy,&
 !$OMP& sdcu,samu)
       do 120 k = 1, mxyp1
       noffp = (k - 1)/mx1
@@ -477,7 +477,7 @@
 ! interpolation.
 ! OpenMP version using guard cells, for distributed data
 ! data read/written in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 218 flops/particle, 1 divide, 69 loads, 40 stores
 ! input: all, output: cu, dcu, amu
 ! current density is approximated by values at the nearest grid points
@@ -606,10 +606,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,vx,vy,vz,v1,v2,v3,
-!$OMP& v4,dxp,dyp,amx,amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt, 
-!$OMP& omt,anorm,rot1,rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,sfxy,sbxy,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,vx,vy,vz,v1,v2,v3,&
+!$OMP& v4,dxp,dyp,amx,amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt, &
+!$OMP& omt,anorm,rot1,rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,sfxy,sbxy,&
 !$OMP& scu,sdcu,samu)
       do 120 k = 1, mxyp1
       noffp = (k - 1)/mx1
@@ -915,7 +915,7 @@
 ! for relativistic particles.
 ! OpenMP version using guard cells, for distributed data
 ! data read/written in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 217 flops/particle, 2 divide, 1 sqrt, 57 loads, 28 stores
 ! input: all, output: dcu, amu
 ! acceleration density is approximated by values at the nearest grid
@@ -1041,10 +1041,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,vx,vy,vz,v1,v2,v3,
-!$OMP& v4,dxp,dyp,amx,amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt, 
-!$OMP& omt,anorm,rot1,rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,  
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,vx,vy,vz,v1,v2,v3,&
+!$OMP& v4,dxp,dyp,amx,amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt, &
+!$OMP& omt,anorm,rot1,rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,  &
 !$OMP& qtmg,gh,sfxy,sbxy,sdcu,samu)
       do 120 k = 1, mxyp1
       noffp = (k - 1)/mx1
@@ -1319,7 +1319,7 @@
 ! interpolation for relativistic particles.
 ! OpenMP version using guard cells, for distributed data
 ! data read/written in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 241 flops/particle, 2 divide, 1 sqrt, 69 loads, 40 stores
 ! input: all, output: cu, dcu, amu
 ! current density is approximated by values at the nearest grid points
@@ -1455,10 +1455,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,vx,vy,vz,v1,v2,v3,
-!$OMP& v4,dxp,dyp,amx,amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt, 
-!$OMP& omt,anorm,rot1,rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,  
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,mnoff,x,y,vx,vy,vz,v1,v2,v3,&
+!$OMP& v4,dxp,dyp,amx,amy,dx,dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt, &
+!$OMP& omt,anorm,rot1,rot2,rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,  &
 !$OMP& qtmg,gh,sfxy,sbxy,scu,sdcu,samu)
       do 120 k = 1, mxyp1
       noffp = (k - 1)/mx1

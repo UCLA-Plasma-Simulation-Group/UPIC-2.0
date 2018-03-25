@@ -8,7 +8,7 @@
 ! writnml3 writes final diagnostic metafile to unit iudm
 ! written by viktor k. decyk, ucla
 ! copyright 2011, regents of the university of california
-! update: may 4, 2017
+! update: March 14, 2018
 !
       implicit none
 !
@@ -35,6 +35,7 @@
       integer :: ndim = 3
 ! nvdist = velocity distribution type
 ! nvdist = (1,2) = (maxwellian/juttner,waterbag) distribution
+! for nvdist=2, maximum velocity in x/y/z is (vtx/vty/vtz)*sqrt(3)
       integer :: nvdist = 1
 ! treverse = (0,1) = (no,yes) reverse simulation at end back to start
       integer :: treverse = 0
@@ -167,35 +168,57 @@
 ! dw = frequency increment used in power spectrum
       real :: wmin = 0.0, wmax = 2.0, dw = 0.01
 !
+! Fluid Moments Diagnostic Parameter:
+! ntfm = number of time steps between fluid moments diagnostic
+! ndfm = (0,1,2,3) = process (nothing,electrons,ions,both)
+! npro = (1,2,3,4) = (density,momentum,momentum flux,energy flux)
+! if npro = n is selected, all profiles less than n are also calculated
+      integer :: ntfm = 0, ndfm = 1, npro = 2
+! nferec = current record number for electron fluid moments writes
+! nfirec = current record number for ion fluid moments writes
+!           (0 for beginnning of file, -1 to disable writes)
+      integer :: nferec = -1, nfirec = -1
+!
 ! Velocity-Space Diagnostic Parameter:
 ! ntv = number of time steps between velocity-space diagnostic
-! ndv = (0,1,2,3) = display (nothing,electrons,ions,both)
+! ndv = (0,1,2,3) = process (nothing,electrons,ions,both)
 ! nmv = number of segments in v for velocity distribution
       integer :: ntv = 0, ndv = 3, nmv = 40
-!
-! Phase-Space Diagnostic
-! nts = number of time steps between phase space diagnostic
-! nds = (0,1,2,3) = display (nothing,electrons,ions,both)
-! nsxv = component(s) for phase-space display(s), if nts > 0
-! 1 = x-vx, 2 = x-vy, 3 = x-vx and x-vy, 4 = x-vz, 5 = x-vx and x-vz,
-! 6 = x-vy and x-vz, 7 = x-vx and x-vy and x-vz
-! nsvv = component(s) for phase-space display(s), if nts > 0
-! 1 = vx-vy, 2 = vx-vz, 3 = vx-vy and vx-vz, 4 = vy-vz,
-! 5 = vx-vy and vy-vz, 6 = vx-vy, vx-vz, and vy-vz
-! ntsc = (0,1) = (no,yes) color beam particles
-      integer :: nts = 0, nds = 3, nsxv = 1, nsvv = 0, ntsc = 0
+! nvft = (1,2,3,4,5) = (cartesian,energy,cartesian+energy,cylindrical,
+!        (cylindrical+energy) 1d distribution functions
+!        for cylindrical, z axis is along the external magnetic field
+      integer :: nvft = 1
+! nverec = current record number for electron velocity distribution writes
+! nvirec = current record number for ion velocity distribution writes
+!          (0 for beginnning of file, -1 to disable writes)
+      integer :: nverec = -1, nvirec = -1
 !
 ! Trajectory Diagnostic Parameters:
 ! ntt = number of time steps between trajectory diagnostic.
+! ndt = (0,1,2) = process (nothing,electrons,ions)
 ! nst = type of test particle distribution, if ntt > 0
 ! 1 = uniformly distribution in real space
 ! 2 = uniform distribution in velocity space
 ! 3 = velocity slice at vtsx +- dvtx/2
 ! nprobt = number of test charges whose trajectories will be stored.
-      integer :: ntt = 0, nst = 0, nprobt = 0
+      integer :: ntt = 0, ndt = 1, nst = 0, nprobt = 0
 ! vtsx = center of velocity slice if nst = 3
 ! dvtx = width of velocity slice if nst = 3
       real :: vtsx = 0.0, dvtx = 0.1
+! ntrec = current record number for trajectory writes
+!          (0 for beginnning of file, -1 to disable writes)
+      integer :: ntrec = -1
+!
+! Phase-Space Diagnostic
+! nts = number of time steps between phase space diagnostic
+! nds = (0,1,2,3) = display (nothing,electrons,ions,both)
+      integer :: nts = 0, nds = 3
+! mvx/mvy/mvz = number of grids in x/y/z for phase space aggregation
+      integer :: mvx = 3, mvy = 3, mvz = 3
+! nserec = current record number for electron phase space writes
+! nsirec = current record number for ion phase space writes
+!          (0 for beginnning of file, -1 to disable writes)
+      integer :: nserec = -1, nsirec = -1
 !
 ! ntm = number of time steps between momentum diagnostic
 !     integer :: ntm = 0
@@ -229,12 +252,13 @@
      &shiftdz, amodex, freq, trmp, toff, el0, er0, ntw, ndw, ntde,      &
      &modesxde, modesyde, modeszde, nderec, ntp, ndp, modesxp, modesyp, &
      &modeszp, nprec, ntel, modesxel, modesyel, modeszel, nelrec, wmin, &
-     &wmax, dw, ntv, ndv, nmv, nts, nds, nsxv, nsvv, ntsc, ntt, nst,    &
-     &nprobt, vtsx, dvtx, movion, emf, nustrt, ntr, idrun0, nvpp,       &
-     &imbalance, monitor
+     &wmax, dw, ntfm, ndfm, npro, nferec, nfirec, ntv, ndv, nmv, nvft,  &
+     &nverec, nvirec, ntt, ndt, nst, nprobt, vtsx, dvtx, ntrec, nts,    &
+     &nds, mvx, mvy, mvz, nserec, nsirec, movion, emf, nustrt, ntr,     &
+     &idrun0, nvpp, imbalance, monitor
 !
 ! equivalence data to simplify MPI broadcast
-      integer, parameter :: lnin3 = 98
+      integer, parameter :: lnin3 = 110
       double precision, dimension(lnin3) :: ddin3
       private :: lnin3, ddin3
       equivalence (ddin3(1),idrun), (ddin3(2),idcode), (ddin3(3),indx)
@@ -267,14 +291,20 @@
       equivalence (ddin3(71),modesxel), (ddin3(72),modesyel)
       equivalence (ddin3(73),modeszel), (ddin3(74),nelrec)
       equivalence (ddin3(75),wmin), (ddin3(76),wmax), (ddin3(77),dw)
-      equivalence (ddin3(78),ntv), (ddin3(79),ndv), (ddin3(80),nmv)
-      equivalence (ddin3(81),nts), (ddin3(82),nds), (ddin3(83),nsxv)
-      equivalence (ddin3(84),nsvv), (ddin3(85),ntsc), (ddin3(86),ntt)
-      equivalence (ddin3(87),nst), (ddin3(88),nprobt), (ddin3(89),vtsx)
-      equivalence (ddin3(90),dvtx), (ddin3(91),movion), (ddin3(92),emf)
-      equivalence (ddin3(93),nustrt), (ddin3(94),ntr)
-      equivalence (ddin3(95),idrun0), (ddin3(96),nvpp)
-      equivalence (ddin3(97),imbalance), (ddin3(98),monitor)
+      equivalence (ddin3(78),ntfm), (ddin3(79),ndfm), (ddin3(80),npro)
+      equivalence (ddin3(81),nferec), (ddin3(82),nfirec)
+      equivalence (ddin3(83),ntv), (ddin3(84),ndv), (ddin3(85),nmv)
+      equivalence (ddin3(86),nvft), (ddin3(87),nverec)
+      equivalence (ddin3(88),nvirec), (ddin3(89),ntt), (ddin3(90),ndt)
+      equivalence (ddin3(91),nst), (ddin3(92),nprobt), (ddin3(93),vtsx)
+      equivalence (ddin3(94),dvtx), (ddin3(95),ntrec), (ddin3(96),nts)
+      equivalence (ddin3(97),nds), (ddin3(98),mvx), (ddin3(99),mvy)
+      equivalence (ddin3(100),mvz), (ddin3(101),nserec)
+      equivalence (ddin3(102),nsirec), (ddin3(103),movion)
+      equivalence (ddin3(104),emf), (ddin3(105),nustrt)
+      equivalence (ddin3(106),ntr), (ddin3(107),idrun0)
+      equivalence (ddin3(108),nvpp), (ddin3(109),imbalance)
+      equivalence (ddin3(110),monitor)
 !
 ! Electromagnetic Namelist
 ! External Magnetic Field Parameters:
@@ -544,6 +574,45 @@
      &modesyar, modeszar, ndim, omx, omy, omz, ci, narrec, nvpy, nvpz,  &
      &t0, tend, dt, ceng, farname
 !
+! Namelist output for fluid moments diagnostic
+! nprd = dimension of fluid moment arrays fmse and fmsi
+      integer :: nprd = 0
+! ffename/ffiname = file name for electron/ion fluid moments diagnostic
+      character(len=32) :: ffename = 'fmer3.0', ffiname = 'fmir3.0'
+! define namelist
+      namelist /fm3d/ idrun, indx, indy, indz, ntfm, npro, ndim, nprd,  &
+     &nferec, nfirec, nvpy, nvpz, t0, tend, dt, ceng, ffename, ffiname
+!
+! Namelist output for velocity-space diagnostic
+! nfvd = dimension of velocity distribution arrays fv and fvi
+! nfed = dimension of energy distribution arrays fe and fei
+      integer :: nfvd = 0, nfed = 0
+! fvename/fviname = file name for electron/ion velocity-space diagnostic
+      character(len=32) :: fvename = 'fve3.0', fviname = 'fvi3.0'
+! define namelist
+      namelist /fv3d/ idrun, indx, indy, indz, ntv, nmv, nvft, ndim,    &
+     &nfvd, nfed, omx, omy, omz, nverec, nvirec, nvpy, nvpz, t0, tend,  &
+     &dt, fvename, fviname
+!
+! Namelist output for trajectory diagnostic
+! ndimp = size of phase space trajectories
+      integer :: ndimp = 0
+! ftname = file name for trajectory diagnostic
+      character(len=32) :: ftname = 'tr3.0'
+! define namelist
+      namelist /tr3d/ idrun, indx, indy, indz, ntt, ndt, nst, nmv, ndim,&
+     &ndimp, nprobt, ntrec, nvpy, nvpz, t0, tend, dt, ftname
+!
+! Namelist output for phase space diagnostic
+! nsxb/nsyb/nszb = number of segments in x/y/z for global velocity distribution
+      integer :: nsxb = 0, nsyb= 0, nszb= 0
+! fsename/fsiname = file name for electron/ion phase space diagnostic
+      character(len=32) :: fsename = 'pse3.0', fsiname = 'psi3.0'
+! define namelist
+      namelist /ps3d/ idrun, indx, indy, indz, nts, nmv, ndim, nsxb,    &
+     &nsyb, nszb, nserec, nsirec, nvpy, nvpz, t0, tend, dt, fsename,    &
+     &fsiname
+!
 ! Namelist output for ion density diagnostic
 ! fdname = file name for ion density diagnostic
       character(len=32) :: fdiname = 'denik3.0'
@@ -650,6 +719,23 @@
       if (ntar > 0) then
          write (iudm,vpotr3d)
       endif
+! fluid moments diagnostic
+      if (ntfm > 0) then
+         write (iudm,fm3d)
+      endif
+! velocity-space diagnostic
+      if (ntv > 0) then
+         write (iudm,fv3d)
+      endif
+! trajectory diagnostic
+      if (ntt > 0) then
+         write (iudm,tr3d)
+      endif
+! phase space diagnostic
+      if (nts > 0) then
+         write (iudm,ps3d)
+      endif
+! ion parameters
       if (movion==1) then
 ! write out ion input parameters
          write (iudm,ions3)

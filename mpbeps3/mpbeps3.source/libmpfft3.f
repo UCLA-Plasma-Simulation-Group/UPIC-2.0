@@ -19,7 +19,7 @@
 ! MPPSWAPC32N swaps components for multiple ffts
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 17, 2016
+! update: february 15, 2018
 !-----------------------------------------------------------------------
       subroutine WPFFT32RINIT(mixup,sct,indx,indy,indz,nxhyzd,nxyzhd)
 ! this subroutine calculates tables needed by a three dimensional
@@ -444,7 +444,7 @@
       ani = 0.5/(real(nx)*real(ny)*real(nz))
       nrxb = nxhyz/nxh
       nrx = nxyz/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,s,t,t1)
       do 60 nn = 1, kypp*kzpp
       i = (nn - 1)/kzpp
@@ -497,7 +497,7 @@
 ! forward fourier transform
    70 nrxb = nxhyz/nxh
       nrx = nxyz/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,s,t,t1)
       do 130 nn = 1, kypp*kzpp
       i = (nn - 1)/kzpp
@@ -629,7 +629,7 @@
 ! inverse fourier transform
       nryb = nxhyz/ny
       nry = nxyz/ny
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,s,t)
       do 50 nn = 1, kxypp*kzpp
       i = (nn - 1)/kzpp
@@ -694,7 +694,7 @@
   100    continue
 !$OMP END PARALLEL DO
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,s,t)
       do 150 nn = 1, kxypp*kzpp
       i = (nn - 1)/kzpp
@@ -805,7 +805,7 @@
       nxyz = max0(nx,ny,nz)
       nxhyz = 2**ndx1yz
       kxypt = kxypi + kxypp - 1
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       kyzpp = min(kyzp,max(0,ny-kyzp*ks))
@@ -814,7 +814,7 @@
 ! inverse fourier transform
       nrzb = nxhyz/nz
       nrz = nxyz/nz
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,l1,s,t)
       do 50 nn = 1, kxypp*kyzpp
       i = (nn - 1)/kyzpp
@@ -895,7 +895,7 @@
   100       continue
          endif
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,l1,s,t)
       do 150 nn = 1, kxypp*kyzpp
       i = (nn - 1)/kyzpp
@@ -1018,8 +1018,8 @@
       ani = 0.5/(real(nx)*real(ny)*real(nz))
       nrxb = nxhyz/nxh
       nrx = nxyz/nxh
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,jj,j1,j2,at1,at2,s,t,t1,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,jj,j1,j2,at1,at2,s,t,t1,&
 !$OMP& t2,t3)
       do 90 nn = 1, kypp*kzpp
       i = (nn - 1)/kzpp
@@ -1097,8 +1097,8 @@
 ! forward fourier transform
   100 nrxb = nxhyz/nxh
       nrx = nxyz/nxh
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,jj,j1,j2,at1,at2,s,t,t1,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,jj,j1,j2,at1,at2,s,t,t1,&
 !$OMP& t2,t3)
       do 190 nn = 1, kypp*kzpp
       i = (nn - 1)/kzpp
@@ -1256,7 +1256,7 @@
 ! inverse fourier transform
       nryb = nxhyz/ny
       nry = nxyz/ny
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,s,t1,t2,t3)
       do 50 nn = 1, kxypp*kzpp
       i = (nn - 1)/kzpp
@@ -1338,7 +1338,7 @@
   120    continue
 !$OMP END PARALLEL DO
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,s,t1,t2,t3)
       do 170 nn = 1, kxypp*kzpp
       i = (nn - 1)/kzpp
@@ -1462,7 +1462,7 @@
       nxyz = max0(nx,ny,nz)
       nxhyz = 2**ndx1yz
       kxypt = kxypi + kxypp - 1
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       kyzpp = min(kyzp,max(0,ny-kyzp*ks))
@@ -1471,7 +1471,7 @@
 ! inverse fourier transform
       nrzb = nxhyz/nz
       nrz = nxyz/nz
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,l1,s,t1,t2,t3)
       do 50 nn = 1, kxypp*kyzpp
       i = (nn - 1)/kyzpp
@@ -1573,7 +1573,7 @@
   140       continue
          endif
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,l1,s,t1,t2,t3)
       do 190 nn = 1, kxypp*kyzpp
       i = (nn - 1)/kyzpp
@@ -1714,7 +1714,7 @@
 ! swap complex components
       call MPPSWAPC32N(f,ss,isign,nxh,kypi,kypt,nxvh,kzpp,kypd,kzpd,ndim&
      &)
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,jj,j1,j2,s,t,t1)
       do 100 nn = 1, kypp*kzpp
       i = (nn - 1)/kzpp
@@ -1776,7 +1776,7 @@
 ! forward fourier transform
   110 nrxb = nxhyz/nxh
       nrx = nxyz/nxh
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,jj,j1,j2,s,t,t1)
       do 210 nn = 1, kypp*kzpp
       i = (nn - 1)/kzpp
@@ -1921,7 +1921,7 @@
 ! inverse fourier transform
       nryb = nxhyz/ny
       nry = nxyz/ny
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,s,t1)
       do 70 nn = 1, kxypp*kzpp
       i = (nn - 1)/kzpp
@@ -1995,7 +1995,7 @@
   140    continue
 !$OMP END PARALLEL DO
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,s,t1)
       do 210 nn = 1, kxypp*kzpp
       i = (nn - 1)/kzpp
@@ -2111,7 +2111,7 @@
       nxyz = max0(nx,ny,nz)
       nxhyz = 2**ndx1yz
       kxypt = kxypi + kxypp - 1
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
       kyzpp = min(kyzp,max(0,ny-kyzp*ks))
@@ -2120,7 +2120,7 @@
 ! inverse fourier transform
       nrzb = nxhyz/nz
       nrz = nxyz/nz
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,l1,s,t1)
       do 70 nn = 1, kxypp*kyzpp
       i = (nn - 1)/kyzpp
@@ -2214,7 +2214,7 @@
   160       continue
          endif
       endif
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(i,j,k,l,n,nn,ns,ns2,km,kmr,k1,k2,j1,j2,l1,s,t1)
       do 230 nn = 1, kxypp*kyzpp
       i = (nn - 1)/kyzpp

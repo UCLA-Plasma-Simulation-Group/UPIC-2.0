@@ -35,6 +35,8 @@
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
 
+#FF03 = -Tf
+
 #LEGACY = -nofor_main
 
 # Makefile Intel compiler with Linux
@@ -52,6 +54,8 @@
 
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -no-vec -Wall -std=c99
+
+#FF03 = -Tf
 
 #LEGACY = -nofor_main
 
@@ -112,14 +116,14 @@ LEGACY =
 #
 
 ESOBJS = libmpinit3.o libmppush3.o libmpsort3.o libmpgard3.o libmpfft3.o \
-libmpfield3.o
+libmpfield3.o libmpdiag3.o
 
 EMOBJS = libmpbpush3.o libmpcurd3.o
 
 EDOBJS = libmpdpush3.o
 
 ESHOBJS = libmpinit3_h.o libmppush3_h.o libmpsort3_h.o libmpgard3_h.o \
-libmpfft3_h.o libmpfield3_h.o
+libmpfft3_h.o libmpfield3_h.o libmpdiag3_h.o
 
 EMHOBJS = libmpbpush3_h.o libmpcurd3_h.o
 
@@ -141,35 +145,39 @@ nompi : mbeps3 mbbeps3 mdbeps3
 mpbeps3 : mpbeps3.o $(ESOBJS) dtimer.o
 	$(MPIFC) $(OPTS90) $(LOPTS) -o mpbeps3 \
     mpbeps3.o $(ESOBJS) $(ESMODS) mpplib3.o mppmod3.o omplib.o ompplib3.o \
-    $(ESHOBJS) dtimer.o
+    $(ESHOBJS) mpsimul3.o dtimer.o
 
 mpbbeps3 : mpbbeps3.o $(ESOBJS) $(EMOBJS) dtimer.o
 	$(MPIFC) $(OPTS90) $(LOPTS) -o mpbbeps3 \
     mpbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) mpplib3.o mppmod3.o \
-    omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) dtimer.o
+    omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) mpsimul3.o mpbsimul3.o dtimer.o
 
 mpdbeps3 : mpdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) dtimer.o
 	$(MPIFC) $(OPTS90) $(LOPTS) -o mpdbeps3 \
     mpdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
     mpplib3.o mppmod3.o omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) $(EDHOBJS) \
-    dtimer.o
+    mpsimul3.o mpbsimul3.o mpdsimul3.o dtimer.o
 
 #noMPI
 mbeps3 : mbeps3.o $(ESOBJS) noMPI.o dtimer.o
 	$(FC90) $(OPTS90) $(LOPTS) -o mbeps3 \
     mbeps3.o $(ESOBJS) $(ESMODS) nmpplib3.o nmppmod3.o omplib.o nompplib3.o \
-    $(ESHOBJS) noMPI.o dtimer.o
+    $(ESHOBJS) noMPI.o msimul3.o dtimer.o
 
 mbbeps3 : mbbeps3.o $(ESOBJS) $(EMOBJS) noMPI.o dtimer.o
 	$(FC90) $(OPTS90) $(LOPTS) -o mbbeps3 \
     mbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) nmpplib3.o nmppmod3.o \
-    omplib.o nompplib3.o $(ESHOBJS) $(EMHOBJS) noMPI.o dtimer.o
+    omplib.o nompplib3.o $(ESHOBJS) $(EMHOBJS) noMPI.o msimul3.o mbsimul3.o \
+    dtimer.o
 
 mdbeps3 : mdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) noMPI.o dtimer.o
 	$(FC90) $(OPTS90) $(LOPTS) -o mdbeps3 \
     mdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
     nmpplib3.o nmppmod3.o omplib.o nompplib3.o $(ESHOBJS) $(EMHOBJS) \
-    $(EDHOBJS) noMPI.o dtimer.o
+    $(EDHOBJS) noMPI.o msimul3.o mbsimul3.o mdsimul3.o dtimer.o
+
+list:
+	echo mpbeps3 mpbbeps3 mpdbeps3 nompi mbeps3 mbbeps3 mdbeps3 clean clobber
 
 # Compilation rules
 
@@ -229,6 +237,9 @@ libmpfft3.o : libmpfft3.f
 libmpfield3.o : libmpfield3.f
 	$(FC90) $(OPTS90) -o libmpfield3.o -c libmpfield3.f
 
+libmpdiag3.o : libmpdiag3.f
+	$(FC90) $(OPTS90) -o libmpdiag3.o -c libmpdiag3.f
+
 libmpinit3_h.o : libmpinit3_h.f90
 	$(FC90) $(OPTS90) -o libmpinit3_h.o -c libmpinit3_h.f90
 
@@ -255,6 +266,9 @@ libmpfft3_h.o : libmpfft3_h.f90
 
 libmpfield3_h.o : libmpfield3_h.f90
 	$(FC90) $(OPTS90) -o libmpfield3_h.o -c libmpfield3_h.f90
+
+libmpdiag3_h.o : libmpdiag3_h.f90
+	$(FC90) $(OPTS90) -o libmpdiag3_h.o -c libmpdiag3_h.f90
 
 input3mod.o : input3mod.f90
 	$(FC90) $(OPTS90) -o input3mod.o -c input3mod.f90
@@ -286,31 +300,47 @@ modmpfft3.o : modmpfft3.f90 libmpfft3_h.o
 modmpfield3.o : modmpfield3.f90 libmpfield3_h.o
 	$(FC90) $(OPTS90) -o modmpfield3.o -c modmpfield3.f90
 
-modmpdiag3.o : modmpdiag3.f90
+modmpdiag3.o : modmpdiag3.f90 mppmod3.o libmpdiag3_h.o
 	$(FC90) $(OPTS90) -o modmpdiag3.o -c modmpdiag3.f90
 
 ompplib3.o : ompplib3.f90 modmpsort3.o modmpfft3.o modmpgard3.o mppmod3.o
 	$(FC90) $(OPTS90) -o ompplib3.o -c ompplib3.f90
 
-mpbeps3.o : mpbeps3.f90 $(ESMODS) mppmod3.o omplib.o ompplib3.o
+mpsimul3.o : mpsimul3.f03 $(ESMODS) mppmod3.o
+	$(FC90) $(OPTS90) -o mpsimul3.o -c $(FF03) mpsimul3.f03
+
+mpbsimul3.o : mpbsimul3.f03 mpsimul3.o $(EMMODS)
+	$(FC90) $(OPTS90) -o mpbsimul3.o -c $(FF03) mpbsimul3.f03
+
+mpdsimul3.o : mpdsimul3.f03 mpbsimul3.o $(EDMODS)
+	$(FC90) $(OPTS90) -o mpdsimul3.o -c $(FF03) mpdsimul3.f03
+
+mpbeps3.o : mpbeps3.f90 mpsimul3.o mppmod3.o omplib.o ompplib3.o
 	$(FC90) $(OPTS90) -o mpbeps3.o -c mpbeps3.f90
 
-mpbbeps3.o : mpbbeps3.f90 $(ESMODS) $(EMMODS) mppmod3.o omplib.o ompplib3.o
+mpbbeps3.o : mpbbeps3.f90 mpbsimul3.o mppmod3.o omplib.o ompplib3.o
 	$(FC90) $(OPTS90) -o mpbbeps3.o -c mpbbeps3.f90
 
-mpdbeps3.o : mpdbeps3.f90 $(ESMODS) $(EMMODS) $(EDMODS) mppmod3.o omplib.o \
-             ompplib3.o
+mpdbeps3.o : mpdbeps3.f90 mpdsimul3.o mppmod3.o omplib.o ompplib3.o
 	$(FC90) $(OPTS90) -o mpdbeps3.o -c mpdbeps3.f90
 
 #noMPI
-mbeps3.o : mpbeps3.f90 $(ESMODS) nmppmod3.o omplib.o nompplib3.o
+msimul3.o : mpsimul3.f03 $(ESMODS) nmppmod3.o
+	$(FC90) $(OPTS90) -o msimul3.o -c $(FF03) mpsimul3.f03
+
+mbsimul3.o : mpbsimul3.f03 msimul3.o $(EMMODS)
+	$(FC90) $(OPTS90) -o mbsimul3.o -c $(FF03) mpbsimul3.f03
+
+mdsimul3.o : mpdsimul3.f03 mbsimul3.o $(EDMODS)
+	$(FC90) $(OPTS90) -o mdsimul3.o -c $(FF03) mpdsimul3.f03
+
+mbeps3.o : mpbeps3.f90 msimul3.o nmppmod3.o omplib.o nompplib3.o
 	$(FC90) $(OPTS90) -o mbeps3.o -c mpbeps3.f90
 
-mbbeps3.o : mpbbeps3.f90 $(ESMODS) $(EMMODS) nmppmod3.o omplib.o nompplib3.o
+mbbeps3.o : mpbbeps3.f90 mbsimul3.o nmppmod3.o omplib.o nompplib3.o
 	$(FC90) $(OPTS90) -o mbbeps3.o -c mpbbeps3.f90
 
-mdbeps3.o : mpdbeps3.f90 $(ESMODS) $(EMMODS) $(EDMODS) nmppmod3.o omplib.o \
-            nompplib3.o
+mdbeps3.o : mpdbeps3.f90 mdsimul3.o nmppmod3.o omplib.o nompplib3.o
 	$(FC90) $(OPTS90) -o mdbeps3.o -c mpdbeps3.f90
 
 cpexecs : cpmpbeps3 cpmpbbeps3 cpmpdbeps3

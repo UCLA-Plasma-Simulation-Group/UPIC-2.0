@@ -3,27 +3,25 @@
 ! written by 3D MPI/OpenMP PIC codes
 ! written by Viktor K. Decyk, UCLA
       program preadf3
-      use in3, only: idrun, indx, indy, indz, nvpy, nvpz, ndim, tend,   &
-     &dt, ci, omx, omy, omz,                                            &
-     &el3d, ntel, felname, modesxel, modesyel, modeszel, nelrec,        &
-     &vpot3d, nta, faname, modesxa, modesya, modesza, narec,            &
-     &et3d, ntet, fetname, modesxet, modesyet, modeszet, netrec,        &
-     &b3d, ntb, fbname, modesxb, modesyb, modeszb, nbrec,               &
-     &vpotr3d, ntar, farname, modesxar, modesyar, modeszar, narrec,     &
-     &vcuri3d, ntji, fjiname, modesxji, modesyji, modeszji, njirec
+      use in3, only: idrun, indx, indy, indz, nvpy, nvpz, ndim, tend, dt
+      use cmfield3
 !
       implicit none
-      integer, parameter :: ns = 6
+      integer, parameter :: ns = 7
       integer :: iudm = 19, iuv = 12
-      integer :: i, j, k, l, m, n, ii, nx, ny, nz, kyp, kzp, kyb, kzb
-      integer :: nyv, nzv, lrec, nrec, ios
-      integer :: nplot = 1
+      integer :: i, m, n, ii, it, nx, ny, nz, kyp, kzp, kyb, kzb
+      integer :: nyv, nzv, nrec
+      integer :: modesx, modesy, modesz
+      integer :: nts = 0
+      real :: time
+! nscalars = table of available diagnostics
       integer, dimension(ns) :: nscalars = 0
       real, dimension(:,:,:,:), allocatable :: vfield
       character(len=20), dimension(ns) :: dname = (/                    &
-     &'longitudinal efield ','vector potential    ',                    &
-     &'transverse efield   ','magnetic field      ',                    &
-     &'radiative vpotential','ion current density '/)
+     &'LONGITUDINAL EFIELD ','ELEC CURRENT DENSITY',                    &
+     &'VECTOR POTENTIAL    ','TRANSVERSE EFIELD   ',                    &
+     &'MAGNETIC FIELD      ','RADIATIVE VPOTENTIAL',                    &
+     &'ION CURRENT DENSITY '/)
       character(len=10) :: cdrun
       character(len=32) :: fname
 !
@@ -32,33 +30,10 @@
       write (cdrun,'(i10)') idrun
       cdrun = adjustl(cdrun)
       fname = 'diag3.'//cdrun
-      open(unit=iudm,file=fname,form='formatted',status='old')
+      call ffopen3(iudm,fname)
 !
 ! determine which vector diagnostics are available
-      do n = 1, ns
-      select case(n)
-! load metadata for longitudinal efield data
-      case (1)
-         read (iudm,el3d,iostat=ios)
-! load metadata for vector potential data
-      case (2)
-         read (iudm,vpot3d,iostat=ios)
-! load metadata for transverse efield data
-      case (3)
-         read (iudm,et3d,iostat=ios)
-! load metadata for magnetic field data
-      case (4)
-         read (iudm,b3d,iostat=ios)
-! load metadata for radiative vector potential data
-      case (5)
-         read (iudm,vpotr3d,iostat=ios)
-! load metadata for ion current density data
-      case (6)
-         read (iudm,vcuri3d,iostat=ios)
-      end select
-      if (ios==0) nscalars(n) = 1
-      rewind iudm
-      enddo
+      call readvdiags3(iudm,nscalars)
 !
 ! select diagnostic
       m = sum(nscalars)
@@ -89,34 +64,14 @@
             endif
          enddo
       else
-         write (*,*) 'no scalar diagnostic files found'
+         write (*,*) 'no vector diagnostic files found'
          stop
       endif
 !
       write (*,*) trim(dname(n)), ' diagnostic selected'
 !
-      select case(n)
-      case (1)
-         read (iudm,el3d,iostat=ios)
-         fname = felname; nrec = nelrec
-      case (2)
-         read (iudm,vpot3d,iostat=ios)
-         fname = faname; nrec = narec
-      case (3)
-         read (iudm,et3d,iostat=ios)
-         fname = fetname; nrec = netrec
-      case (4)
-         read (iudm,b3d,iostat=ios)
-         fname = fbname; nrec = nbrec
-      case (5)
-         read (iudm,vpotr3d,iostat=ios)
-         fname = farname; nrec = narrec
-      case (6)
-         read (iudm,vcuri3d,iostat=ios)
-         fname = fjiname; nrec = njirec
-      end select
-      rewind iudm
-      nplot = ndim
+! return parameters for selected vector diagnostic
+      call vdiagparams3(iudm,n,nts,modesx,modesy,modesz,nrec,fname)
 !
 ! nx/ny/nz = number of global grid points in x/y/z direction
       nx = 2**indx; ny = 2**indy; nz = 2**indz
@@ -130,11 +85,10 @@
 !
 ! allocate vector array
       allocate(vfield(ndim,nx,nyv,nzv))
-! open direct access file for vector field
-      inquire(iolength=lrec) vfield(1,1,1,1)
-      lrec = lrec*ndim*nx*nyv*nzv
-      open(unit=iuv,file=fname,form='unformatted',access='direct',      &
-     &recl=lrec,status='old')
+      dt = dt*real(nts)
+!
+! open stream file for vector field
+      call fsopen3(iuv,fname)
 !
 ! nrec = number of complete records
       nrec = nrec/(kyb*kzb)
@@ -142,16 +96,15 @@
 !
 ! read and transpose vector data
       do ii = 1, nrec
-         read (unit=iuv,rec=ii) ((((((vfield(i,j,k+kyp*(n-1),           &
-     &l+kzp*(m-1)),i=1,ndim),j=1,nx),k=1,kyp),l=1,kzp),n=1,kyb),m=1,kzb)
+! read real vector field
+         call freadv3(iuv,vfield,ndim,nx,kyp,kyb,kzp,kzb)
+         it = nts*(ii - 1)
+         time = dt*real(ii - 1)
+! show time
+         write (*,*) 'it,time=',it,time
       enddo
 !
+      call closeff3(iudm)
+      call closeff3(iuv)
+!
       end program
-!
-! unneeded function in input3mod.f90
-      subroutine PPBDCAST(f,nxp)
-      implicit none
-      integer, intent(in) :: nxp
-      double precision, dimension(nxp), intent(inout) :: f
-      end subroutine
-!

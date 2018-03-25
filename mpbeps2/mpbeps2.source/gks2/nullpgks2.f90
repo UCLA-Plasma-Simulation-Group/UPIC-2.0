@@ -2,7 +2,7 @@
 ! Null general 2d parallel gks graphics library
 ! written by viktor k. decyk, ucla
 ! copyright 1999, regents of the university of california
-! update: february 8, 2017
+! update: february 5, 2017
       module plibgks2
       implicit none
 !
@@ -20,6 +20,13 @@
       subroutine PGRCLOSE
 ! this subroutine deactivates workstation and closes gks
       implicit none
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PDSYNC(irc)
+! this subroutine synchronizes irc and iplot element in plotcm
+      implicit none
+      integer, intent(inout) :: irc
       end subroutine
 !
 !-----------------------------------------------------------------------
@@ -134,5 +141,108 @@
       real, dimension(2*npmax), intent(inout) :: f
       end subroutine
 !
+!-----------------------------------------------------------------------
+      subroutine PBGRASP23(part,f,npp,label,itime,isc,omx,omy,omz,nx,ny,&
+     &iyp,ixp,idimp,npmax,irc)
+! for 2-1/2d code, this subroutine displays (iyp-ixp) phase space
+! for magnetized plasma, rotating cartesian co-ordinates so that B
+! points in the z direction.
+! if iyp=2, plot vperp1, if iyp=3, plot vperp2, if iyp=4, plot vparallel
+! if ixp=2, plot vperp1, if ixp=3, plot vperp2, if ixp=4, plot vparallel
+! part(1,n) = position x of particle n in partition
+! part(2,n) = position y of particle n in partition
+! part(3,n) = velocity vx of particle n in partition
+! part(4,n) = velocity vy of particle n in partition
+! part(5,n) = velocity vz of particle n in partition
+! f = scratch array for receiving messages
+! npp = number of particles in partition
+! label = species label
+! itime = current time step
+! isc = power of 2 scale of range of values of velocity
+! omx/omy/omz = magnetic field electron cyclotron frequency in x/y/z 
+! nx/ny = system length in x/y direction
+! iyp/ixp = phase space coordinates to be displayed
+! idimp = size of phase space = 4 or 5
+! npmax = maximum number of particles in each partition
+! irc = return code (0 = normal return)
+      implicit none
+      integer, intent(in) :: npp
+      integer, intent(in) :: itime, isc, nx, ny, idimp, npmax, iyp, ixp
+      integer, intent(inout) :: irc
+      real, intent(in) :: omx, omy, omz
+      character(len=*), intent(in) :: label
+      real, dimension(idimp,npmax), intent(in) :: part
+      real, dimension(2*npmax), intent(inout) :: f
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPGRASP23(ppart,f,kpic,label,itime,isc,nx,ny,iyp,ixp,  &
+     &idimp,nppmx,mxyp1,irc)
+! for 2-1/2d code, this subroutine displays (iyp-ixp) phase space
+! ppart(1,n,m) = position x of particle n in tile m in partition
+! ppart(2,n,m) = position y of particle n in tile m in partition
+! ppart(3,n,m) = velocity vx of particle n in tile m in partition
+! ppart(4,n,m) = velocity vy of particle n in tile m in partition
+! ppart(5,n,m) = velocity vz of particle n in tile m in partition
+! kpic = number of particles per tile
+! f = scratch array for receiving messages
+! label = species label
+! itime = current time step
+! isc = power of 2 scale of range of values of velocity
+! nx/ny = system length in x/y direction
+! iyp/ixp = phase space coordinates to be displayed
+! idimp = size of phase space = 4 or 5
+! nppmx = maximum number of particles in tile
+! mxyp1 = mx1*myp1, where myp1=(partition length in y direction-1)/my+1
+! and where mx1 = (system length in x direction - 1)/mx + 1
+! irc = return code (0 = normal return)
+      implicit none
+      integer, intent(in) :: itime, isc, nx, ny, iyp, ixp, idimp, nppmx
+      integer, intent(in) :: mxyp1
+      integer, intent(inout) :: irc
+      character(len=*), intent(in) :: label
+      real, dimension(idimp,nppmx,mxyp1), intent(in) :: ppart
+      real, dimension(2*nppmx*mxyp1), intent(inout) :: f
+      integer, dimension(mxyp1) :: kpic
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine PPBGRASP23(ppart,f,kpic,label,itime,isc,omx,omy,omz,nx,&
+     &ny,iyp,ixp,idimp,nppmx,mxyp1,irc)
+! for 2-1/2d code, this subroutine displays (iyp-ixp) phase space
+! for magnetized plasma, rotating cartesian co-ordinates so that B
+! points in the z direction.
+! if iyp=2, plot vperp1, if iyp=3, plot vperp2, if iyp=4, plot vparallel
+! if ixp=2, plot vperp1, if ixp=3, plot vperp2, if ixp=4, plot vparallel
+! ppart(1,n,m) = position x of particle n in tile m in partition
+! ppart(2,n,m) = position y of particle n in tile m in partition
+! ppart(3,n,m) = velocity vx of particle n in tile m in partition
+! ppart(4,n,m) = velocity vy of particle n in tile m in partition
+! ppart(5,n,m) = velocity vz of particle n in tile m in partition
+! kpic = number of particles per tile
+! f = scratch array for receiving messages
+! label = species label
+! itime = current time step
+! isc = power of 2 scale of range of values of velocity
+! omx/omy/omz = magnetic field electron cyclotron frequency in x/y/z 
+! nx/ny = system length in x/y direction
+! iyp/ixp = phase space coordinates to be displayed
+! idimp = size of phase space = 4 or 5
+! nppmx = maximum number of particles in tile
+! mxyp1 = mx1*myp1, where myp1=(partition length in y direction-1)/my+1
+! and where mx1 = (system length in x direction - 1)/mx + 1
+! irc = return code (0 = normal return)
+      implicit none
+      integer, intent(in) :: itime, isc, nx, ny, iyp, ixp, idimp, nppmx
+      integer, intent(in) :: mxyp1
+      integer, intent(inout) :: irc
+      real, intent(in) :: omx, omy, omz
+      character(len=*), intent(in) :: label
+      real, dimension(idimp,nppmx,mxyp1), intent(in) :: ppart
+      real, dimension(2*nppmx*mxyp1), intent(inout) :: f
+      integer, dimension(mxyp1) :: kpic
+      end subroutine
+!
       end module
+
 

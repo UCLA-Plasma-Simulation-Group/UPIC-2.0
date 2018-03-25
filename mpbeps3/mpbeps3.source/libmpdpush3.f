@@ -15,7 +15,7 @@
 ! MPPASCFGUARD32L add scaled vector field to extended periodic field
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 2, 2017
+! update: jfebruary 15, 2018
 !-----------------------------------------------------------------------
       subroutine PPFWPMINMX32(qe,nyzp,qbme,wpmax,wpmin,nx,nxe,nypmx,    &
      &nzpmx,idds)
@@ -42,7 +42,7 @@
       real at1
       wpmax = qbme*qe(1,1,1)
       wpmin = wpmax
-!$OMP PARALLEL DO PRIVATE(j,k,l)
+!$OMP PARALLEL DO PRIVATE(j,k,l)                                        &
 !$OMP& REDUCTION(max:wpmax), REDUCTION(min:wpmin)
       do 30 l = 1, nyzp(2)
       do 20 k = 1, nyzp(1)
@@ -82,7 +82,7 @@
       real at1
       wpmax = qbme*qe(1,1,1) + qbmi*qi(1,1,1)
       wpmin = wpmax
-!$OMP PARALLEL DO PRIVATE(j,k,l)
+!$OMP PARALLEL DO PRIVATE(j,k,l)                                        &
 !$OMP& REDUCTION(max:wpmax), REDUCTION(min:wpmin)
       do 30 l = 1, nyzp(2)
       do 20 k = 1, nyzp(1)
@@ -105,7 +105,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data read/written in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 350 flops/particle, 1 divide, 126 loads, 72 stores
 ! input: all, output: dcu, amu
 ! acceleration density is approximated by values at the nearest grid
@@ -240,10 +240,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm
-!$OMP& ,x,y,z,vx,vy,vz,v1,v2,v3,v4,v5,v6,dxp,dyp,dzp,amx,amy,amz,dx1,dx,
-!$OMP& dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,   
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm&
+!$OMP& ,x,y,z,vx,vy,vz,v1,v2,v3,v4,v5,v6,dxp,dyp,dzp,amx,amy,amz,dx1,dx,&
+!$OMP& dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,   &
 !$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,sfxyz,sbxyz,sdcu,samu)
       do 210 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -823,7 +823,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data read/written in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 398 flops/particle, 1 divide, 150 loads, 96 stores
 ! input: all, output: cu, dcu, amu
 ! current density is approximated by values at the nearest grid points
@@ -974,10 +974,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm
-!$OMP& ,x,y,z,vx,vy,vz,v1,v2,v3,v4,v5,v6,dxp,dyp,dzp,amx,amy,amz,dx1,dx,
-!$OMP& dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,   
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm&
+!$OMP& ,x,y,z,vx,vy,vz,v1,v2,v3,v4,v5,v6,dxp,dyp,dzp,amx,amy,amz,dx1,dx,&
+!$OMP& dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,   &
 !$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,sfxyz,sbxyz,scu,sdcu,samu)
       do 210 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -1680,7 +1680,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data read/written in tiles
-! particles stored segmented arra
+! particles stored in segmented arra
 ! 384 flops/particle, 2 divides, 1 sqrt, 126 loads, 72 stores
 ! input: all, output: dcu, amu
 ! acceleration density is approximated by values at the nearest grid
@@ -1821,11 +1821,11 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm
-!$OMP& ,x,y,z,vx,vy,vz,v1,v2,v3,v4,v5,v6,dxp,dyp,dzp,amx,amy,amz,dx1,dx,
-!$OMP& dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,   
-!$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,qtmg,gh,sfxyz,sbxyz,  
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm&
+!$OMP& ,x,y,z,vx,vy,vz,v1,v2,v3,v4,v5,v6,dxp,dyp,dzp,amx,amy,amz,dx1,dx,&
+!$OMP& dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,   &
+!$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,qtmg,gh,sfxyz,sbxyz,  &
 !$OMP& sdcu,samu)
       do 210 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1
@@ -2416,7 +2416,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data read/written in tiles
-! particles stored segmented arra
+! particles stored in segmented arra
 ! 432 flops/particle, 2 divides, 1 sqrt, 150 loads, 96 stores
 ! input: all, output: cu, dcu, amu
 ! current density is approximated by values at the nearest grid points
@@ -2574,11 +2574,11 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm
-!$OMP& ,x,y,z,vx,vy,vz,v1,v2,v3,v4,v5,v6,dxp,dyp,dzp,amx,amy,amz,dx1,dx,
-!$OMP& dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,   
-!$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,qtmg,gh,sfxyz,sbxyz,  
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,l,noffp,moffp,loffp,nppp,mnoff,lnoff,nn,mm,ll,nm,lm&
+!$OMP& ,x,y,z,vx,vy,vz,v1,v2,v3,v4,v5,v6,dxp,dyp,dzp,amx,amy,amz,dx1,dx,&
+!$OMP& dy,dz,ox,oy,oz,acx,acy,acz,omxt,omyt,omzt,omt,anorm,rot1,rot2,   &
+!$OMP& rot3,rot4,rot5,rot6,rot7,rot8,rot9,p2,gami,qtmg,gh,sfxyz,sbxyz,  &
 !$OMP& scu,sdcu,samu)
       do 210 l = 1, mxyzp1
       loffp = (l - 1)/mxyp1

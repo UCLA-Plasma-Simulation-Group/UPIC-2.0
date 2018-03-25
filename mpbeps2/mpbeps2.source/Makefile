@@ -35,6 +35,8 @@
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
 
+#FF03 = -Tf
+
 #LEGACY = -nofor_main
 
 # Makefile Intel compiler with Linux
@@ -50,10 +52,13 @@
 #OPTS90 = -O3 -r8
 #OPTS90 = -O3 -CB -r8 -warn all -std90
 
+#FF03 = -Tf
+
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -no-vec -Wall -std=c99
 
 #LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
+#LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11
 #LEGACY = -nofor_main
 
 # Makefile gfortran compiler with Linux
@@ -74,6 +79,7 @@ CCOPTS = -O3 -std=c99
 
 LOPTS = -lgomp
 #LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
+#LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11
 LEGACY =
 
 # Makefile PGI compiler with Linux
@@ -114,21 +120,21 @@ LEGACY =
 #
 
 ESOBJS = libmpinit2.o libmppush2.o libmpsort2.o libmpgard2.o libmpfft2.o \
-libmpfield2.o
+libmpfield2.o libmpdiag2.o
 
 EMOBJS = libmpbpush2.o libmpcurd2.o
 
 EDOBJS = libmpdpush2.o
 
 ESHOBJS = libmpinit2_h.o libmppush2_h.o libmpsort2_h.o libmpgard2_h.o \
-libmpfft2_h.o libmpfield2_h.o
+libmpfft2_h.o libmpfield2_h.o libmpdiag2_h.o
 
 EMHOBJS = libmpbpush2_h.o libmpcurd2_h.o
 
 EDHOBJS = libmpdpush2_h.o
 
 ESMODS = input2mod.o modmpinit2.o modmppush2.o modmpsort2.o modmpgard2.o \
-modmpfft2.o modmpfield2.o modmpdiag2.o
+modmpfft2.o modmpfield2.o
 
 EMMODS = modmpbpush2.o modmpcurd2.o
 
@@ -138,13 +144,13 @@ EDMODS = modmpdpush2.o
 
 #Tektronix
 #GOBJS = libt1.o plot10.o libplt10.o libgks1.o libgks2.o plibgks2.o \
-#modpgraf2.o
+#modpgraf2.o modpgraf1.o
 # X11 graphics needs Ygl from http://www.thp.uni-duisburg.de/Ygl/
-#GOBJS = libygl.o libgks1.o libgks2.o plibgks2.o modpgraf2.o
-#NGOBJS = libygl.o libgks1.o libgks2.o nplibgks2.o nmodpgraf2.o
+#GOBJS = libygl.o libgks1.o libgks2.o plibgks2.o modpgraf2.o modpgraf1.o
+#NGOBJS = libygl.o libgks1.o libgks2.o nplibgks2.o nmodpgraf2.o modpgraf1.o
 #No graphics
-GOBJS = nullgks1.o nullgks2.o nullpgks2.o modpgraf2.o
-NGOBJS = nullgks1.o nullgks2.o nullpgks2.o nmodpgraf2.o
+GOBJS = nullgks1.o nullgks2.o nullpgks2.o modpgraf2.o modpgraf1.o
+NGOBJS = nullgks1.o nullgks2.o nullpgks2.o nmodpgraf2.o modpgraf1.o
 
 # Linkage rules
 
@@ -153,37 +159,43 @@ all : mpbeps2 mpbbeps2 mpdbeps2
 nompi : mbeps2 mbbeps2 mdbeps2
 
 mpbeps2 : mpbeps2.o $(ESOBJS) $(GOBJS) dtimer.o
-	$(MPIFC) $(OPTS90) $(LOPTS) $(LGOPTS) -o mpbeps2 \
-    mpbeps2.o $(ESOBJS) $(ESMODS) mpplib2.o mppmod2.o omplib.o ompplib2.o \
-    $(ESHOBJS) $(GOBJS) dtimer.o
+	$(MPIFC) $(OPTS90) $(LOPTS) -o mpbeps2 \
+    mpbeps2.o $(ESOBJS) $(ESMODS) modmpdiag2.o mpplib2.o mppmod2.o omplib.o \
+    ompplib2.o $(ESHOBJS) $(GOBJS) mpsimul2.o $(LGOPTS) dtimer.o
 
 mpbbeps2 : mpbbeps2.o $(ESOBJS) $(EMOBJS) $(GOBJS) dtimer.o
-	$(MPIFC) $(OPTS90) $(LOPTS) $(LGOPTS) -o mpbbeps2 \
-    mpbbeps2.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) mpplib2.o \
-    mppmod2.o omplib.o ompplib2.o $(ESHOBJS) $(EMHOBJS) $(GOBJS) dtimer.o
+	$(MPIFC) $(OPTS90) $(LOPTS) -o mpbbeps2 \
+    mpbbeps2.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) modmpdiag2.o mpplib2.o \
+    mppmod2.o omplib.o ompplib2.o $(ESHOBJS) $(EMHOBJS) $(GOBJS) mpsimul2.o \
+    mpbsimul2.o $(LGOPTS) dtimer.o
 
 mpdbeps2 : mpdbeps2.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(GOBJS) dtimer.o
-	$(MPIFC) $(OPTS90) $(LOPTS) $(LGOPTS) -o mpdbeps2 \
+	$(MPIFC) $(OPTS90) $(LOPTS) -o mpdbeps2 \
     mpdbeps2.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
-    mpplib2.o mppmod2.o omplib.o ompplib2.o $(ESHOBJS) $(EMHOBJS) $(EDHOBJS) \
-    $(GOBJS) dtimer.o
+    modmpdiag2.o mpplib2.o mppmod2.o omplib.o ompplib2.o $(ESHOBJS) $(EMHOBJS) \
+    $(EDHOBJS) $(GOBJS) mpsimul2.o mpbsimul2.o mpdsimul2.o $(LGOPTS) dtimer.o
 
 #noMPI
 mbeps2 : mbeps2.o $(ESOBJS) noMPI.o $(NGOBJS) dtimer.o
-	$(FC90) $(OPTS90) $(LOPTS) $(LGOPTS) -o mbeps2 \
-    mbeps2.o $(ESOBJS) $(ESMODS) nmpplib2.o nmppmod2.o omplib.o nompplib2.o \
-    $(ESHOBJS) noMPI.o $(NGOBJS) dtimer.o
+	$(FC90) $(OPTS90) $(LOPTS) -o mbeps2 \
+    mbeps2.o $(ESOBJS) $(ESMODS) nmodmpdiag2.o nmpplib2.o nmppmod2.o omplib.o \
+    nompplib2.o $(ESHOBJS) noMPI.o $(NGOBJS) msimul2.o $(LGOPTS) dtimer.o
 
 mbbeps2 : mbbeps2.o $(ESOBJS) $(EMOBJS) noMPI.o $(NGOBJS) dtimer.o
-	$(FC90) $(OPTS90) $(LOPTS) $(LGOPTS) -o mbbeps2 \
-    mbbeps2.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) nmpplib2.o \
-    nmppmod2.o omplib.o nompplib2.o $(ESHOBJS) $(EMHOBJS) noMPI.o $(NGOBJS) dtimer.o
+	$(FC90) $(OPTS90) $(LOPTS) -o mbbeps2 \
+    mbbeps2.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) nmodmpdiag2.o nmpplib2.o \
+    nmppmod2.o omplib.o nompplib2.o $(ESHOBJS) $(EMHOBJS) noMPI.o $(NGOBJS) \
+    msimul2.o mbsimul2.o $(LGOPTS) dtimer.o
 
 mdbeps2 : mdbeps2.o $(ESOBJS) $(EMOBJS) $(EDOBJS) noMPI.o $(NGOBJS) dtimer.o
-	$(FC90) $(OPTS90) $(LOPTS) $(LGOPTS) -o mdbeps2 \
+	$(FC90) $(OPTS90) $(LOPTS) -o mdbeps2 \
     mdbeps2.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
-    nmpplib2.o nmppmod2.o omplib.o nompplib2.o $(ESHOBJS) $(EMHOBJS) \
-    $(EDHOBJS) noMPI.o $(NGOBJS) dtimer.o
+    nmodmpdiag2.o nmpplib2.o nmppmod2.o omplib.o nompplib2.o $(ESHOBJS) \
+    $(EMHOBJS) $(EDHOBJS) noMPI.o $(NGOBJS) msimul2.o mbsimul2.o mdsimul2.o \
+    $(LGOPTS) dtimer.o
+
+list:
+	echo mpbeps2 mpbbeps2 mpdbeps2 nompi mbeps2 mbbeps2 mdbeps2 clean clobber
 
 # Compilation rules
 
@@ -243,6 +255,9 @@ libmpfft2.o : libmpfft2.f
 libmpfield2.o : libmpfield2.f
 	$(FC90) $(OPTS90) -o libmpfield2.o -c libmpfield2.f
 
+libmpdiag2.o : libmpdiag2.f
+	$(FC90) $(OPTS90) -o libmpdiag2.o -c libmpdiag2.f
+
 libmpinit2_h.o : libmpinit2_h.f90
 	$(FC90) $(OPTS90) -o libmpinit2_h.o -c libmpinit2_h.f90
 
@@ -269,6 +284,9 @@ libmpfft2_h.o : libmpfft2_h.f90
 
 libmpfield2_h.o : libmpfield2_h.f90
 	$(FC90) $(OPTS90) -o libmpfield2_h.o -c libmpfield2_h.f90
+
+libmpdiag2_h.o : libmpdiag2_h.f90
+	$(FC90) $(OPTS90) -o libmpdiag2_h.o -c libmpdiag2_h.f90
 
 input2mod.o : input2mod.f90
 	$(FC90) $(OPTS90) -o input2mod.o -c input2mod.f90
@@ -300,33 +318,56 @@ modmpfft2.o : modmpfft2.f90 libmpfft2_h.o
 modmpfield2.o : modmpfield2.f90 libmpfield2_h.o
 	$(FC90) $(OPTS90) -o modmpfield2.o -c modmpfield2.f90
 
-modmpdiag2.o : modmpdiag2.f90
+modmpdiag2.o : modmpdiag2.f90 mppmod2.o libmpdiag2_h.o
 	$(FC90) $(OPTS90) -o modmpdiag2.o -c modmpdiag2.f90
 
 ompplib2.o : ompplib2.f90 modmpsort2.o modmpfft2.o modmpgard2.o mppmod2.o
 	$(FC90) $(OPTS90) -o ompplib2.o -c ompplib2.f90
 
-mpbeps2.o : mpbeps2.f90 $(ESMODS) mppmod2.o omplib.o ompplib2.o modpgraf2.o
+mpsimul2.o : mpsimul2.f03 $(ESMODS) modmpdiag2.o mppmod2.o
+	$(FC90) $(OPTS90) -o mpsimul2.o -c $(FF03) mpsimul2.f03
+
+mpbsimul2.o : mpbsimul2.f03 mpsimul2.o $(EMMODS) modmpdiag2.o 
+	$(FC90) $(OPTS90) -o mpbsimul2.o -c $(FF03) mpbsimul2.f03
+
+mpdsimul2.o : mpdsimul2.f03 mpbsimul2.o $(EDMODS) modmpdiag2.o 
+	$(FC90) $(OPTS90) -o mpdsimul2.o -c $(FF03) mpdsimul2.f03
+
+mpbeps2.o : mpbeps2.f90 mpsimul2.o mppmod2.o omplib.o ompplib2.o modpgraf2.o \
+            modpgraf1.o
 	$(FC90) $(OPTS90) -o mpbeps2.o -c mpbeps2.f90
 
-mpbbeps2.o : mpbbeps2.f90 $(ESMODS) $(EMMODS) mppmod2.o omplib.o ompplib2.o \
-             modpgraf2.o
+mpbbeps2.o : mpbbeps2.f90 mpbsimul2.o mppmod2.o omplib.o ompplib2.o \
+             modpgraf2.o modpgraf1.o
 	$(FC90) $(OPTS90) -o mpbbeps2.o -c mpbbeps2.f90
 
-mpdbeps2.o : mpdbeps2.f90 $(ESMODS) $(EMMODS) $(EDMODS) mppmod2.o omplib.o \
-             ompplib2.o modpgraf2.o
+mpdbeps2.o : mpdbeps2.f90 mpdsimul2.o mppmod2.o omplib.o ompplib2.o \
+             modpgraf2.o modpgraf1.o
 	$(FC90) $(OPTS90) -o mpdbeps2.o -c mpdbeps2.f90
 
 #noMPI
-mbeps2.o : mpbeps2.f90 $(ESMODS) nmppmod2.o omplib.o nompplib2.o nmodpgraf2.o
+nmodmpdiag2.o : modmpdiag2.f90 nmppmod2.o libmpdiag2_h.o
+	$(FC90) $(OPTS90) -o nmodmpdiag2.o -c modmpdiag2.f90
+
+msimul2.o : mpsimul2.f03 $(ESMODS) nmodmpdiag2.o nmppmod2.o
+	$(FC90) $(OPTS90) -o msimul2.o -c $(FF03) mpsimul2.f03
+
+mbsimul2.o : mpbsimul2.f03 msimul2.o $(EMMODS) nmodmpdiag2.o 
+	$(FC90) $(OPTS90) -o mbsimul2.o -c $(FF03) mpbsimul2.f03
+
+mdsimul2.o : mpdsimul2.f03 mbsimul2.o $(EDMODS) nmodmpdiag2.o
+	$(FC90) $(OPTS90) -o mdsimul2.o -c $(FF03) mpdsimul2.f03
+
+mbeps2.o : mpbeps2.f90 msimul2.o nmppmod2.o omplib.o nompplib2.o \
+           nmodpgraf2.o modpgraf1.o
 	$(FC90) $(OPTS90) -o mbeps2.o -c mpbeps2.f90
 
-mbbeps2.o : mpbbeps2.f90 $(ESMODS) $(EMMODS) nmppmod2.o omplib.o nompplib2.o \
-            nmodpgraf2.o
+mbbeps2.o : mpbbeps2.f90 mbsimul2.o nmppmod2.o omplib.o nompplib2.o \
+            nmodpgraf2.o modpgraf1.o
 	$(FC90) $(OPTS90) -o mbbeps2.o -c mpbbeps2.f90
 
-mdbeps2.o : mpdbeps2.f90 $(ESMODS) $(EMMODS) $(EDMODS) nmppmod2.o omplib.o \
-            nompplib2.o nmodpgraf2.o
+mdbeps2.o : mpdbeps2.f90 mdsimul2.o nmppmod2.o omplib.o nompplib2.o \
+            nmodpgraf2.o modpgraf1.o
 	$(FC90) $(OPTS90) -o mdbeps2.o -c mpdbeps2.f90
 
 # Fortran Graphics
@@ -340,7 +381,10 @@ plot10.o : gks2/plot10.f
 libplt10.o : gks2/libplt10.f
 	$(FC90) $(OPTS90) -o libplt10.o -c gks2/libplt10.f
 	
-libygl.o : gks2/libygl.f
+gks2/Ygl-4.2/libYgl.a :
+	make -C gks2/Ygl-4.2
+	
+libygl.o : gks2/libygl.f gks2/Ygl-4.2/libYgl.a
 	$(FC90) $(OPTS90) -o libygl.o -c gks2/libygl.f
 
 libgks1.o : gks2/libgks1.f
@@ -363,6 +407,9 @@ nullpgks2.o : gks2/nullpgks2.f90
 
 modpgraf2.o : gks2/modpgraf2.f90 plibgks2.o
 	$(FC90) $(OPTS90) -o modpgraf2.o -c gks2/modpgraf2.f90
+
+modpgraf1.o : gks2/modpgraf1.f90
+	$(FC90) $(OPTS90) -o modpgraf1.o -c gks2/modpgraf1.f90
 
 #noMPI
 nplibgks2.o : gks2/plibgks2.f90 nmpplib2.o
@@ -395,7 +442,7 @@ cpmdbeps2 :
 	cp mdbeps2 ../
 
 clean :
-	rm -f *.o *.mod
+	rm -f *.o *.mod gks2/Ygl-4.2/*.o
 
 clobber: clean
-	rm -f mpbeps2 mpbbeps2 mpdbeps2 mbeps2 mbbeps2 mdbeps2
+	rm -f mpbeps2 mpbbeps2 mpdbeps2 mbeps2 mbbeps2 mdbeps2 gks2/Ygl-4.2/*.a

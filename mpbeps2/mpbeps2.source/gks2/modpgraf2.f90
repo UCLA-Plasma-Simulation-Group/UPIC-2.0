@@ -3,15 +3,34 @@
       module pgraf2
 !
 ! Fortran90 interface to 2d PIC Fortran77 library plibgks2.f
+! open_pgraphs open graphics device
+!               calls GROPEN and SETNPLT
+! reset_pgraphs
+!               calls reset_graphs and PDSYNC
+! reset graphics device
+! close_pgraphs close graphics device
+!               calls GRCLOSE
+! set_ppalit selects one from three available palettes
+!            calls STPALIT
 ! pdscaler2 displays 2d parallel scalar field in real space
 !           calls PCARPET or PCONTUR
 ! pdvector2 displays 2d parallel vector field in real space
 !           calls PCARPET or PCONTUR
+! pdgrasp2 displays phase space
+!          calls PGRASP23
+! pdbgrasp2 displays phase space for magnetized plasma
+!           calls PBGRASP23
+! ppdgrasp2 displays phase space with segmented particle array
+!           calls PPGRASP23
+! ppdbgrasp2 displays phase space for magnetized plasma with segmented
+!            particle array
+!            calls PPGRASP23 or PPBGRASP23
 ! written by viktor k. decyk, ucla
 ! copyright 2000, regents of the university of california
-! update: april 18, 2017
+! update: february 3, 2018
 !
-      use plibgks2, only: IPLTCOMM, PGRCLOSE, PCARPET, PCONTUR, PGRASP23
+      use plibgks2, only: IPLTCOMM, PGRCLOSE, PDSYNC, PCARPET, PCONTUR, &
+     &PGRASP23, PBGRASP23, PPGRASP23, PPBGRASP23
       implicit none
 !
 ! pfs = scratch array for scalar displays
@@ -23,14 +42,18 @@
 ! pfvs = scratch array for vector displays
       real, dimension(:,:), allocatable :: pfvs
       integer :: szpfvs = -1
+! pfp = scratch array for phase space displays
+      real, dimension(:), allocatable :: pfp
+      integer :: szpfp = -1
       save
 !
-      private :: pfs, szpfs, plf, szplf
+      private :: pfs, szpfs, plf, szplf, pfvs, szpfvs, pfp, szpfp
 !
       contains
 !
 !-----------------------------------------------------------------------
       function open_pgraphs(nplot) result(irc)
+      implicit none
 ! open graphics device
       integer, intent(in) :: nplot
       integer :: irc
@@ -39,9 +62,39 @@
       end function
 !
 !-----------------------------------------------------------------------
+      subroutine reset_pgraphs(kstrt,irc)
+      implicit none
+      integer, intent(in) :: kstrt
+      integer, intent(inout) :: irc
+! reset graphics device
+      if (kstrt==1) call RSTSCRN
+! synchronize irc and iplot
+      call PDSYNC(irc)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine reset_nplot(nplt,irc)
+! resets the maximum number of plots per page
+      implicit none
+      integer, intent(in) :: nplt
+      integer, intent(inout) :: irc
+      call SETNPLT(nplt,irc)
+      end subroutine
+!
+!-----------------------------------------------------------------------
       subroutine close_pgraphs
+      implicit none
 ! close graphics device
       call PGRCLOSE
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine set_ppalit(idpal)
+! selects one from three available palettes
+! idpal = palette id number: 1 = cold/hot, 2 = color wheel, 3 = rainbow
+      implicit none
+      integer, intent(in) :: idpal
+      call STPALIT(idpal)
       end subroutine
 !
 !-----------------------------------------------------------------------
@@ -52,8 +105,15 @@
 ! nvp = number of real or virtual processors requested
 ! label = field label
 ! itime = current time step
-! isc = power of 2 scale of range of values of pot
+! isc = power of 2 scale of range of values of f
 ! ist = flag for choosing positive and/or negative values
+! the range of values of f are given by fmax and fmin.
+! if ist = 0, then fmax = 2**isc and fmin = -2**isc.
+! if ist = 1, then fmax = 2**isc and fmin = 0.
+! if ist = -1, then fmax = 0 and fmin = -2**isc.
+! if ist = 2, then fmax = fmin + 2**ir,
+! where fmin/fmax are the function minimum/maximum, 
+! and ir = power of 2 scale for (fmax - fmin)
 ! idt = (1,2,3) = display (color map,contour plot,both)
 ! nx/ny = system length in x/y direction
 ! irc = return code (0 = normal return)
@@ -181,6 +241,154 @@
          enddo
 ! display amplitude
          call pdscaler2(pfvs,nyp,nvp,label,itime,isc,ist,idt,nx,ny,irc)
+      endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine pdgrasp2(part,npp,label,itime,isc,nx,ny,iyp,ixp,ierr)
+! displays phase space
+      implicit none
+      integer, intent(in) :: npp, itime, isc, nx, ny, iyp, ixp
+      integer, intent(inout) :: ierr
+      character(len=*), intent(in) :: label
+      real, dimension(:,:), intent(in) :: part
+! local data
+      integer :: idimp, npmax
+      idimp = size(part,1); npmax = size(part,2)
+! check for errors
+      ierr = 0
+      if ((ixp.lt.1).or.(ixp.gt.idimp)) then
+         ierr = 1
+      endif
+      if ((iyp.lt.1).or.(iyp.gt.idimp)) then
+         ierr = ierr + 2
+      endif
+      if (ierr.gt.0) return
+! check if required size of buffer has increased
+      if (szpfp < 2*npmax) then
+         if (szpfp > 0) deallocate(pfp)
+! allocate new buffer
+         allocate(pfp(2*npmax))
+         szpfp = 2*npmax
+      endif
+      call PGRASP23(part,pfp,npp,label,itime,isc,nx,ny,iyp,ixp,idimp,   &
+     &npmax,ierr)
+      end subroutine pdgrasp2
+!
+!-----------------------------------------------------------------------
+      subroutine pdbgrasp2(part,npp,label,itime,isc,omx,omy,omz,nx,ny,  &
+     &iyp,ixp,ierr)
+! displays phase space for magnetized plasma
+      implicit none
+      integer, intent(in) :: npp, itime, isc, nx, ny, iyp, ixp
+      real, intent(in) :: omx, omy, omz
+      integer, intent(inout) :: ierr
+      character(len=*), intent(in) :: label
+      real, dimension(:,:), intent(in) :: part
+! local data
+      integer :: idimp, npmax
+      idimp = size(part,1); npmax = size(part,2)
+! check for errors
+      ierr = 0
+      if ((ixp.lt.1).or.(ixp.gt.idimp)) then
+         ierr = 1
+      endif
+      if ((iyp.lt.1).or.(iyp.gt.idimp)) then
+         ierr = ierr + 2
+      endif
+      if (ierr.gt.0) return
+! check if required size of buffer has increased
+      if (szpfp < 2*npmax) then
+         if (szpfp > 0) deallocate(pfp)
+! allocate new buffer
+         allocate(pfp(2*npmax))
+         szpfp = 2*npmax
+      endif
+      call PBGRASP23(part,pfp,npp,label,itime,isc,omx,omy,omz,nx,ny,iyp,&
+     &ixp,idimp,npmax,ierr)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine ppdgrasp2(ppart,kpic,label,itime,isc,nx,ny,iyp,ixp,ierr&
+     &)
+! displays phase space with segmented particle array
+      implicit none
+      integer, intent(in) :: itime, isc, nx, ny, iyp, ixp
+      integer, intent(inout) :: ierr
+      character(len=*), intent(in) :: label
+      real, dimension(:,:,:), intent(in) :: ppart
+      integer, dimension(:), intent(in) :: kpic
+! local data
+      integer :: idimp, nppmx, mxyp1, npmax
+      idimp = size(ppart,1); nppmx = size(ppart,2);
+      mxyp1 = size(kpic,1)
+      npmax = nppmx*mxyp1
+! check for errors
+      ierr = 0
+      if ((ixp.lt.1).or.(ixp.gt.idimp)) then
+         ierr = 1
+      endif
+      if ((iyp.lt.1).or.(iyp.gt.idimp)) then
+         ierr = ierr + 2
+      endif
+      if (ierr.gt.0) return
+! check if required size of buffer has increased
+      if (szpfp < 2*npmax) then
+         if (szpfp > 0) deallocate(pfp)
+! allocate new buffer
+         allocate(pfp(2*npmax))
+         szpfp = 2*npmax
+      endif
+      call PPGRASP23(ppart,pfp,kpic,label,itime,isc,nx,ny,iyp,ixp,idimp,&
+     &nppmx,mxyp1,ierr)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine ppdbgrasp2(ppart,kpic,label,itime,isc,omx,omy,omz,nx,ny&
+     &,iyp,ixp,ierr)
+! displays phase space for magnetized plasma with segmented particle
+! array
+      implicit none
+      integer, intent(in) :: itime, isc, nx, ny, iyp, ixp
+      integer, intent(inout) :: ierr
+      real, intent(in) :: omx, omy, omz
+      character(len=*), intent(in) :: label
+      real, dimension(:,:,:), intent(in) :: ppart
+      integer, dimension(:), intent(in) :: kpic
+! local data
+      integer :: idimp, nppmx, mxyp1, npmax, nomt
+      idimp = size(ppart,1); nppmx = size(ppart,2);
+      mxyp1 = size(kpic,1)
+      npmax = nppmx*mxyp1
+! exit if co-ordinates out of range
+      ierr = 0
+      if ((ixp.lt.1).or.(ixp.gt.idimp)) then
+         ierr = 1
+      endif
+      if ((iyp.lt.1).or.(iyp.gt.idimp)) then
+         ierr = ierr + 2
+      endif
+      if (ierr.gt.0) return
+! determine if magnetic fields points in one of the cartesian directions
+      nomt = 0
+      if (omx.ne.0.0) nomt = nomt + 1
+      if (omy.ne.0.0) nomt = nomt + 1
+      if (omz.ne.0.0) nomt = nomt + 1
+! check if required size of buffer has increased
+      if (szpfp < 2*npmax) then
+         if (szpfp > 0) deallocate(pfp)
+! allocate new buffer
+         allocate(pfp(2*npmax))
+         szpfp = 2*npmax
+      endif
+! magnetic field points in cartesian direction
+      if (nomt < 2) then
+         call PPGRASP23(ppart,pfp,kpic,label,itime,isc,nx,ny,iyp,ixp,   &
+     &idimp,nppmx,mxyp1,ierr)
+! magnetic field points in non-cartesian direction
+      else
+         call PPBGRASP23(ppart,pfp,kpic,label,itime,isc,omx,omy,omz,nx, &
+     &ny,iyp,ixp,idimp,nppmx,mxyp1,ierr)
       endif
       end subroutine
 !

@@ -3,22 +3,22 @@
 ! written by 3D MPI/OpenMP PIC codes
 ! written by Viktor K. Decyk, UCLA
       program preadf3
-      use in3, only: idrun, indx, indy, indz, nvpy, nvpz, tend, dt, ci, &
-     &pot3d, ntp, fpname, modesxp, modesyp, modeszp, nprec,             &
-     &dene3d, ntde, fdename, modesxde, modesyde, modeszde, nderec,      &
-     &deni3d, ntdi, fdiname, modesxdi, modesydi, modeszdi, ndirec
-
+      use in3, only: idrun, indx, indy, indz, nvpy, nvpz, ndim, tend, dt
+      use cmfield3
 !
       implicit none
       integer, parameter :: ns = 3
       integer :: iudm = 19, ius = 11
-      integer :: i, j, k, l, m, n, ii, nx, ny, nz, kyp, kzp, kyb, kzb
-      integer :: nyv, nzv, lrec, nrec, ios
-      integer :: nplot = 1
+      integer :: i, m, n, ii, it, nx, ny, nz, kyp, kzp, kyb, kzb
+      integer :: nyv, nzv, nrec
+      integer :: modesx, modesy, modesz
+      integer :: nts = 0
+      real :: time
+! nscalars = table of available diagnostics
       integer, dimension(ns) :: nscalars = 0
       real, dimension(:,:,:), allocatable :: sfield
-      character(len=16), dimension(ns) :: dname = (/'potential       ', &
-     &'electron density','ion density     '/)
+      character(len=16), dimension(ns) :: dname = (/'POTENTIAL       ', &
+     &'ELECTRON DENSITY','ION DENSITY     '/)
       character(len=10) :: cdrun
       character(len=32) :: fname
 !
@@ -27,24 +27,10 @@
       write (cdrun,'(i10)') idrun
       cdrun = adjustl(cdrun)
       fname = 'diag3.'//cdrun
-      open(unit=iudm,file=fname,form='formatted',status='old')
+      call ffopen3(iudm,fname)
 !
 ! determine which scalar diagnostics are available
-      do n = 1, ns
-      select case(n)
-! load metadata for potential data
-      case (1)
-         read (iudm,pot3d,iostat=ios)
-! load metadata for electron density data
-      case (2)
-         read (iudm,dene3d,iostat=ios)
-! load metadata for ion density data
-      case (3)
-         read (iudm,deni3d,iostat=ios)
-      end select
-      if (ios==0) nscalars(n) = 1
-      rewind iudm
-      enddo
+      call readsdiags3(iudm,nscalars)
 !
 ! select diagnostic
       m = sum(nscalars)
@@ -81,19 +67,9 @@
 !
       write (*,*) trim(dname(n)), ' diagnostic selected'
 !
-      select case(n)
-      case (1)
-         read (iudm,pot3d,iostat=ios)
-         fname = fpname; nrec = nprec
-      case (2)
-         read (iudm,dene3d,iostat=ios)
-         fname = fdename; nrec = nderec
-      case (3)
-         read (iudm,deni3d,iostat=ios)
-         fname = fdiname; nrec = ndirec
-      end select
+! return parameters for selected scalar diagnostic
+      call sdiagparams3(iudm,n,nts,modesx,modesy,modesz,nrec,fname)
 !
-! nx
 ! nx/ny/nz = number of global grid points in x/y/z direction
       nx = 2**indx; ny = 2**indy; nz = 2**indz
 ! kyp/kzp = number of real grids in each field partition in y/z
@@ -106,10 +82,10 @@
 !
 ! allocate scalar array
       allocate(sfield(nx,nyv,nzv))
-! open direct access file for scalar field
-      inquire(iolength=lrec) sfield(1,1,1); lrec = lrec*nx*nyv*nzv
-      open(unit=ius,file=fname,form='unformatted',access='direct',      &
-     &recl=lrec,status='old')
+      dt = dt*real(nts)
+!
+! open stream file for scalar field
+      call fsopen3(ius,fname)
 !
 ! nrec = number of complete records
       nrec = nrec/(kyb*kzb)
@@ -117,16 +93,15 @@
 !
 ! read and transpose scalar data
       do ii = 1, nrec
-         read (unit=ius,rec=ii) (((((sfield(j,k+kyp*(n-1),l+kzp*(m-1)), &
-     &j=1,nx),k=1,kyp),l=1,kzp),n=1,kyb),m=1,kzb)
+! read real scalar field
+         call fread3(ius,sfield,nx,kyp,kyb,kzp,kzb)
+         it = nts*(ii - 1)
+         time = dt*real(ii - 1)
+! show time
+         write (*,*) 'it,time=',it,time
       enddo
 !
+      call closeff3(iudm)
+      call closeff3(ius)
+!
       end program
-!
-! unneeded function in input3mod.f90
-      subroutine PPBDCAST(f,nxp)
-      implicit none
-      integer, intent(in) :: nxp
-      double precision, dimension(nxp), intent(inout) :: f
-      end subroutine
-!

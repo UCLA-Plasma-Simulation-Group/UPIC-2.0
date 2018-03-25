@@ -1,0 +1,50 @@
+XCOMM
+XCOMM    Ygl: Run 3d-GL programs with standard X11 routines.
+XCOMM    (C) Fred Hucht 1993-2002
+XCOMM    EMail: fred@thp.Uni-Duisburg.DE
+XCOMM
+XCOMM    $Id: Imakefile,v 3.4 1997-03-13 16:16:45+01 fred Exp fred $
+
+SRCS 		= lines.c rgbtest.c coltest.c smile.c popup.c lmbind.c
+INCLUDES 	= -I..
+#ifdef LinuxArchitecture
+LOCAL_LDFLAGS	= -Xlinker -rpath .. -L..
+#else
+LOCAL_LDFLAGS	= -L..
+#endif
+LOCAL_LIBRARIES = -lYgl
+
+AllTarget(lines coltest rgbtest smile popup $(THREE_D_TARGETS))
+
+NormalProgramTarget(lines.gl,  lines.o,  NullParameter,../gl2ppm.o -lgl,NullParameter)
+NormalProgramTarget(rgbtest.gl,rgbtest.o,NullParameter,../gl2ppm.o -lgl,NullParameter)
+NormalProgramTarget(coltest.gl,coltest.o,NullParameter,-lgl -lm,	NullParameter)
+NormalProgramTarget(smile.gl,  smile.o,  NullParameter,-lgl,		NullParameter)
+NormalProgramTarget(popup.gl,  popup.o,  NullParameter,-lgl,		NullParameter)
+NormalProgramTarget(lmbind.gl, lmbind.o, NullParameter,-lgl -lm,	NullParameter)
+
+NormalProgramTarget(lines,     lines.o,  NullParameter,$(LOCAL_LIBRARIES),NullParameter)
+NormalProgramTarget(rgbtest,   rgbtest.o,NullParameter,$(LOCAL_LIBRARIES),NullParameter)
+NormalProgramTarget(coltest,   coltest.o,NullParameter,$(LOCAL_LIBRARIES),-lm)
+NormalProgramTarget(smile,     smile.o,  NullParameter,$(LOCAL_LIBRARIES),NullParameter)
+NormalProgramTarget(popup,     popup.o,  NullParameter,$(LOCAL_LIBRARIES),NullParameter)
+NormalProgramTarget(lmbind,    lmbind.o, NullParameter,$(LOCAL_LIBRARIES),-lm)
+
+DependTarget()
+
+gl::	lines.gl coltest.gl rgbtest.gl smile.gl popup.gl lmbind.gl
+
+clean::
+	$(RM) *.gif smile_xlf smile_f2c smile_f77 smile_f77.c
+
+smile_f2c:: smile_f77.f
+	f2c smile_f77.f
+	$(CC) $(CFLAGS) -o $@ smile_f77.c -lf2c $(LOCAL_LDFLAGS) $(LOCAL_LIBRARIES)
+
+smile_f77:: smile_f77.f
+	$(FC) $(EXTNAME) $(FFLAGS) -o $@ smile_f77.f $(LOCAL_LDFLAGS) $(LOCAL_LIBRARIES)
+
+#if defined(AIXArchitecture) || defined(RsArchitecture)
+smile_xlf:: smile_xlf.f
+	xlf   $(FFLAGS) -o $@ smile_xlf.f $(LOCAL_LDFLAGS) $(LOCAL_LIBRARIES)
+#endif

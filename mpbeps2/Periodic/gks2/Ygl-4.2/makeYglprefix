@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+#    Ygl: Run GL programs with standard X11 routines.
+#    (C) Fred Hucht 1993-96
+#    EMail: fred@thp.Uni-Duisburg.DE
+#
+#    $Id: makeYglprefix,v 3.4 1997-07-09 13:54:42+02 fred Exp $
+
+PREF=ygl_
+
+cat << EOF1
+/* File is generated automagically by makeYglprefix. Do not change! */
+#define YGL_PRE(x) ${PREF}##x
+
+EOF1
+
+grep extern X11/Ygl.h |
+grep -v 'extern[ 	]"C"' |
+sed "s/^\([ 	]*extern[ 	]*[A-Za-z0-9_\*]*\)[ 	]*\**\([A-Za-z0-9_]*\).*/#define \2 $PREF\2/"
+
+cat << EOF2
+#define sleep   ${PREF}sleep
+#define usleep  ${PREF}usleep
+
+EOF2

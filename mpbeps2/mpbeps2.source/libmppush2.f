@@ -38,7 +38,7 @@
 !            interpolation
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: may 16, 2017
+! update: february 26, 2018
 !-----------------------------------------------------------------------
       subroutine PPPMOVIN2L(part,ppart,kpic,npp,noff,nppmx,idimp,npmax, &
      &mx,my,mx1,mxyp1,irc)
@@ -210,8 +210,8 @@
       real edgelx, edgely, edgerx, edgery, dx, dy
       mxyp1 = mx1*myp1
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(j,k,noffp,moffp,nppp,nn,mm,ist,edgelx,edgely,edgerx,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(j,k,noffp,moffp,nppp,nn,mm,ist,edgelx,edgely,edgerx,     &
 !$OMP& edgery,dx,dy)
       do 20 k = 1, mxyp1
       noffp = (k - 1)/mx1
@@ -248,7 +248,7 @@
 ! interpolation in space, with various boundary conditions
 ! OpenMP version using guard cells, for distributed data
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 42 flops/particle, 12 loads, 4 stores
 ! input: all, output: ppart, ek
 ! equations used are:
@@ -321,10 +321,9 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,mnoff,nn,mm,x,y,dxp,dyp,amx,amy,dx
-!$OMP& ,dy,vx,vy,sum1,sfxy)
-!$OMP& REDUCTION(+:sum2)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,mnoff,nn,mm,x,y,dxp,dyp,amx,amy,dx&
+!$OMP& ,dy,vx,vy,sum1,sfxy) REDUCTION(+:sum2)
       do 40 k = 1, mxyp1
       noffp = (k - 1)/mx1
       moffp = my*noffp
@@ -486,9 +485,9 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,ih,nh,mnoff,x,y,dxp,dyp,amx,
-!$OMP& amy,dx,dy,vx,vy,edgelx,edgely,edgerx,edgery,sum1,sfxy)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,nn,mm,ih,nh,mnoff,x,y,dxp,dyp,amx,&
+!$OMP& amy,dx,dy,vx,vy,edgelx,edgely,edgerx,edgery,sum1,sfxy)           &
 !$OMP& REDUCTION(+:sum2)
       do 50 k = 1, mxyp1
       noffp = (k - 1)/mx1
@@ -624,7 +623,7 @@
 ! with various boundary conditions
 ! OpenMP version using guard cells, for distributed data
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 50 flops/particle, 2 divides, 2 sqrts, 12 loads, 4 stores
 ! input: all, output: ppart, ek
 ! equations used are:
@@ -703,10 +702,9 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,mnoff,nn,mm,x,y,dxp,dyp,amx,amy,dx
-!$OMP& ,dy,vx,vy,acx,acy,p2,dtg,sum1,sfxy)
-!$OMP& REDUCTION(+:sum2)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,mnoff,nn,mm,x,y,dxp,dyp,amx,amy,dx&
+!$OMP& ,dy,vx,vy,acx,acy,p2,dtg,sum1,sfxy) REDUCTION(+:sum2)
       do 40 k = 1, mxyp1
       noffp = (k - 1)/mx1
       moffp = my*noffp
@@ -881,11 +879,10 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,mnoff,nn,mm,ih,nh,x,y,dxp,dyp,amx,
-!$OMP& amy,dx,dy,vx,vy,acx,acy,p2,dtg,edgelx,edgely,edgerx,edgery,sum1, 
-!$OMP& sfxy)
-!$OMP& REDUCTION(+:sum2)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,mnoff,nn,mm,ih,nh,x,y,dxp,dyp,amx,&
+!$OMP& amy,dx,dy,vx,vy,acx,acy,p2,dtg,edgelx,edgely,edgerx,edgery,sum1, &
+!$OMP& sfxy) REDUCTION(+:sum2)
       do 50 k = 1, mxyp1
       noffp = (k - 1)/mx1
       moffp = my*noffp
@@ -1024,7 +1021,7 @@
 ! particles with fixed velocities, with various boundary conditions.
 ! OpenMP version using guard cells, for distributed data
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 9 flops/particle, 4 loads, 2 stores
 ! input: all, output: ppart, ek
 ! equations used are:
@@ -1164,10 +1161,9 @@
       any = real(ny)
       sum2 = 0.0d0
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(j,k,noffp,moffp,nppp,nn,mm,ih,nh,dx,dy,edgelx,edgely,    
-!$OMP& edgerx,edgery,sum1)
-!$OMP& REDUCTION(+:sum2)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(j,k,noffp,moffp,nppp,nn,mm,ih,nh,dx,dy,edgelx,edgely,    &
+!$OMP& edgerx,edgery,sum1) REDUCTION(+:sum2)
       do 30 k = 1, mxyp1
       noffp = (k - 1)/mx1
       moffp = my*noffp
@@ -1267,7 +1263,7 @@
 ! conditions.
 ! OpenMP version using guard cells, for distributed data
 ! data read in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 12 flops/particle, 1 divides, 1 sqrts, 4 loads, 2 stores
 ! input: all, output: ppart, ek
 ! equations used are:
@@ -1314,7 +1310,7 @@
          edgerx = real(nx-1)
       endif
 ! loop over tiles
-!$OMP PARALLEL DO PRIVATE(j,k,nppp,dx,dy,p2,gam,dtg,sum1)
+!$OMP PARALLEL DO PRIVATE(j,k,nppp,dx,dy,p2,gam,dtg,sum1)               &
 !$OMP& REDUCTION(+:sum2)
       do 20 k = 1, mxyp1
       nppp = kpic(k)
@@ -1423,10 +1419,9 @@
       any = real(ny)
       sum2 = 0.0d0
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(j,k,noffp,moffp,nppp,nn,mm,ih,nh,dx,dy,p2,gam,dtg,edgelx,
-!$OMP& edgely,edgerx,edgery,sum1)
-!$OMP& REDUCTION(+:sum2)
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(j,k,noffp,moffp,nppp,nn,mm,ih,nh,dx,dy,p2,gam,dtg,edgelx,&
+!$OMP& edgely,edgerx,edgery,sum1) REDUCTION(+:sum2)
       do 30 k = 1, mxyp1
       noffp = (k - 1)/mx1
       moffp = my*noffp
@@ -1529,7 +1524,7 @@
 ! using first-order linear interpolation, periodic boundaries
 ! OpenMP version using guard cells, for distributed data
 ! data deposited in tiles
-! particles stored segmented array
+! particles stored in segmented array
 ! 17 flops/particle, 6 loads, 4 stores
 ! input: all, output: q
 ! charge density is approximated by values at the nearest grid points
@@ -1570,8 +1565,8 @@
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV)) return
 ! loop over tiles
-!$OMP PARALLEL DO
-!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,mnoff,nn,mm,x,y,dxp,dyp,amx,amy,
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(i,j,k,noffp,moffp,nppp,mnoff,nn,mm,x,y,dxp,dyp,amx,amy,  &
 !$OMP& sq)
       do 80 k = 1, mxyp1
       noffp = (k - 1)/mx1

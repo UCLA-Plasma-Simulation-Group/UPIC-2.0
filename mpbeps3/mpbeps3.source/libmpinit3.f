@@ -1,6 +1,7 @@
 !-----------------------------------------------------------------------
 ! Fortran Library for initialization of domains and particles
 ! 3D MPI/OpenMP PIC Codes:
+! NEXTRAN3 = skips over nextrand groups of random numbers
 ! PDICOMP32L determines uniform integer spatial decomposition for
 !            uniform distribution of particles for 3d code
 !            integer boundaries set, of equal size except for remainders
@@ -28,12 +29,17 @@
 ! PVRDISTR32 calculates initial particle momenta with maxwell-juttner
 !            distribution with drift for 3d code with relativistic
 !            particles
+! PVBDISTR32 calculates initial particle velocities for a magnetized
+!            plasma with maxwellian velocity with drift in direction
+!            parallel to B, ring distribution in directions
+!            perpendicular to B for 3d code
 ! PPDBLKP3L finds the maximum number of particles in each tile
 ! PFEDGES32 = finds new partitions boundaries (edges,noff,nyzp)
 !             from analytic general density profiles.
 ! PFHOLES32 determines list of particles which are leaving this node
 ! ranorm gaussian random number generator
 ! randum uniform random number generator
+! rd1rand 1d rayleigh random number generator
 ! The following functions are used by FDISTR1 and GFDISTR1:
 ! DLDISTR1 calculates either a density function or its integral
 !          for a linear density profile with uniform background
@@ -50,7 +56,26 @@
 !          for a gaussian density profile with no background density
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: may 15, 2017
+! update: march 23, 2018
+!-----------------------------------------------------------------------
+      subroutine NEXTRAN3(nextrand,ndim,np)
+! for 2d code, this subroutine skips over nextrand groups of random
+! numbers in order to initialize different random ensembles
+! nextrand = (0,N) = generate (default,Nth block) of random numbers
+! ndim = number of velocity dimensions = 3
+! np = number of particles in distribution
+      implicit none
+      integer nextrand, ndim, np
+! local data
+      integer j, n
+      double precision d
+      double precision ranorm
+      n = ndim*np*nextrand
+      do 10 j = 1, n
+      d = ranorm()
+   10 continue
+      return
+      end
 !-----------------------------------------------------------------------
       subroutine PDICOMP32L(edges,nyzp,noff,nypmx,nzpmx,nypmn,nzpmn,ny, &
      &nz,kstrt,nvpy,nvpz,idps,idds)
@@ -757,7 +782,7 @@
 ! particle distribution constants
       ks = kstrt - 1
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
 ! mpy = number of particles per processor in y direction
@@ -912,7 +937,7 @@
 ! particle distribution constants
       ks = kstrt - 1
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
 ! mpy = number of particles per processor in y direction
@@ -1125,7 +1150,7 @@
 ! with maxwellian velocity with drift for distributed data
 ! algorithm designed to assign the same random numbers to particle
 ! velocities, independent of the number of processors
-! input: all except part, ierr, output: part, npp, ierr
+! input: all except part, ierr, output: part, ierr
 ! part(4,n) = velocity vx of particle n in partition
 ! part(5,n) = velocity vy of particle n in partition
 ! part(6,n) = velocity vz of particle n in partition
@@ -1161,7 +1186,7 @@
 ! particle distribution constants
       ks = kstrt - 1
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
 ! mpy = number of particles per processor in y direction
@@ -1236,12 +1261,12 @@
 ! since pt is normally distributed, we can use a gaussian random number
 ! to calculate it.  We then solve the pt**2 equation to obtain:
 ! (p/m0)**2 = ((pt*vth)**2)*(1 + (pt/4c)**2),
-! where vth = sqrt(kT/m0) is the thermal velocity.  This equation is
-! satisfied if we set the individual components j as follows:
+! where vth = sqrt(kT/m0) is the thermal momentum/mass.  This equation
+! is satisfied if we set the individual components j as follows:
 ! pj/m0 = ptj*vth*sqrt(1 + (pt/4c)**2)
 ! algorithm designed to assign the same random numbers to particle
 ! velocities, independent of the number of processors
-! input: all except part, ierr, output: part, npp, ierr
+! input: all except part, ierr, output: part, ierr
 ! part(4,n) = momentum px of particle n in partition
 ! part(5,n) = momentum py of particle n in partition
 ! part(6,n) = momentum pz of particle n in partition
@@ -1279,7 +1304,7 @@
 ! particle distribution constants
       ks = kstrt - 1
 ! find processor id and offsets in y/z
-! js/ks = processor co-ordinates in x/y => idproc = js + nvpy*ks
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
       ks = (kstrt - 1)/nvpy
       js = kstrt - nvpy*ks - 1
 ! mpy = number of particles per processor in y direction
@@ -1342,6 +1367,177 @@
       part(5,j) = part(5,j) - sum4(2)
       part(6,j) = part(6,j) - sum4(3)
    50 continue
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PVBDISTR32(part,nps,npp,vtr,vtz,vdr,vdz,omx,omy,omz,npx&
+     &,npy,npz,kstrt,nvpy,nvpz,idimp,npmax,ierr)
+! for 3d code, this subroutine calculates initial particle velocities
+! velocities for a magnetized plasma with maxwellian velocity with
+! drift in direction parallel to B, ring distribution in directions
+! perpendicular to B.  The algorithm due to phil pritchett proceeds by
+! first assuming B is in the z direction, then rotating to the
+! co-ordinates to match the actual B direction
+! algorithm designed to assign the same random numbers to particle
+! velocities, independent of the number of processors
+! input: all except part, ierr, output: part, ierr
+! part(4,n) = velocity vx of particle n in partition
+! part(5,n) = velocity vy of particle n in partition
+! part(6,n) = velocity vz of particle n in partition
+! nps = starting address of particles in partition
+! npp = number of particles in partition
+! vtr/vtz = thermal velocity of particles in azimuthal/B direction
+! vdt/vdz = drift velocity of particles in azimuthal/B direction
+! omx/omy/omz = magnetic field electron cyclotron frequency in x/y/z 
+! npx/npy/npz = initial number of particles distributed in x/y/z
+! direction
+! kstrt = starting data block number
+! nvpy/nvpz = number of real or virtual processors in y/z
+! idimp = size of phase space = 6
+! npmax = maximum number of particles in each partition
+! ierr = (0,1) = (no,yes) error condition exists
+! randum = uniform random number
+! ranorm = gaussian random number with zero mean and unit variance
+! with 2D spatial decomposition
+      implicit none
+      integer nps, npp, npx, npy, npz, kstrt, nvpy, nvpz, idimp, npmax
+      integer ierr
+      real vtr, vtz, vdr, vdz, omx, omy, omz
+      real part
+      dimension part(idimp,npmax)
+! local data
+      integer npt, npxyzp, js, ks, j, k, l, kk, ll, mpy, mpys, mpz, mpzs
+      integer ndir
+      real twopi, at1, at2, vxt, vyt, vzt
+      real ox, oy, oz, px, py, pz, qx, qy, qz
+      double precision dnpxyz, dt1
+      integer ierr1, iwork1
+      dimension ierr1(1), iwork1(1)
+      double precision sum4, work4
+      dimension sum4(4), work4(4)
+      double precision randum, ranorm
+      ierr = 0
+! particle distribution constants
+      ks = kstrt - 1
+! find processor id and offsets in y/z
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+      ks = (kstrt - 1)/nvpy
+      js = kstrt - nvpy*ks - 1
+! mpy = number of particles per processor in y direction
+      mpy = (npy - 1)/nvpy + 1
+      mpys = min(mpy,max(0,npy-mpy*js))
+! mpz = number of particles per processor in z direction
+      mpz = (npz - 1)/nvpz + 1
+      mpzs = min(mpz,max(0,npz-mpz*ks))
+      twopi = 6.28318530717959
+! maxwell velocity distribution with ring distribution in x and y,
+! maxwell velocity distribution in z
+      npt = nps - 1
+      do 30 ll = 1, npz
+      l = ll - mpz*ks
+      do 20 kk = 1, npy
+      k = kk - mpy*js
+      do 10 j = 1, npx
+      at1 = twopi*randum()
+      vxt = vdr*cos(at1) + vtr*ranorm()
+      vyt = vdr*sin(at1) + vtr*ranorm()
+      vzt = vtz*ranorm()
+      if ((l.ge.1).and.(l.le.mpzs)) then
+         if ((k.ge.1).and.(k.le.mpys)) then
+            npt = npt + 1
+            if (npt.le.npmax) then
+               part(4,npt) = vxt
+               part(5,npt) = vyt
+               part(6,npt) = vzt
+            endif
+         endif
+      endif
+   10 continue
+   20 continue
+   30 continue
+! process particle number error
+      ierr = npp - npt
+      ierr1(1) = ierr
+      call PPIMAX(ierr1,iwork1,1)
+      ierr = ierr1(1)
+      if (ierr.ne.0) return
+! add correct drift
+      npxyzp = 0
+      sum4(1) = 0.0d0
+      sum4(2) = 0.0d0
+      sum4(3) = 0.0d0
+      do 40 j = nps, npp
+      npxyzp = npxyzp + 1
+      sum4(1) = sum4(1) + part(4,j)
+      sum4(2) = sum4(2) + part(5,j)
+      sum4(3) = sum4(3) + part(6,j)
+   40 continue
+      sum4(4) = dble(npxyzp)
+      call PPDSUM(sum4,work4,4)
+      dnpxyz = sum4(4)
+      dt1 = 1.0d0/dnpxyz
+      sum4(1) = dt1*sum4(1)
+      sum4(2) = dt1*sum4(2)
+      sum4(3) = dt1*sum4(3) - vdz
+      do 50 j = nps, npp
+      part(4,j) = part(4,j) - sum4(1)
+      part(5,j) = part(5,j) - sum4(2)
+      part(6,j) = part(6,j) - sum4(3)
+   50 continue
+! rotate perpendicular and parallel component to align with actual B field
+      at1 = sqrt(omx*omx + omy*omy + omz*omz)
+! exit if zero B field
+      if (at1.eq.0.0) return
+! first create unit vector in B direction
+      at1 = 1.0/at1
+      ox = omx*at1
+      oy = omy*at1
+      oz = omz*at1
+! then create unit vector in first perpendicular direction
+! find direction with smallest component of B
+      ndir = 1
+      at1 = abs(omx)
+      at2 = abs(omy)
+      if (at2.le.at1) then
+         ndir = 2
+         at1 = at2
+      endif
+      if (abs(omz).lt.at1) ndir = 3
+! take the cross product of that direction with B
+! vpr1 = x cross B
+      if (ndir.eq.1) then
+         at1 = 1.0/sqrt(oy*oy + oz*oz)
+         px = 0.0
+         py = -oz*at1
+         pz = oy*at1
+! vpr1 = y cross B
+      else if (ndir.eq.2) then
+         at1 = 1.0/sqrt(ox*ox + oz*oz)
+         px = oz*at1
+         py = 0.0
+         pz = -ox*at1
+! vpr1 = z cross B
+      else if (ndir.eq.3) then
+         at1 = 1.0/sqrt(ox*ox + oy*oy)
+         px = -oy*at1
+         py = ox*at1
+         pz = 0.0
+      endif
+! finally create unit vector in second perpendicular direction
+! vpr2 = B cross vpr1
+      qx = oy*pz - oz*py
+      qy = oz*px - ox*pz
+      qz = ox*py - oy*px
+! rotate particle velocities
+      do 60 j = nps, npp
+      vxt = part(4,j)
+      vyt = part(5,j)
+      vzt = part(6,j)
+! store components in appropriate direction
+      part(4,j) = vzt*ox + vxt*px + vyt*qx
+      part(5,j) = vzt*oy + vxt*py + vyt*qy
+      part(6,j) = vzt*oz + vxt*pz + vyt*qz
+   60 continue
       return
       end
 !-----------------------------------------------------------------------
@@ -1562,7 +1758,8 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine PFHOLES32(part,edges,npp,ihole,idimp,npmax,idps,ntmax)
+      subroutine PFHOLES32(part,edges,npp,ihole,nc,idimp,npmax,idps,    &
+     &ntmax)
 ! for 3d code, this subroutine determines list of particles which are
 ! leaving this processor, with 2D spatial decomposition
 ! input: all except ihole, output: ihole
@@ -1573,27 +1770,39 @@
 ! npp = number of particles in partition
 ! ihole(:,2) = location of holes left in y/z in particle arrays
 ! ihole(1,:) = ih, number of holes left in y/z (error, if negative)
-! idimp = size of phase space = 4
+! nc = (1,2) = (normal,tagged) partitioned co-ordinate to sort by
+! idimp = size of phase space = 6 or 7
 ! npmax = maximum number of particles in each partition
 ! idps = number of particle partition boundaries = 4
 ! ntmax = size of hole array for particles leaving processors
       implicit none
-      integer npp, idimp, npmax, idps, ntmax
+      integer npp, nc, idimp, npmax, idps, ntmax
       real part, edges
       integer ihole
       dimension part(idimp,npmax)
       dimension edges(idps), ihole(ntmax+1,2)
 ! local data
-      integer j, ih1, ih2, nh
+      integer j, iy, iz, ih1, ih2, nh
       real dy, dz
       integer ierr1, iwork1
       dimension ierr1(1), iwork1(1)
+      if ((nc.lt.1).or.(nc.gt.2)) return
+! determine co-ordinate to sort by
+      if (nc.eq.1) then
+         iy = 2
+         iz = 3
+      else if (idimp.gt.6) then
+         iy = 7
+         iz = 7
+      else
+         return
+      endif
       ih1 = 0
       ih2 = 0
       nh = 0
       do 10 j = 1, npp
-      dy = part(2,j)
-      dz = part(3,j)
+      dy = part(iy,j)
+      dz = part(iz,j)
 ! find particles out of bounds
 ! check particles leaving in y direction or y and z
       if ((dy.lt.edges(1)).or.(dy.ge.edges(2))) then
@@ -1715,6 +1924,15 @@
       isc = r3*asc
       r1 = r3 - dble(isc)*bsc
       randum = (dble(r1) + dble(r2)*asc)*asc
+      return
+      end
+!-----------------------------------------------------------------------
+      function rd1rand()
+! random number generator for 1d rayleigh distribution:
+! f(x) = x*exp(-x*x/2), using inverse transformation method
+      implicit none
+      double precision rd1rand, randum
+      rd1rand = dsqrt(-2.0d0*dlog(randum()))
       return
       end
 !-----------------------------------------------------------------------

@@ -1,0 +1,76 @@
+
+uclapic42:Ygl-4.2 uclapic$ xmkmf
+mv -f Makefile Makefile.bak
+imake -DUseInstalled -I/usr/X11/lib/X11/config
+uclapic42:Ygl-4.2 uclapic$ make
++ mkdir unshared
+/usr/bin/cc -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    -o makeYgltypes makeYgltypes.c
+./makeYgltypes > X11/Ygltypes.h
+rm -f ygl.o unshared/ygl.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   ygl.c -o unshared/ygl.o
+rm -f ygl.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic ygl.c
+rm -f draw.o unshared/draw.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   draw.c -o unshared/draw.o
+rm -f draw.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic draw.c
+rm -f usleep_tst.c
+ln -s header.h usleep_tst.c
+/usr/bin/cc -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    -E usleep_tst.c > usleep.i
+rm -f usleep_tst.c
+sed -nf makeusleep.sed usleep.i > usleep.h
+rm -f misc.o unshared/misc.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   misc.c -o unshared/misc.o
+rm -f misc.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic misc.c
+rm -f font.o unshared/font.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   font.c -o unshared/font.o
+rm -f font.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic font.c
+rm -f queue.o unshared/queue.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   queue.c -o unshared/queue.o
+rm -f queue.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic queue.c
+rm -f color.o unshared/color.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   color.c -o unshared/color.o
+rm -f color.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic color.c
+rm -f menu.o unshared/menu.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   menu.c -o unshared/menu.o
+rm -f menu.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic menu.c
+rm -f gl2ppm.o unshared/gl2ppm.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   gl2ppm.c -o unshared/gl2ppm.o
+rm -f gl2ppm.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic gl2ppm.c
+rm -f 3d.o unshared/3d.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   3d.c -o unshared/3d.o
+rm -f 3d.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic 3d.c
+rm -f fortran.o unshared/fortran.o
+/usr/bin/cc -c -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF    	-Os   fortran.c -o unshared/fortran.o
+header.h:242: warning: ‘I’ defined but not used
+rm -f fortran.o
+/usr/bin/cc -c -Os  -Wall -Wpointer-arith -no-cpp-precomp -fno-common  -I.  -I/usr/X11/include    -D__i386__ -D__DARWIN__                                 -DNO_ALLOCA -DCSRG_BASED      -DOGL -DX11 -DGSvs -DDOUBLEBUF -DMULTIBUF       -dynamic fortran.c
+header.h:242: warning: ‘I’ defined but not used
+rm -f libYgl.4.2.dylib~
++ cd .
++ /usr/bin/cc -o ./libYgl.4.2.dylib~ -dynamiclib -install_name /usr/X11/lib/libYgl.4.dylib -current_version 4.2 -compatibility_version 4.2 ygl.o draw.o misc.o font.o queue.o color.o menu.o gl2ppm.o 3d.o fortran.o -L/usr/X11/lib -lGL -lGLU -lXext -lX11
++ rm -f libYgl.4.dylib
++ ln -s libYgl.4.2.dylib libYgl.4.dylib
++ true
+rm -f libYgl.4.2.dylib
+mv -f libYgl.4.2.dylib~ libYgl.4.2.dylib
++ rm -f libYgl.dylib
++ ln -s libYgl.4.2.dylib libYgl.dylib
+rm -f libYgl.a
++ cd unshared
++ ar clq ../libYgl.a ygl.o draw.o misc.o font.o queue.o color.o menu.o gl2ppm.o 3d.o fortran.o
+ranlib libYgl.a
+making all in ./examples...
+cc -O  -I.. -o coltest coltest.c -L.. -lYgl -lXext -lX11  -lm
+ld: library not found for -lXext
+collect2: ld returned 1 exit status
+make[1]: *** [coltest] Error 1
+make: *** [all] Error 2
+

@@ -2,11 +2,11 @@
 by Viktor K. Decyk
 copyright 1994-2017, regents of the university of california
 
-This code is a sample program which illustrate how to read periodic
-fields which have been written using simple Fortran IO by the mpbeps2
-suite of PIC codes.  It is designed for Linux but will also compile for
-Mac OS X.  The default compiler used is gfortran, but other compiler
-flags are commented out.
+These codes are sample programs which illustrate how to read various
+diagnostics written using simple Fortran IO by the mpbeps2 suite of PIC
+codes.  It is designed for Linux but will also compile for Mac OS X.
+The default compiler used is gfortran, but other compiler flags are
+commented out.
 
 No warranty for proper operation of this software is given or implied.
 Software or information may be copied, distributed, and used at own
@@ -17,7 +17,9 @@ acknowledgement is requested.
 The makefile is setup to use gfortran with Linux.  It should also work
 with MacOS X.
 
-The executables created are called preadf2 and pvreadf2.
+Six Fortran executables can be created, called preadf2, pvreadf2,
+pflreadf2, pfvreadf2, ptreadf2, and psreadf2, to read scalar, vector,
+fluid, velocity trajectory or phase space data.
 
 To compile the programs, execute:
 
@@ -27,7 +29,8 @@ To compile just one, execute:
 
 make program_name
 
-where program_name is either: preadf2 or pvreadf2
+where program_name is either: preadf2, pvreadf2, pflreadf2, pfvreadf2,
+ptreadf2 or psreadf2
 
 To execute, type the name of the executable:
 
@@ -46,7 +49,8 @@ To turn it on for Fortran, search for the string: Fortran Graphics in
 the Makefile, and comment out the symbol GOBJS for No graphics and
 uncomment it either for Tektronix, Postscript or X1. The X11 option
 requires that the library Ygl is installed and the symbol
-LGOPTS = -lYgl -L/usr/X11R6/lib -lX11.
+LGOPTS = sgks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11.  To display from
+a remove server, you should login to the server with the command ssh -X.
 
 To run with Tektronix, open the window xterm -t before executing the
 codes.
@@ -57,3 +61,12 @@ can be very large, but it can be converted to pdf with substantial
 compression.  For example, on the Macintosh, the program Preview will
 convert and compress the large Postscript files to pdf and allow one to
 easily move through this file.
+
+There are also 6 Python scripts available.  They require a dynamic
+library, libcmfield2.
+
+To compile this library, execute:
+
+make python
+
+This currently only works in single precision.

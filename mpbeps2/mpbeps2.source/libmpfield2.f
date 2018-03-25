@@ -51,7 +51,7 @@
 !             unpacked array and stores them into a packed array
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: april 26, 2017
+! update: february 26, 2018
 !-----------------------------------------------------------------------
       subroutine MPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,&
      &kxp,nyhd)
@@ -134,7 +134,7 @@
    30 sum1 = 0.0d0
       if (kstrt.gt.nxh) go to 70
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,at1,at2,at3,zt1,zt2,wp)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,at1,at2,at3,zt1,zt2,wp)            &
 !$OMP& REDUCTION(+:sum1)
       do 50 j = 1, kxps
       dkx = dnx*real(j + joff)
@@ -276,8 +276,8 @@
 ! calculate force/charge and sum field energy
    30 sum1 = 0.0d0
       if (kstrt.gt.nxh) go to 70
-! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,at1,at2,at3,zt1,zt2,wp)
+! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2-
+!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,at1,at2,at3,zt1,zt2,wp)            &
 !$OMP& REDUCTION(+:sum1)
       do 50 j = 1, kxps
       dkx = dnx*real(j + joff)
@@ -507,7 +507,7 @@
       sum1 = 0.0d0
       if (kstrt.gt.nxh) go to 40
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,at1,at2,at3,zt1,zt2,zt3,wp)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,at1,at2,at3,zt1,zt2,zt3,wp)    &
 !$OMP& REDUCTION(+:sum1)
       do 20 j = 1, kxps
       dkx = dnx*real(j + joff)
@@ -670,9 +670,8 @@
       if (kstrt.gt.nxh) go to 40
 ! calculate the electromagnetic fields
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,afdt,zt1,zt2,zt3,zt4,zt5,zt6,  
-!$OMP& zt7,zt8,zt9,ws,wp)
-!$OMP& REDUCTION(+:sum1,sum2)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,afdt,zt1,zt2,zt3,zt4,zt5,zt6,  &
+!$OMP& zt7,zt8,zt9,ws,wp) REDUCTION(+:sum1,sum2)
       do 20 j = 1, kxps
       dkx = dnx*real(j + joff)
       ws = 0.0d0
@@ -1071,7 +1070,7 @@
       sum1 = 0.0d0
       if (kstrt.gt.nxh) go to 40
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,at1,at2,at3,zt1,zt2,zt3,wp)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,at1,at2,at3,zt1,zt2,zt3,wp)    &
 !$OMP& REDUCTION(+:sum1)
       do 20 j = 1, kxps
       dkx = dnx*real(j + joff)
@@ -1203,7 +1202,7 @@
 ! calculate transverse part of current
       if (kstrt.gt.nxh) return
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(j,k,k1,dkx,dkx2,dky,dky2,dkxy,dkxy2,at1,zt1,zt2,zt3)
       do 20 j = 1, kxps
       dkx = dnx*real(j + joff)
@@ -1325,7 +1324,7 @@
 ! calculate transverse part of current
       if (kstrt.gt.nxh) return
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO                                                       &
 !$OMP& PRIVATE(j,k,k1,dkx,dkx2,dky,dky2,dkxy,dkxy2,at1,zt1,zt2,zt3)
       do 20 j = 1, kxps
       dkx = dnx*real(j + joff)
@@ -1493,8 +1492,7 @@
       wp = 0.0d0
       if (kstrt.gt.nxh) go to 70
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,at1,at2,wp)
-!$OMP& REDUCTION(+:sum1)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,at1,at2,wp) REDUCTION(+:sum1)
       do 50 j = 1, kxps
       wp = 0.0d0
       if ((j+joff).gt.0) then
@@ -1565,8 +1563,7 @@
    80 sum1 = 0.0d0
       if (kstrt.gt.nxh) go to 120
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,at1,at2,wp)
-!$OMP& REDUCTION(+:sum1)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,at1,at2,wp) REDUCTION(+:sum1)
       do 100 j = 1, kxps
       wp = 0.0d0
       if ((j+joff).gt.0) then
@@ -1782,7 +1779,7 @@
       sum1 = 0.0d0
       if (kstrt.gt.nxh) go to 40
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,at1,at2,at3,zt1,zt2,wp)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,at1,at2,at3,zt1,zt2,wp)            &
 !$OMP& REDUCTION(+:sum1)
       do 20 j = 1, kxps
       dkx = dnx*real(j + joff)
@@ -1902,7 +1899,7 @@
       sum1 = 0.0d0
       if (kstrt.gt.nxh) go to 40
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,at1,at2,at3,zt1,zt2,wp)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,at1,at2,at3,zt1,zt2,wp)            &
 !$OMP& REDUCTION(+:sum1)
       do 20 j = 1, kxps
       dkx = dnx*real(j + joff)
@@ -2667,8 +2664,7 @@
       sum1 = 0.0d0
       if (kstrt.gt.nxh) go to 40
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,at1,at2,wp)
-!$OMP& REDUCTION(+:sum1)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,at1,at2,wp) REDUCTION(+:sum1)
       do 20 j = 1, kxps
       wp = 0.0d0
       if ((j+joff).gt.0) then

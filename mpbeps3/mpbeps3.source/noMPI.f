@@ -2,7 +2,7 @@
 ! Null MPI library
 ! written by viktor k. decyk, ucla
 ! copyright 2017, regents of the university of california
-! update: february 9, 2017
+! update: march 6, 2018
 !-----------------------------------------------------------------------
       subroutine MPI_INIT(ierror)
 ! initialize the MPI execution environment
@@ -168,6 +168,22 @@
       implicit none
       integer comm, rank, ierror
       rank = 0
+      ierror = 0
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine MPI_COMM_SPLIT(comm,color,key,newcomm,ierror)
+! create a new communicator based on color and key
+! comm = communicator
+! color = control of subset assignment
+! key = control of rank assignment
+! newcomm = new communicator
+! ierror = error indicator
+! input: comm, color, key
+! output: newcomm, ierror
+      implicit none
+      integer comm, color, key, newcomm, ierror
+      newcomm = 0
       ierror = 0
       return
       end
