@@ -8,7 +8,7 @@
 ! writnml3 writes final diagnostic metafile to unit iudm
 ! written by viktor k. decyk, ucla
 ! copyright 2011, regents of the university of california
-! update: March 14, 2018
+! update: April 2, 2018
 !
       implicit none
 !
@@ -430,7 +430,7 @@
 ! vdxi/vdyi/vdzi = drift velocity of beam ions in x/y/z direction
       real :: vdxi = 0.0, vdyi = 0.0, vdzi = 0.0
 ! rtempdxi/rtempdyi/rtempdzi = electron/ion temperature ratio of beam
-! ions in x/y/z direction
+! electrons to beam ions  in x/y/z direction
       real :: rtempdxi = 1.0, rtempdyi = 1.0, rtempdzi = 1.0
 !
 ! Initial Ion Density Parameters:

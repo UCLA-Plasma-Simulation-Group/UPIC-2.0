@@ -14,7 +14,7 @@
 ! PPPRSTOR3L restores particle coordinates from ppbuff
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 15, 2018
+! update: april 17, 2018
 !-----------------------------------------------------------------------
       subroutine PPPORDER32LA(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,  &
      &ncll,nclr,noff,nyzp,idimp,nppmx,nx,ny,nz,mx,my,mz,mx1,myp1,mzp1,  &
@@ -164,6 +164,7 @@
             endif
          endif
       endif
+! increment counters
       if (ist.gt.0) then
          ncl(ist,l) = ncl(ist,l) + 1
          ih = ih + 1
@@ -1294,16 +1295,16 @@
          if (inside) then
 ! check for periodic boundary conditions
             dx = ppbuff(1,j+ncoff,ks(ii))
-            if (dx.ge.anx) dx = dx - anx
             if (dx.lt.0.0) dx = dx + anx
+            if (dx.ge.anx) dx = dx - anx
             ppart(1,j1,l) = dx
             dy = ppbuff(2,j+ncoff,ks(ii))
-            if (dy.ge.any) dy = dy - any
             if (dy.lt.0.0) dy = dy + any
+            if (dy.ge.any) dy = dy - any
             ppart(2,j1,l) = dy
             dz = ppbuff(3,j+ncoff,ks(ii))
-            if (dz.ge.anz) dz = dz - anz
             if (dz.lt.0.0) dz = dz + anz
+            if (dz.ge.anz) dz = dz - anz
             ppart(3,j1,l) = dz
 ! copy remaining particle data
             do 10 i = 4, idimp
@@ -1317,16 +1318,16 @@
                if (lorr.lt.0) then
 ! check for periodic boundary conditions
                   dx = rbufl(1,j+joff,1)
-                  if (dx.ge.anx) dx = dx - anx
                   if (dx.lt.0.0) dx = dx + anx
+                  if (dx.ge.anx) dx = dx - anx
                   ppart(1,j1,l) = dx
                   dy = rbufl(2,j+joff,1)
-                  if (dy.ge.any) dy = dy - any
                   if (dy.lt.0.0) dy = dy + any
+                  if (dy.ge.any) dy = dy - any
                   ppart(2,j1,l) = dy
                   dz = rbufl(3,j+joff,1)
-                  if (dz.ge.anz) dz = dz - anz
                   if (dz.lt.0.0) dz = dz + anz
+                  if (dz.ge.anz) dz = dz - anz
                   ppart(3,j1,l) = dz
 ! copy remaining particle data
                   do 20 i = 4, idimp
@@ -1336,16 +1337,16 @@
                else if (ks(ii).gt.0) then
 ! check for periodic boundary conditions
                   dx = ppbuff(1,j+ncoff,ks(ii))
-                  if (dx.ge.anx) dx = dx - anx
                   if (dx.lt.0.0) dx = dx + anx
+                  if (dx.ge.anx) dx = dx - anx
                   ppart(1,j1,l) = dx
                   dy = ppbuff(2,j+ncoff,ks(ii))
-                  if (dy.ge.any) dy = dy - any
                   if (dy.lt.0.0) dy = dy + any
+                  if (dy.ge.any) dy = dy - any
                   ppart(2,j1,l) = dy
                   dz = ppbuff(3,j+ncoff,ks(ii))
-                  if (dz.ge.anz) dz = dz - anz
                   if (dz.lt.0.0) dz = dz + anz
+                  if (dz.ge.anz) dz = dz - anz
                   ppart(3,j1,l) = dz
 ! copy remaining particle data
                   do 30 i = 4, idimp
@@ -1359,16 +1360,16 @@
                if (lorr.gt.0) then
 ! check for periodic boundary conditions
                   dx = rbufr(1,j+joff,1)
-                  if (dx.ge.anx) dx = dx - anx
                   if (dx.lt.0.0) dx = dx + anx
+                  if (dx.ge.anx) dx = dx - anx
                   ppart(1,j1,l) = dx
                   dy = rbufr(2,j+joff,1)
-                  if (dy.ge.any) dy = dy - any
                   if (dy.lt.0.0) dy = dy + any
+                  if (dy.ge.any) dy = dy - any
                   ppart(2,j1,l) = dy
                   dz = rbufr(3,j+joff,1)
-                  if (dz.ge.anz) dz = dz - anz
                   if (dz.lt.0.0) dz = dz + anz
+                  if (dz.ge.anz) dz = dz - anz
                   ppart(3,j1,l) = dz
 ! copy remaining particle data
                   do 40 i = 4, idimp
@@ -1379,16 +1380,16 @@
                   if (ky.gt.1) then
 ! check for periodic boundary conditions
                      dx = ppbuff(1,j+ncoff,ks(ii))
-                     if (dx.ge.anx) dx = dx - anx
                      if (dx.lt.0.0) dx = dx + anx
+                     if (dx.ge.anx) dx = dx - anx
                      ppart(1,j1,l) = dx
                      dy = ppbuff(2,j+ncoff,ks(ii))
-                     if (dy.ge.any) dy = dy - any
                      if (dy.lt.0.0) dy = dy + any
+                     if (dy.ge.any) dy = dy - any
                      ppart(2,j1,l) = dy
                      dz = ppbuff(3,j+ncoff,ks(ii))
-                     if (dz.ge.anz) dz = dz - anz
                      if (dz.lt.0.0) dz = dz + anz
+                     if (dz.ge.anz) dz = dz - anz
                      ppart(3,j1,l) = dz
 ! copy remaining particle data
                      do 50 i = 4, idimp
@@ -1402,16 +1403,16 @@
               if ((ii.ge.18).and.(ii.le.20)) then
 ! check for periodic boundary conditions
                   dx = rbufl(1,j+koff,2)
-                  if (dx.ge.anx) dx = dx - anx
                   if (dx.lt.0.0) dx = dx + anx
+                  if (dx.ge.anx) dx = dx - anx
                   ppart(1,j1,l) = dx
                   dy = rbufl(2,j+koff,2)
-                  if (dy.ge.any) dy = dy - any
                   if (dy.lt.0.0) dy = dy + any
+                  if (dy.ge.any) dy = dy - any
                   ppart(2,j1,l) = dy
                   dz = rbufl(3,j+koff,2)
-                  if (dz.ge.anz) dz = dz - anz
                   if (dz.lt.0.0) dz = dz + anz
+                  if (dz.ge.anz) dz = dz - anz
                   ppart(3,j1,l) = dz
 ! copy remaining particle data
                   do 60 i = 4, idimp
@@ -1421,16 +1422,16 @@
                   if (ky.lt.myp1) then
 ! check for periodic boundary conditions
                      dx = rbufl(1,j+koff,2)
-                     if (dx.ge.anx) dx = dx - anx
                      if (dx.lt.0.0) dx = dx + anx
+                     if (dx.ge.anx) dx = dx - anx
                      ppart(1,j1,l) = dx
                      dy = rbufl(2,j+koff,2)
-                     if (dy.ge.any) dy = dy - any
                      if (dy.lt.0.0) dy = dy + any
+                     if (dy.ge.any) dy = dy - any
                      ppart(2,j1,l) = dy
                      dz = rbufl(3,j+koff,2)
-                     if (dz.ge.anz) dz = dz - anz
                      if (dz.lt.0.0) dz = dz + anz
+                     if (dz.ge.anz) dz = dz - anz
                      ppart(3,j1,l) = dz
 ! copy remaining particle data
                      do 70 i = 4, idimp
@@ -1441,16 +1442,16 @@
                   if (ky.gt.1) then
 ! check for periodic boundary conditions
                      dx = rbufl(1,j+koff,2)
-                     if (dx.ge.anx) dx = dx - anx
                      if (dx.lt.0.0) dx = dx + anx
+                     if (dx.ge.anx) dx = dx - anx
                      ppart(1,j1,l) = dx
                      dy = rbufl(2,j+koff,2)
-                     if (dy.ge.any) dy = dy - any
                      if (dy.lt.0.0) dy = dy + any
+                     if (dy.ge.any) dy = dy - any
                      ppart(2,j1,l) = dy
                      dz = rbufl(3,j+koff,2)
-                     if (dz.ge.anz) dz = dz - anz
                      if (dz.lt.0.0) dz = dz + anz
+                     if (dz.ge.anz) dz = dz - anz
                      ppart(3,j1,l) = dz
 ! copy remaining particle data
                      do 80 i = 4, idimp
@@ -1462,16 +1463,16 @@
                   if ((ky.gt.1).and.(ky.lt.myp1)) then
 ! check for periodic boundary conditions
                      dx = ppbuff(1,j+ncoff,ks(ii))
-                     if (dx.ge.anx) dx = dx - anx
                      if (dx.lt.0.0) dx = dx + anx
+                     if (dx.ge.anx) dx = dx - anx
                      ppart(1,j1,l) = dx
                      dy = ppbuff(2,j+ncoff,ks(ii))
-                     if (dy.ge.any) dy = dy - any
                      if (dy.lt.0.0) dy = dy + any
+                     if (dy.ge.any) dy = dy - any
                      ppart(2,j1,l) = dy
                      dz = ppbuff(3,j+ncoff,ks(ii))
-                     if (dz.ge.anz) dz = dz - anz
                      if (dz.lt.0.0) dz = dz + anz
+                     if (dz.ge.anz) dz = dz - anz
                      ppart(3,j1,l) = dz
 ! copy remaining particle data
                      do 90 i = 4, idimp
@@ -1485,16 +1486,16 @@
                if ((ii.ge.9).and.(ii.le.11)) then
 ! check for periodic boundary conditions
                   dx = rbufr(1,j+koff,2)
-                  if (dx.ge.anx) dx = dx - anx
                   if (dx.lt.0.0) dx = dx + anx
+                  if (dx.ge.anx) dx = dx - anx
                   ppart(1,j1,l) = dx
                   dy = rbufr(2,j+koff,2)
-                  if (dy.ge.any) dy = dy - any
                   if (dy.lt.0.0) dy = dy + any
+                  if (dy.ge.any) dy = dy - any
                   ppart(2,j1,l) = dy
                   dz = rbufr(3,j+koff,2)
-                  if (dz.ge.anz) dz = dz - anz
                   if (dz.lt.0.0) dz = dz + anz
+                  if (dz.ge.anz) dz = dz - anz
                   ppart(3,j1,l) = dz
 ! copy remaining particle data
                   do 100 i = 4, idimp
@@ -1504,16 +1505,16 @@
                   if (ky.lt.myp1) then
 ! check for periodic boundary conditions
                      dx = rbufr(1,j+koff,2)
-                     if (dx.ge.anx) dx = dx - anx
                      if (dx.lt.0.0) dx = dx + anx
+                     if (dx.ge.anx) dx = dx - anx
                      ppart(1,j1,l) = dx
                      dy = rbufr(2,j+koff,2)
-                     if (dy.ge.any) dy = dy - any
                      if (dy.lt.0.0) dy = dy + any
+                     if (dy.ge.any) dy = dy - any
                      ppart(2,j1,l) = dy
                      dz = rbufr(3,j+koff,2)
-                     if (dz.ge.anz) dz = dz - anz
                      if (dz.lt.0.0) dz = dz + anz
+                     if (dz.ge.anz) dz = dz - anz
                      ppart(3,j1,l) = dz
 ! copy remaining particle data
                      do 110 i = 4, idimp
@@ -1524,16 +1525,16 @@
                   if (ky.gt.1) then
 ! check for periodic boundary conditions
                      dx = rbufr(1,j+koff,2)
-                     if (dx.ge.anx) dx = dx - anx
                      if (dx.lt.0.0) dx = dx + anx
+                     if (dx.ge.anx) dx = dx - anx
                      ppart(1,j1,l) = dx
                      dy = rbufr(2,j+koff,2)
-                     if (dy.ge.any) dy = dy - any
                      if (dy.lt.0.0) dy = dy + any
+                     if (dy.ge.any) dy = dy - any
                      ppart(2,j1,l) = dy
                      dz = rbufr(3,j+koff,2)
-                     if (dz.ge.anz) dz = dz - anz
                      if (dz.lt.0.0) dz = dz + anz
+                     if (dz.ge.anz) dz = dz - anz
                      ppart(3,j1,l) = dz
 ! copy remaining particle data
                      do 120 i = 4, idimp
@@ -1545,16 +1546,16 @@
                   if ((ky.gt.1).and.(ky.lt.myp1)) then
 ! check for periodic boundary conditions
                      dx = ppbuff(1,j+ncoff,ks(ii))
-                     if (dx.ge.anx) dx = dx - anx
                      if (dx.lt.0.0) dx = dx + anx
+                     if (dx.ge.anx) dx = dx - anx
                      ppart(1,j1,l) = dx
                      dy = ppbuff(2,j+ncoff,ks(ii))
-                     if (dy.ge.any) dy = dy - any
                      if (dy.lt.0.0) dy = dy + any
+                     if (dy.ge.any) dy = dy - any
                      ppart(2,j1,l) = dy
                      dz = ppbuff(3,j+ncoff,ks(ii))
-                     if (dz.ge.anz) dz = dz - anz
                      if (dz.lt.0.0) dz = dz + anz
+                     if (dz.ge.anz) dz = dz - anz
                      ppart(3,j1,l) = dz
 ! copy remaining particle data
                      do 130 i = 4, idimp
