@@ -190,6 +190,11 @@
 !
 ! start timing initialization
       call dtimer(dtime,itime,-1)
+!   
+! nvp = number of MPI ranks
+! initialize for distributed memory parallel processing
+      call PPINIT2(idproc,nvp)
+      kstrt = idproc + 1
 !
       irc = 0
 ! nvpp = number of shared memory nodes (0=default)
@@ -201,11 +206,6 @@
 ! initialize for shared memory parallel processing
       call INIT_OMP(nvpp)
 !   
-! nvp = number of MPI ranks
-! initialize for distributed memory parallel processing
-      call PPINIT2(idproc,nvp)
-      kstrt = idproc + 1
-!
 ! read namelists
       if (kstrt==1) then
 ! override default input data
@@ -475,6 +475,7 @@
             endif
 ! beam ions
             if (npxyzbi > 0.0d0) then
+               nps = nppi + 1
 ! calculates initial ion co-ordinates with uniform density and
 ! velocities or momenta
 !              call wmpdistr3(part,edges,nppi,vtdxi,vtdyi,vtdzi,vdxi,   &
@@ -1583,7 +1584,7 @@
      &indx,indy,indz,kstrt,nvpy,nvpz,kxyp,kyp,kyzp,kzp,ny,nz,mterf,ierr)
 !
 ! add constant to magnetic field with OpenMP: updates bxyze
-!     if (omt > 0.0) call mpbaddext2(bxyze,nyp,tfield,omx,omy,omz,nx)
+      if (omt > 0.0) call mpbaddext3(bxyze,nyzp,tfield,omx,omy,omz,nx)
 !
 ! copy guard cells with OpenMP: updates fxyze, bxyze
       call wmpncguard3(fxyze,nyzp,tguard,nx,kstrt,nvpy,nvpz)

@@ -158,6 +158,11 @@
 !
 ! start timing initialization
       call dtimer(dtime,itime,-1)
+!   
+! nvp = number of MPI ranks
+! initialize for distributed memory parallel processing
+      call PPINIT2(idproc,nvp)
+      kstrt = idproc + 1
 !
       irc = 0
 ! nvpp = number of shared memory nodes (0=default)
@@ -169,11 +174,6 @@
 ! initialize for shared memory parallel processing
       call INIT_OMP(nvpp)
 !   
-! nvp = number of MPI ranks
-! initialize for distributed memory parallel processing
-      call PPINIT2(idproc,nvp)
-      kstrt = idproc + 1
-!
 ! read namelists
       if (kstrt==1) then
          call readnml3(iuin)
@@ -436,6 +436,7 @@
             endif
 ! beam ions
             if (npxyzbi > 0.0d0) then
+               nps = nppi + 1
 ! calculates initial ion co-ordinates and velocities with
 ! uniform density and maxwellian velocity with drift
 !              call mpdistr3(part,edges,nppi,vtdxi,vtdyi,vtdzi,vdxi,vdyi&
@@ -1150,8 +1151,6 @@
                   fmsi = 0.0
                   call dtimer(dtime,itime,1)
                   tdiag = tdiag + real(dtime)
-                  call wmprofx3(pparti,fmsi,kipic,noff,ci,tdiag,npro,mx,&
-     &my,mz,mx1,myp1,relativity)
                   call wmgprofx3(pparti,fxyze,fmsi,kipic,noff,nyzp,qbme,&
      &dt,ci,tdiag,npro,nx,mx,my,mz,mx1,myp1,relativity)
                   fmsi = rmass*fmsi
