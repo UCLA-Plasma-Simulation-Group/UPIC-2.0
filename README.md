@@ -4,14 +4,14 @@ BEPS2 and BEPS3
 by Viktor K. Decyk, UCLA  
 Copyright 1994-2018, Regents of the University of California
 
-These codes are part of the UPIC 2.0.3 Framework.  The primary purpose
+These codes are part of the UPIC 2.0.4 Framework.  The primary purpose
 of this framework is to provide trusted components for building and
 customizing parallel Particle-in-Cell codes for plasma simulation.
 The framework provides libraries as well as reference
 applications illustrating their use.  The libraries are designed to
 work with up to 3 levels of parallelization (using MPI for distributed
-memory, OpenMP for shared memory, local vectorization).  Currently only
-the first two are supported.  The reference applications are designed to
+memory, OpenMP for shared memory, local vectorization). 
+The reference applications are designed to
 provide basic functionality common to many PIC codes, and are intended
 to be customized and specialized by users for specific applications.
 Currently, only spectral field solvers supported, but the particle
