@@ -19,7 +19,7 @@
 !                leaving each tile
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 15, 2018
+! update: april 30, 2018
 !-----------------------------------------------------------------------
       subroutine PPGBPPUSH32L(ppart,fxyz,bxyz,kpic,noff,nyzp,qbm,dt,dtc,&
      &ek,idimp,nppmx,nx,ny,nz,mx,my,mz,nxv,nypmx,nzpmx,mx1,myp1,mxyzp1, &
@@ -133,8 +133,8 @@
       real rot1, rot2, rot3, rot4, rot5, rot6, rot7, rot8, rot9
       real x, y, z
       real sfxyz, sbxyz
-      dimension sfxyz(3,MXV,MYV,MZV), sbxyz(3,MXV,MYV,MZV)
-!     dimension sfxyz(3,mx+1,my+1,mz+1), sbxyz(3,mx+1,my+1,mz+1)
+!     dimension sfxyz(3,MXV,MYV,MZV), sbxyz(3,MXV,MYV,MZV)
+      dimension sfxyz(3,mx+1,my+1,mz+1), sbxyz(3,mx+1,my+1,mz+1)
       double precision sum1, sum2
       mxyp1 = mx1*myp1
       qtmh = 0.5*qbm*dt
@@ -458,8 +458,8 @@
       real qtmh, rot1, rot2, rot3, rot4, rot5, rot6, rot7, rot8, rot9
       real x, y, z
       real sfxyz, sbxyz
-      dimension sfxyz(3,MXV,MYV,MZV), sbxyz(3,MXV,MYV,MZV)
-!     dimension sfxyz(3,mx+1,my+1,mz+1), sbxyz(3,mx+1,my+1,mz+1)
+!     dimension sfxyz(3,MXV,MYV,MZV), sbxyz(3,MXV,MYV,MZV)
+      dimension sfxyz(3,mx+1,my+1,mz+1), sbxyz(3,mx+1,my+1,mz+1)
       double precision sum1, sum2
       mxyp1 = mx1*myp1
       qtmh = 0.5*qbm*dt
@@ -817,8 +817,8 @@
       real rot1, rot2, rot3, rot4, rot5, rot6, rot7, rot8, rot9, dtg
       real x, y, z
       real sfxyz, sbxyz
-      dimension sfxyz(3,MXV,MYV,MZV), sbxyz(3,MXV,MYV,MZV)
-!     dimension sfxyz(3,mx+1,my+1,mz+1), sbxyz(3,mx+1,my+1,mz+1)
+!     dimension sfxyz(3,MXV,MYV,MZV), sbxyz(3,MXV,MYV,MZV)
+      dimension sfxyz(3,mx+1,my+1,mz+1), sbxyz(3,mx+1,my+1,mz+1)
       double precision sum1, sum2
       mxyp1 = mx1*myp1
       qtmh = 0.5*qbm*dt
@@ -1156,8 +1156,8 @@
       real rot1, rot2, rot3, rot4, rot5, rot6, rot7, rot8, rot9, dtg
       real qtmh, ci2, x, y, z
       real sfxyz, sbxyz
-      dimension sfxyz(3,MXV,MYV,MZV), sbxyz(3,MXV,MYV,MZV)
-!     dimension sfxyz(3,mx+1,my+1,mz+1), sbxyz(3,mx+1,my+1,mz+1)
+!     dimension sfxyz(3,MXV,MYV,MZV), sbxyz(3,MXV,MYV,MZV)
+      dimension sfxyz(3,mx+1,my+1,mz+1), sbxyz(3,mx+1,my+1,mz+1)
       double precision sum1, sum2
       mxyp1 = mx1*myp1
       qtmh = 0.5*qbm*dt

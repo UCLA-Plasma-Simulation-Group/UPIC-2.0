@@ -3,19 +3,19 @@
 ! written by Viktor K. Decyk, UCLA
       program mpdbeps3
       use in3
-      use modmpinit3
-      use modmppush3
-      use modmpbpush3
-      use modmpcurd3
-      use modmpdpush3
-      use modmpfield3
-      use mpdiag3
+      use minit3
+      use mpush3
+      use mbpush3
+      use mcurd3
+      use mdpush3
+      use mfield3
+      use mdiag3
       use mppmod3
       use omplib
       use ompplib3
-      use mpsimul3
-      use mpbsimul3
-      use mpdsimul3
+      use f3
+      use fb3
+      use fd3
       implicit none
 !
 ! idimp = number of particle coordinates = 6
@@ -29,7 +29,8 @@
       real :: wke = 0.0, wki = 0.0, we = 0.0, wf = 0.0, wb = 0.0
       real :: zero = 0.0
 ! plist = (true,false) = list of particles leaving tiles found in push
-      logical :: plist = .true.
+!     logical :: plist = .true.
+      logical :: plist = .false.
 !
 ! declare scalars for standard code
       integer :: k, n
@@ -62,7 +63,7 @@
       integer :: iur = 17, iur0 = 27, iscr = 99
       integer :: iua = 13, iuet = 14, iub = 15
       integer :: iuje = 21, iufe = 23, iuve = 25, iut = 28, iuse = 29
-      integer :: iudi = 20, iuji = 21, iufi = 24, iuvi = 26, iusi = 30
+      integer :: iudi = 20, iuji = 22, iufi = 24, iuvi = 26, iusi = 30
 ! dimensions for fourier data
       integer :: modesxpd, modesz2de, modesz2p, modesz2el, modesz2di
       integer :: modesz2a, modesz2et, modesz2b, modesz2je, modesz2ji
@@ -88,7 +89,7 @@
       real, dimension(:,:,:,:), allocatable :: fxyze, exyze, bxyze
 ! qt = scalar charge density field array in fourier space
       complex, dimension(:,:,:), allocatable :: qt
-! cut = scalar charge density field arrays in fourier space
+! cut = vector current density field arrays in fourier space
 ! dcut = vector acceleration density in fourier space
 ! exyzt = vector transverse electric field in fourier space
 ! amut = tensor momentum flux in fourier space
@@ -186,7 +187,7 @@
 ! declare and initialize timing data
       real :: time
       integer, dimension(4) :: itime, ltime
-      real :: tinit = 0.0, tloop = 0.0, tscr = 0.0
+      real :: tinit = 0.0, tloop = 0.0
       real :: tdpost = 0.0, tguard = 0.0, tfield = 0.0
       real :: tdjpost = 0.0, tdcjpost = 0.0, tpush = 0.0, tsort = 0.0
       real :: tmov = 0.0, tfmov = 0.0, tdiag = 0.0
@@ -195,7 +196,7 @@
 !
 ! start timing initialization
       call dtimer(dtime,itime,-1)
-!
+!   
 ! nvp = number of MPI ranks
 ! initialize for distributed memory parallel processing
       call PPINIT2(idproc,nvp)
@@ -203,14 +204,14 @@
 !
       irc = 0
 ! nvpp = number of shared memory nodes (0=default)
-      nvpp = 0
+!     nvpp = 0
 !     if (kstrt==1) then
 !        write (*,*) 'enter number of nodes:'
 !        read (5,*) nvpp
 !     endif
 ! initialize for shared memory parallel processing
       call INIT_OMP(nvpp)
-!   
+! 
 ! read namelists
       if (kstrt==1) then
 ! override default input data
@@ -303,7 +304,7 @@
       endif
 !
 ! check for unimplemented features
-      if ((plist).and.(ipbc.ne.1)) then
+      if ((plist).and.(ipbc /= 1)) then
          if (kstrt==1) then
             write (*,*) 'ipbc /= 1 and plist = .true. not yet supported'
             write (*,*) 'plist reset to .false.'
@@ -428,9 +429,9 @@
                call PPEXIT(); stop
             endif
          endif
-! more electrons to correct nod
-         call ipmove3(part,edges,npp,iholep,ny,nz,tmov,kstrt,nvpy,nvpz,1&
-     &,ierr)
+! move electrons to correct node
+         call ipmove3(part,edges,npp,iholep,ny,nz,tinit,kstrt,nvpy,nvpz,&
+     &1,ierr)
          if (ierr /= 0) then
             call PPEXIT(); stop
          endif
@@ -448,21 +449,22 @@
          allocate(ihole(2,ntmaxp+1,mxyzp1))
 !
 ! copy ordered electron data for OpenMP: updates ppart and kpic
-         call mpmovin3(part,ppart,kpic,npp,noff,mx,my,mz,mx1,myp1,irc)
+         call mpmovin3p(part,ppart,kpic,npp,noff,mx,my,mz,mx1,myp1,irc)
 !
 ! sanity check for electrons
          call mpcheck3(ppart,kpic,noff,nyzp,nx,mx,my,mz,mx1,myp1,irc)
 !
 ! initialize background charge density: updates qi
          if (movion==0) then
-            qi = 0.0
-            call mppost3(ppart,qi,kpic,noff,-qme,tscr,mx,my,mz,mx1,myp1)
-            call wmpaguard3(qi,nyzp,tscr,nx,kstrt,nvpy,nvpz)
+            call mpset_pszero3(qi,tinit,mx,my,mz,mx1,myp1,mzp1)
+            call mppost3(ppart,qi,kpic,noff,-qme,tinit,mx,my,mz,mx1,myp1&
+     &,popt)
+            call wmpaguard3(qi,nyzp,tinit,nx,kstrt,nvpy,nvpz)
          endif
 !
 ! initialize ions
          if (movion==1) then
-            cui = 0.0
+            call mpset_pvzero3(cui,tinit,mx,my,mz,mx1,myp1,mzp1)
             nps = 1
             nppi = 0
 ! background ions
@@ -491,7 +493,8 @@
 ! calculates initial ion co-ordinates with uniform density and
 ! velocities or momenta
 !              call wmpdistr3(part,edges,nppi,vtdxi,vtdyi,vtdzi,vdxi,   &
-!    &vdyi,vdzi,ci,npxbi,npybi,npzbi,nx,ny,nz,kstrt,ipbc,relativity,ierr)
+!    &vdyi,vdzi,ci,npxbi,npybi,npzbi,nx,ny,nz,kstrt,ipbc,relativity,ierr&
+!    &)
 ! calculates initial ion co-ordinates with various density profiles
                call mpfdistr3(part,nppi,ampdxi,scaledxi,shiftdxi,ampdyi,&
      &scaledyi,shiftdyi,ampdzi,scaledzi,shiftdzi,npxbi,npybi,npzbi,nx,ny&
@@ -501,7 +504,7 @@
                   call wmpvdistr3(part,nps,nppi,vtdxi,vtdyi,vtdzi,vdxi, &
      &vdyi,vdzi,ci,npxbi,npybi,npzbi,kstrt,nvpy,nvpz,relativity,ierr)
                endif
-! check for background ion initialization error
+! check for beam ion initialization error
                if (ierr /= 0) then
                   call PPEXIT(); stop
                endif
@@ -526,8 +529,8 @@
                   call PPEXIT(); stop
                endif
             endif
-! more ions to correct node
-            call ipmove3(part,edges,nppi,iholep,ny,nz,tmov,kstrt,nvpy,  &
+! move ions to correct node
+            call ipmove3(part,edges,nppi,iholep,ny,nz,tinit,kstrt,nvpy, &
      &nvpz,1,ierr)
             if (ierr /= 0) then
                call PPEXIT(); stop
@@ -548,8 +551,8 @@
                allocate(ihole(2,ntmaxp+1,mxyzp1))
             endif
 ! copy ordered ion data for OpenMP: updates pparti and kipic
-            call mpmovin3(part,pparti,kipic,nppi,noff,mx,my,mz,mx1,myp1,&
-     &irc)
+            call mpmovin3p(part,pparti,kipic,nppi,noff,mx,my,mz,mx1,myp1&
+     &,irc)
 !
 ! sanity check for ions
             call mpcheck3(pparti,kipic,noff,nyzp,nx,mx,my,mz,mx1,myp1,  &
@@ -557,21 +560,22 @@
          endif
 !
 ! find maximum and minimum initial electron density
-         qe = 0.0
-         call mppost3(ppart,qe,kpic,noff,qme,tscr,mx,my,mz,mx1,myp1)
-         call wmpaguard3(qe,nyzp,tscr,nx,kstrt,nvpy,nvpz)
+         call mpset_pszero3(qe,tinit,mx,my,mz,mx1,myp1,mzp1)
+         call mppost3(ppart,qe,kpic,noff,qme,tinit,mx,my,mz,mx1,myp1,   &
+     &popt)
+         call wmpaguard3(qe,nyzp,tinit,nx,kstrt,nvpy,nvpz)
          if (movion==1) then
-            qi = 0.0
-            call mppost3(pparti,qi,kipic,noff,qmi,tscr,mx,my,mz,mx1,myp1&
-     &)
-            call wmpaguard3(qi,nyzp,tscr,nx,kstrt,nvpy,nvpz)
+            call mpset_pszero3(qi,tinit,mx,my,mz,mx1,myp1,mzp1)
+            call mppost3(pparti,qi,kipic,noff,qmi,tinit,mx,my,mz,mx1,   &
+     &myp1,popt)
+            call wmpaguard3(qi,nyzp,tinit,nx,kstrt,nvpy,nvpz)
             call mpfwptminx3(qe,qi,nyzp,qbme,qbmi,wpmax,wpmin,nx)
          else
             call mpfwpminx3(qe,nyzp,qbme,wpmax,wpmin,nx)
          endif
          wtot(1) = wpmax
          wtot(2) = -wpmin
-         call PPDMAX(wtot,work,2)
+         call mpdmax(wtot(:2),tinit)
          wpmax = wtot(1)
          wpmin = -wtot(2)
          wpm = 0.5*(wpmax + wpmin)*affp
@@ -581,7 +585,7 @@
          q2m0 = wpm/affp
 !
 ! initialize darwin electric field
-         cus = 0.0
+         call mpset_pvzero3(cus,tinit,mx,my,mz,mx1,myp1,mzp1)
 !
 ! restart to continue a run which was interrupted
       else if (nustrt==2) then
@@ -591,10 +595,12 @@
 ! start a new run with data from a previous run
       else if (nustrt==0) then
 ! read in basic restart file for electrostatic code
-         if (movion==1) cui = 0.0
+         if (movion==1) then
+            call mpset_pvzero3(cui,tinit,mx,my,mz,mx1,myp1,mzp1)
+         endif
 ! read first part of data:
 ! updates ntime, ntime0, part, npp, kpic, nppmx, ierr
-         call bread_restart3a(part,kpic,noff,tdiag,kstrt,iur0,iscr,ntime&
+         call bread_restart3a(part,kpic,noff,tinit,kstrt,iur0,iscr,ntime&
      &,ntime0,npp,nppmx,mx1,myp1,ierr)
          if (ierr /= 0) then
             call PPEXIT(); stop
@@ -608,7 +614,7 @@
          allocate(ihole(2,ntmaxp+1,mxyzp1))
 ! read second part of data:
 ! updates ppart, kpic, part, nppi, kipic, nppmx, ierr
-         call bread_restart3b(part,ppart,kpic,kipic,noff,nyzp,tdiag,    &
+         call bread_restart3b(part,ppart,kpic,kipic,noff,nyzp,tinit,    &
      &kstrt,iur0,iscr,npp,nppi,nppmx,nx,mx1,myp1,ierr)
          if (ierr /= 0) then
             call PPEXIT(); stop
@@ -625,13 +631,13 @@
             endif
          endif
 ! read third part of data: updates pparti, kipic, qi, ierr
-         call bread_restart3c(part,pparti,kipic,noff,nyzp,qi,tdiag,kstrt&
+         call bread_restart3c(part,pparti,kipic,noff,nyzp,qi,tinit,kstrt&
      &,iur0,ntime,ntime0,nppi,nx,mx1,myp1,ierr)
          if (ierr /= 0) then
             call PPEXIT(); stop
          endif
 ! read in basic restart file for darwin code: updates cus, wpm, q2m0
-         call bread_drestart3(cus,wpm,q2m0,tdiag,kstrt,iur0,ierr)
+         call bread_drestart3(cus,wpm,q2m0,tinit,kstrt,iur0,ierr)
          if (ierr /= 0) then
             call PPEXIT(); stop
          endif
@@ -642,9 +648,9 @@
      &nvpz)
 !
 ! initialize longitudinal electric field
-      fxyze = 0.0
+      call mpset_pvzero3(fxyze,tinit,mx,my,mz,mx1,myp1,mzp1)
 !
-! set magnitude of external transverse magnetic field
+! set magnitude of external magnetic field
       omt = sqrt(omx*omx + omy*omy + omz*omz)
 !
 ! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
@@ -912,12 +918,12 @@
          if ((ndv==1).or.(ndv==3)) then
 ! estimate maximum velocity or momentum
             ws = 0.0
-            if (npxyz.gt.0.0d0) then
+            if (npxyz > 0.0d0) then
                ws = 4.0*vtx+abs(vx0)
                ws = max(ws,4.0*vty+abs(vy0))
                ws = max(ws,4.0*vtz+abs(vz0))
             endif
-            if (npxyzb.gt.0.0d0) then
+            if (npxyzb > 0.0d0) then
                ws = max(ws,4.0*vtdx+abs(vdx))
                ws = max(ws,4.0*vtdy+abs(vdy))
                ws = max(ws,4.0*vtdz+abs(vdz))
@@ -959,12 +965,12 @@
                allocate(fvi(nmv21+1,nfvd),fei(nmv21+1,nfed))
 ! estimate maximum ion velocity or momentum
                ws = 0.0
-               if (npxyzi.gt.0.0d0) then
+               if (npxyzi > 0.0d0) then
                    ws = 4.0*vtxi+abs(vxi0)
                    ws = max(ws,4.0*vtyi+abs(vyi0))
                    ws = max(ws,4.0*vtzi+abs(vzi0))
                endif
-               if (npxyzbi.gt.0.0d0) then
+               if (npxyzbi > 0.0d0) then
                   ws = max(ws,4.0*vtdxi+abs(vdxi))
                   ws = max(ws,4.0*vtdyi+abs(vdyi))
                   ws = max(ws,4.0*vtdzi+abs(vdzi))
@@ -1013,12 +1019,12 @@
 ! estimate maximum electron velocity or momentum
             if (nst==3) then
                ws = 0.0
-               if (npxyz.gt.0.0d0) then
+               if (npxyz > 0.0d0) then
                   ws = 4.0*vtx+abs(vx0)
                   ws = max(ws,4.0*vty+abs(vy0))
                   ws = max(ws,4.0*vtz+abs(vz0))
                endif
-               if (npxyzb.gt.0.0d0) then
+               if (npxyzb > 0.0d0) then
                   ws = max(ws,4.0*vtdx+abs(vdx))
                   ws = max(ws,4.0*vtdy+abs(vdy))
                   ws = max(ws,4.0*vtdz+abs(vdz))
@@ -1032,12 +1038,12 @@
 ! estimate maximum ion velocity or momentum
             if (nst==3) then
                ws = 0.0
-               if (npxyzi.gt.0.0d0) then
+               if (npxyzi > 0.0d0) then
                   ws = 4.0*vtxi+abs(vxi0)
                   ws = max(ws,4.0*vtyi+abs(vyi0))
                   ws = max(ws,4.0*vtzi+abs(vzi0))
                endif
-               if (npxyzbi.gt.0.0d0) then
+               if (npxyzbi > 0.0d0) then
                   ws = max(ws,4.0*vtdxi+abs(vdxi))
                   ws = max(ws,4.0*vtdyi+abs(vdyi))
                   ws = max(ws,4.0*vtzi+abs(vzi0))
@@ -1046,7 +1052,7 @@
          endif
 ! electron or ion trajectories
          if ((ndt==1).or.(ndt==2)) then
-            if (nprobt.gt.16777215) then
+            if (nprobt > 16777215) then
                write(*,*) 'nprobt overflow = ', nprobt
                call PPEXIT(); stop
             endif
@@ -1091,18 +1097,18 @@
          if (js==0) nyb = nyb + 1
          if (ks==0) nzb = nzb + 1
          itot(1) = nyb; itot(2) = nzb
-         call mpimax(itot(:2),tdiag)
+         call mpimax(itot(:2),tinit)
          nybmx = itot(1); nzbmx = itot(2)
 ! electron phase space diagnostic
          if ((nds==1).or.(nds==3)) then
 ! estimate maximum electron velocity or momentum
             ws = 0.0
-            if (npxyz.gt.0.0d0) then
+            if (npxyz > 0.0d0) then
                ws = 4.0*vtx+abs(vx0)
                ws = max(ws,4.0*vty+abs(vy0))
                ws = max(ws,4.0*vtz+abs(vz0))
             endif
-            if (npxyzb.gt.0.0d0) then
+            if (npxyzb > 0.0d0) then
                ws = max(ws,4.0*vtdx+abs(vdx))
                ws = max(ws,4.0*vtdy+abs(vdy))
                ws = max(ws,4.0*vtdz+abs(vdz))
@@ -1128,12 +1134,12 @@
             if ((nds==2).or.(nds==3)) then
 ! estimate maximum ion velocity or momentum
                ws = 0.0
-               if (npxyzi.gt.0.0d0) then
+               if (npxyzi > 0.0d0) then
                    ws = 4.0*vtxi+abs(vxi0)
                    ws = max(ws,4.0*vtyi+abs(vyi0))
                    ws = max(ws,4.0*vtzi+abs(vzi0))
                endif
-               if (npxyzbi.gt.0.0d0) then
+               if (npxyzbi > 0.0d0) then
                   ws = max(ws,4.0*vtdxi+abs(vdxi))
                   ws = max(ws,4.0*vtdyi+abs(vdyi))
                   ws = max(ws,4.0*vtdzi+abs(vdzi))
@@ -1159,6 +1165,7 @@
 !
 ! initialization time
       call dtimer(dtime,itime,1)
+      tinit = 0.0
       tinit = tinit + real(dtime)
 ! start timing loop
       call dtimer(dtime,ltime,-1)
@@ -1169,15 +1176,19 @@
 !
       do n = 1, nloop 
       ntime = n - 1
-      if (kstrt==1) write (iuot,*) 'ntime = ', ntime
+!
+! print time step
+      if (kstrt==1) then
+         if (ntw > 0) then
+            it = ntime/ntw
+            if (ntime==ntw*it) write (iuot,*) 'ntime = ', ntime
+         endif
+      endif
 !
 ! deposit electron current with OpenMP: updates cue
-      call dtimer(dtime,itime,-1)
-      cue = 0.0
-      call dtimer(dtime,itime,1)
-      tdjpost = tdjpost + real(dtime)
+      call mpset_pvzero3(cue,tdjpost,mx,my,mz,mx1,myp1,mzp1)
       call wmpdjpost3(ppart,cue,kpic,ncl,ihole,noff,nyzp,qme,zero,ci,   &
-     &tdjpost,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,relativity,plist,irc)
+     &tdjpost,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,popt,relativity,plist,irc)
 ! add guard cells with OpenMP: updates cue
       call wmpnacguard3(cue,nyzp,tguard,nx,kstrt,nvpy,nvpz)
 !
@@ -1192,22 +1203,17 @@
 ! deposit ion current with OpenMP:
       if (movion==1) then
 ! updates cui
-         call dtimer(dtime,itime,-1)
-         cui = 0.0
-         call dtimer(dtime,itime,1)
-         tdjpost = tdjpost + real(dtime)
+         call mpset_pvzero3(cui,tdjpost,mx,my,mz,mx1,myp1,mzp1)
          call wmpdjpost3(pparti,cui,kipic,ncl,ihole,noff,nyzp,qmi,zero, &
-     &ci,tdjpost,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,relativity,plist,irc)
+     &ci,tdjpost,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,popt,relativity,plist, &
+     &irc)
 ! add guard cells with OpenMP: updates cui
          call wmpnacguard3(cui,nyzp,tguard,nx,kstrt,nvpy,nvpz)
       endif
 !
 ! deposit electron charge with OpenMP: updates qe
-      call dtimer(dtime,itime,-1)
-      qe = 0.0
-      call dtimer(dtime,itime,1)
-      tdpost = tdpost + real(dtime)
-      call mppost3(ppart,qe,kpic,noff,qme,tdpost,mx,my,mz,mx1,myp1)
+      call mpset_pszero3(qe,tdpost,mx,my,mz,mx1,myp1,mzp1)
+      call mppost3(ppart,qe,kpic,noff,qme,tdpost,mx,my,mz,mx1,myp1,popt)
 ! add guard cells with OpenMP: updates qe
       call wmpaguard3(qe,nyzp,tguard,nx,kstrt,nvpy,nvpz)
 !
@@ -1242,11 +1248,9 @@
 !
 ! deposit ion charge with OpenMP: updates qi
       if (movion==1) then
-         call dtimer(dtime,itime,-1)
-         qi = 0.0
-         call dtimer(dtime,itime,1)
-         tdpost = tdpost + real(dtime)
-         call mppost3(pparti,qi,kipic,noff,qmi,tdpost,mx,my,mz,mx1,myp1)
+         call mpset_pszero3(qi,tdpost,mx,my,mz,mx1,myp1,mzp1)
+         call mppost3(pparti,qi,kipic,noff,qmi,tdpost,mx,my,mz,mx1,myp1,&
+     &popt)
 ! add guard cells with OpenMP: updates qi
          call wmpaguard3(qi,nyzp,tguard,nx,kstrt,nvpy,nvpz)
       endif
@@ -1341,12 +1345,10 @@
 !
 ! deposit electron acceleration density and momentum flux with OpenMP:
 ! updates dcu, amu
-      call dtimer(dtime,itime,-1)
-      dcu = 0.0; amu = 0.0
-      call dtimer(dtime,itime,1)
-      tdcjpost = tdcjpost + real(dtime)
+      call mpset_pvzero3(dcu,tdcjpost,mx,my,mz,mx1,myp1,mzp1)
+      call mpset_pvzero3(amu,tdcjpost,mx,my,mz,mx1,myp1,mzp1)
       call wmpgdjpost3(ppart,exyze,bxyze,kpic,noff,nyzp,dcu,amu,qme,qbme&
-     &,dt,ci,tdcjpost,nx,mx,my,mz,mx1,myp1,relativity)
+     &,dt,ci,tdcjpost,nx,mx,my,mz,mx1,myp1,popt,relativity)
 ! add guard cells with OpenMP: updates dcu, amu
       call wmpnacguard3(dcu,nyzp,tguard,nx,kstrt,nvpy,nvpz)
       call wmpnacguard3(amu,nyzp,tguard,nx,kstrt,nvpy,nvpz)
@@ -1354,12 +1356,10 @@
 ! deposit ion acceleration density and momentum flux with OpenMP:
 ! updates dcui, amui
       if (movion==1) then
-         call dtimer(dtime,itime,-1)
-         dcui = 0.0; amui = 0.0
-         call dtimer(dtime,itime,1)
-         tdcjpost = tdcjpost + real(dtime)
+         call mpset_pvzero3(dcui,tdcjpost,mx,my,mz,mx1,myp1,mzp1)
+         call mpset_pvzero3(amui,tdcjpost,mx,my,mz,mx1,myp1,mzp1)
          call wmpgdjpost3(pparti,exyze,bxyze,kipic,noff,nyzp,dcui,amui, &
-     &qmi,qbmi,dt,ci,tdcjpost,nx,mx,my,mz,mx1,myp1,relativity)
+     &qmi,qbmi,dt,ci,tdcjpost,nx,mx,my,mz,mx1,myp1,popt,relativity)
 ! add guard cells with OpenMP: updates dcui, amui
          call wmpnacguard3(dcui,nyzp,tguard,nx,kstrt,nvpy,nvpz)
          call wmpnacguard3(amui,nyzp,tguard,nx,kstrt,nvpy,nvpz)
@@ -1409,12 +1409,11 @@
 !
 ! deposit electron current and acceleration density and momentum flux
 ! with OpenMP: updates cue, dcu, amu
-      call dtimer(dtime,itime,-1)
-      cue = 0.0; dcu = 0.0; amu = 0.0
-      call dtimer(dtime,itime,1)
-      tdcjpost = tdcjpost + real(dtime)
+      call mpset_pvzero3(cue,tdjpost,mx,my,mz,mx1,myp1,mzp1)
+      call mpset_pvzero3(dcu,tdcjpost,mx,my,mz,mx1,myp1,mzp1)
+      call mpset_pvzero3(amu,tdcjpost,mx,my,mz,mx1,myp1,mzp1)
       call wmpgdcjpost3(ppart,exyze,bxyze,kpic,noff,nyzp,cue,dcu,amu,qme&
-     &,qbme,dt,ci,tdcjpost,nx,mx,my,mz,mx1,myp1,relativity)
+     &,qbme,dt,ci,tdcjpost,nx,mx,my,mz,mx1,myp1,popt,relativity)
 ! add guard cells for current, acceleration density, and momentum flux
 ! with OpenMP: updates cue, dcu, amu
       call wmpnacguard3(cue,nyzp,tguard,nx,kstrt,nvpy,nvpz)
@@ -1432,12 +1431,11 @@
 ! deposit ion current and acceleration density and momentum flux
 ! with OpenMP: updates cui, dcui, amui
       if (movion==1) then
-         call dtimer(dtime,itime,-1)
-         cui = 0.0; dcui = 0.0; amui = 0.0
-         call dtimer(dtime,itime,1)
-         tdcjpost = tdcjpost + real(dtime)
+         call mpset_pvzero3(cui,tdjpost,mx,my,mz,mx1,myp1,mzp1)
+         call mpset_pvzero3(dcui,tdcjpost,mx,my,mz,mx1,myp1,mzp1)
+         call mpset_pvzero3(amui,tdcjpost,mx,my,mz,mx1,myp1,mzp1)
          call wmpgdcjpost3(pparti,exyze,bxyze,kipic,noff,nyzp,cui,dcui, &
-     &amui,qmi,qbmi,dt,ci,tdcjpost,nx,mx,my,mz,mx1,myp1,relativity)
+     &amui,qmi,qbmi,dt,ci,tdcjpost,nx,mx,my,mz,mx1,myp1,popt,relativity)
 ! add guard cells for current, acceleration density, and momentum flux
 ! with OpenMP: updates cui, dcui, amui
          call wmpnacguard3(cui,nyzp,tguard,nx,kstrt,nvpy,nvpz)
@@ -1555,6 +1553,7 @@
 !    &,irc)
          endif
       endif
+!
 ! vector potential diagnostic
       if (nta > 0) then
          it = ntime/nta
@@ -1685,10 +1684,7 @@
          if (ntime==ntfm*it) then
 ! calculate electron fluid moments
             if ((ndfm==1).or.(ndfm==3)) then
-               call dtimer(dtime,itime,-1)
-               fmse = 0.0
-               call dtimer(dtime,itime,1)
-               tdiag = tdiag + real(dtime)
+               call mpset_pvzero3(fmse,tdiag,mx,my,mz,mx1,myp1,mzp1)
                call wmgbprofx3(ppart,exyze,bxyze,fmse,kpic,noff,nyzp,   &
      &qbme,dt,ci,tdiag,npro,nx,mx,my,mz,mx1,myp1,relativity)
 ! add guard cells with OpenMP: updates fmse
@@ -1712,10 +1708,7 @@
 ! calculate ion fluid moments
             if (movion==1) then
                if ((ndfm==2).or.(ndfm==3)) then
-                  call dtimer(dtime,itime,-1)
-                  fmsi = 0.0
-                  call dtimer(dtime,itime,1)
-                  tdiag = tdiag + real(dtime)
+                  call mpset_pvzero3(fmsi,tdiag,mx,my,mz,mx1,myp1,mzp1)
                   call wmgbprofx3(pparti,exyze,bxyze,fmsi,kipic,noff,   &
      &nyzp,qbmi,dt,ci,tdiag,npro,nx,mx,my,mz,mx1,myp1,relativity)
                   fmsi = rmass*fmsi
@@ -1825,7 +1818,7 @@
                   else if (ndt==2) then
                      if (movion==1) then
                         call mptraj3(pparti,kipic,partt,tdiag,numtp,ierr&
-    &)
+     &)
                      endif
                   endif
                endif
@@ -1885,7 +1878,8 @@
 ! write test particle diagnostic output: updates ntrec
                   if (kstrt==1) then
                      ws = 0.0
-                     call dafwritefv3(fvmtp,fvtp,fetp,ws,tdiag,iut,ntrec)
+                     call dafwritefv3(fvmtp,fvtp,fetp,ws,tdiag,iut,ntrec&
+     &)
                   endif
                endif
             endif
@@ -1937,15 +1931,15 @@
 ! updates ppart and wke, and possibly ncl, ihole, irc
       wke = 0.0
       call wmpbpush3(ppart,exyze,bxyze,kpic,ncl,ihole,noff,nyzp,qbme,dt,&
-     &dt,ci,wke,tpush,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,relativity,plist, &
-     &irc)
+     &dt,ci,wke,tpush,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,popt,relativity,  &
+     &plist,irc)
 !
 ! reorder electrons by tile with OpenMP and MPI
 ! updates: ppart, kpic, and irc and possibly ncl and ihole
       if (irc==0) then
          call ompmove3(ppart,kpic,ncl,ihole,noff,nyzp,xtras,tsort,tmov, &
      &kstrt,nvpy,nvpz,nx,ny,nz,mx,my,mz,npbmx,nbmaxp,mx1,myp1,mzp1,     &
-     &mxzyp1,plist,irc2)
+     &mxzyp1,popt,plist,irc2)
       else
          irc2(1) = 1; irc2(2) = irc; irc = 0
       endif
@@ -1959,7 +1953,7 @@
             irc2 = 0
             call ompmove3(ppart,kpic,ncl,ihole,noff,nyzp,xtras,tsort,   &
      &tmov,kstrt,nvpy,nvpz,nx,ny,nz,mx,my,mz,npbmx,nbmaxp,mx1,myp1,mzp1,&
-     &mxzyp1,.false.,irc2)
+     &mxzyp1,popt,.false.,irc2)
 ! ppart overflow
          else if (irc2(1)==4) then
 ! restores electron coordinates from ppbuff: updates ppart, ncl
@@ -1973,7 +1967,7 @@
             call mpcopyin3(part,ppart,kpic,irc)
             call ompmove3(ppart,kpic,ncl,ihole,noff,nyzp,xtras,tsort,   &
      &tmov,kstrt,nvpy,nvpz,nx,ny,nz,mx,my,mz,npbmx,nbmaxp,mx1,myp1,mzp1,&
-     &mxzyp1,plist,irc2)
+     &mxzyp1,popt,plist,irc2)
          endif
       enddo
 !
@@ -1987,8 +1981,8 @@
 ! updates pparti and wki, and possibly ncl, ihole, irc
          wki = 0.0
          call wmpbpush3(pparti,exyze,bxyze,kipic,ncl,ihole,noff,nyzp,   &
-     &qbmi,dt,dt,ci,wki,tpush,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,relativity&
-     &,plist,irc)
+     &qbmi,dt,dt,ci,wki,tpush,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,popt,     &
+     &relativity,plist,irc)
          wki = wki*rmass
 !
 ! reorder ions by tile with OpenMP and MPI
@@ -1996,7 +1990,7 @@
          if (irc==0) then
             call ompmove3(pparti,kipic,ncl,ihole,noff,nyzp,xtras,tsort, &
      &tmov,kstrt,nvpy,nvpz,nx,ny,nz,mx,my,mz,npbmx,nbmaxp,mx1,myp1,mzp1,&
-     &mxzyp1,plist,irc2)
+     &mxzyp1,popt,plist,irc2)
          else
             irc2(1) = 1; irc2(2) = irc; irc = 0
          endif
@@ -2010,7 +2004,7 @@
                irc2 = 0
                call ompmove3(pparti,kipic,ncl,ihole,noff,nyzp,xtras,    &
      &tsort,tmov,kstrt,nvpy,nvpz,nx,ny,nz,mx,my,mz,npbmx,nbmaxp,mx1,myp1&
-     &,mzp1,mxzyp1,.false.,irc2)
+     &,mzp1,mxzyp1,popt,.false.,irc2)
 ! pparti overflow
             else if (irc2(1)==4) then
 ! restores ion coordinates from ppbuff: updates pparti, ncl
@@ -2024,7 +2018,7 @@
                call mpcopyin3(part,pparti,kipic,irc)
                call ompmove3(pparti,kipic,ncl,ihole,noff,nyzp,xtras,    &
      &tsort,tmov,kstrt,nvpy,nvpz,nx,ny,nz,mx,my,mz,npbmx,nbmaxp,mx1,myp1&
-     &,mzp1,mxzyp1,plist,irc2)
+     &,mzp1,mxzyp1,popt,plist,irc2)
             endif
          enddo
 !
@@ -2042,16 +2036,16 @@
             dt = -dt
             ws = 0.0
             call wmppush3zf(ppart,kpic,ncl,ihole,noff,nyzp,dt,ci,ws,    &
-     &tpush,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,relativity,plist,irc)
+     &tpush,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,popt,relativity,plist,irc)
             call ompmove3(ppart,kpic,ncl,ihole,noff,nyzp,xtras,tsort,   &
      &tmov,kstrt,nvpy,nvpz,nx,ny,nz,mx,my,mz,npbmx,nbmaxp,mx1,myp1,mzp1,&
-     &mxzyp1,plist,irc2)
+     &mxzyp1,popt,plist,irc2)
             if (movion==1) then
                call wmppush3zf(pparti,kipic,ncl,ihole,noff,nyzp,dt,ci,ws&
-     &,tpush,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,relativity,plist,irc)
+     &,tpush,nx,ny,nz,mx,my,mz,mx1,myp1,ipbc,popt,relativity,plist,irc)
                call ompmove3(pparti,kipic,ncl,ihole,noff,nyzp,xtras,    &
      &tsort,tmov,kstrt,nvpy,nvpz,nx,ny,nz,mx,my,mz,npbmx,nbmaxp,mx1,myp1&
-     &,mzp1,mxzyp1,plist,irc2)
+     &,mzp1,mxzyp1,popt,plist,irc2)
             endif
          endif
       endif
@@ -2105,14 +2099,11 @@
       if (ntr > 0) then
          it = n/ntr
          if (n==ntr*it) then
-            call dtimer(dtime,itime,-1)
 ! write out basic restart file for electrostatic code
             call bwrite_restart3(part,ppart,pparti,qi,kpic,kipic,tdiag, &
      &kstrt,iur,iscr,n,ntime0,irc)
 ! write out basic restart file for darwin code
             call bwrite_drestart3(cus,wpm,q2m0,tdiag,kstrt,iur)
-            call dtimer(dtime,itime,1)
-            tfield = tfield + real(dtime)
          endif
       endif
 !
@@ -2246,7 +2237,7 @@
                ndirec = ndirec - 1
             endif
 ! ion current diagnostic
-            if (ntdi > 0) then
+            if (ntji > 0) then
                njirec = njirec - 1
             endif
          endif
@@ -2255,6 +2246,7 @@
          close(unit=iudm)
 ! close restart files
          call close_restart3(iur,iur0)
+! close output file
          write (iuot,*) ' * * * q.e.d. * * *'
          close(unit=iuot)
       endif

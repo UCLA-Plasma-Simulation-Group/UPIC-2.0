@@ -77,6 +77,37 @@
       end interface
 !
       interface
+         subroutine PGFDISTR2(part,npp,fnx,argx1,argx2,argx3,fny,argy1, &
+     &argy2,argy3,xmin,xmax,ymin,ymax,npx,npy,nx,ny,kstrt,nvp,idimp,    &
+     &npmax,ierr)
+         implicit none
+         integer, intent(in) :: npx, npy, nx, ny, kstrt, nvp
+         integer, intent(in) :: idimp, npmax
+         integer, intent(inout) :: npp, ierr
+         double precision, intent(in) :: argx1, argx2, argx3
+         double precision, intent(in) :: argy1, argy2, argy3
+         real, intent(in) :: xmin, xmax, ymin, ymax
+         real, dimension(idimp,npmax), intent(inout) :: part
+         interface
+            function fnx(argx1,argx2,argx3,intg)
+            implicit none
+            integer, intent(in) :: intg
+            double precision, intent(in) :: argx1, argx2, argx3
+            double precision :: fnx
+            end function
+         end interface
+         interface
+            function fny(argy1,argy2,argy3,intg)
+            implicit none
+            integer, intent(in) :: intg
+            double precision, intent(in) :: argy1, argy2, argy3
+            double precision :: fny
+            end function
+         end interface
+         end subroutine
+      end interface
+!
+      interface
          subroutine PVDISTR2(part,nps,npp,vtx,vty,vdx,vdy,npx,npy,kstrt,&
      &nvp,idimp,npmax,ierr)
          implicit none
@@ -154,6 +185,26 @@
          implicit none
          integer, intent(in) :: ny, kstrt, nvp, idps, ipbc
          integer, intent(inout) :: nyp, noff, nypmx, nypmn
+         double precision, intent(in) :: argy1, argy2, argy3
+         real, dimension(idps), intent(inout) :: edges
+         interface
+            function fny(argy1,argy2,argy3,intg)
+            implicit none
+            integer, intent(in) :: intg
+            double precision, intent(in) :: argy1, argy2, argy3
+            double precision :: fny
+            end function
+         end interface
+         end subroutine
+      end interface
+!
+      interface
+         subroutine PGFEDGES2(edges,nyp,noff,fny,argy1,argy2,argy3,ymin,&
+     &ymax,nypmx,nypmn,ny,kstrt,nvp,idps)
+         implicit none
+         integer, intent(in) :: ny, kstrt, nvp, idps
+         integer, intent(inout) :: nyp, noff, nypmx, nypmn
+         real, intent(in) :: ymin, ymax
          double precision, intent(in) :: argy1, argy2, argy3
          real, dimension(idps), intent(inout) :: edges
          interface

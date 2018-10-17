@@ -1,6 +1,6 @@
 3D OpenMP/MPI Particle-in-Cell (PIC) BEPS3 codes
 by Viktor K. Decyk
-copyright 1994-2017, regents of the university of california
+copyright 1994-2018, regents of the university of california
 
 These codes are part of a set of 3d PIC codes for educational and
 research use.  They are designed for Linux but will also compile for
@@ -35,7 +35,7 @@ number of MPI nodes per host.
 
 By default, OpenMP will use the maximum number of processors it can find
 on the MPI node.  If the user wants to control the number of threads, a
-parameter nvpp can be set in the main program.  In addition, the
+parameter nvpp can be set in the input file.  In addition, the
 environment variable OMP_NUM_THREADS may need to be set to the maximum
 number of threads per node expected.
 
@@ -65,3 +65,12 @@ make clobber
 The Fortran version can be compiled to run with double precision by
 changing the Makefile (for gfortran, set the compiler options to:
 OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8)
+
+There are also 3 Python scripts available.  They require 3 dynamic
+libraries, libmpush3.so, libmbpush3.so, and libmdpush3.so, respectively.
+
+To compile these libraries, execute:
+
+make python
+
+They currently only work in single precision and with OpenMP.

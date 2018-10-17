@@ -85,7 +85,7 @@
       end interface
 !
       interface
-         subroutine PPASCFGUARD2L(dcu,cus,nyp,q2m0,nx,nxe,nypmx)
+         subroutine MPPASCFGUARD2L(dcu,cus,nyp,q2m0,nx,nxe,nypmx)
          implicit none
          integer, intent(in) :: nyp, nx, nxe, nypmx
          real, intent(in) :: q2m0

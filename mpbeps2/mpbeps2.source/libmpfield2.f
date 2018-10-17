@@ -1,29 +1,29 @@
 !-----------------------------------------------------------------------
 ! Fortran library for spectral field solvers
 ! 2D MPI/OpenMP PIC Code:
-! MPPOIS22 solves 2d poisson's equation for smoothed electric field
-! MPPOIS23 solves 2-1/2d poisson's equation for smoothed electric field
+! VMPPOIS22 solves 2d poisson's equation for smoothed electric field
+! VMPPOIS23 solves 2-1/2d poisson's equation for smoothed electric field
 ! MPPADDQEI2 adds electron and ion densities
 ! MPPCUPERP2 calculates the transverse current in fourier space
-! MIPPBPOISP23 solves 2-1/2d poisson's equation for unsmoothed magnetic
-!              field
-! MPPMAXWEL2 solves 2-1/2d maxwell's equation for unsmoothed transverse
-!            electric and magnetic fields
+! VMIPPBPOISP23 solves 2-1/2d poisson's equation for unsmoothed magnetic
+!               field
+! VMPPMAXWEL2 solves 2-1/2d maxwell's equation for unsmoothed transverse
+!             electric and magnetic fields
 ! MPPEMFIELD2 adds and smooths or copies and smooths complex vector
 !             fields in fourier space
 ! MPPADDCUEI2 adds electron and ion current densities
 ! MPPADDAMUI2 adds electron and ion momentum flux densities
 ! PPBADDEXT2 adds constant to magnetic field for 2-1/2d code
 ! PPADDVRFIELD2 calculates a = b + c
-! MPPBBPOISP23 solves 2-1/2d poisson's equation in fourier space for
-!              smoothed magnetic field
+! VMPPBBPOISP23 solves 2-1/2d poisson's equation in fourier space for
+!               smoothed magnetic field
 ! MPPDCUPERP23 calculates transverse part of the derivative of the
 !              current density from the momentum flux
 ! MPPADCUPERP23 Calculates transverse part of the derivative of the
 !               current density from the momentum flux and acceleration
 !               density
-! MPPEPOISP23 solves 2-1/2d poisson's equation in fourier space for
-!             smoothed or unsmoothed transverse electric field
+! VMPPEPOISP23 solves 2-1/2d poisson's equation in fourier space for
+!              smoothed or unsmoothed transverse electric field
 ! MPPOTP2 solves 2d poisson's equation for potential
 ! MPPELFIELD22 solves 2d poisson's equation for unsmoothed electric
 !              field
@@ -49,12 +49,13 @@
 !             stores them into a location in an unpacked array
 ! PPWRVMODES2 extracts lowest order vector modes from a location in an
 !             unpacked array and stores them into a packed array
+! SET_PCVZERO2 zeros out transverse field array.
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 26, 2018
+! update: july 25, 2018
 !-----------------------------------------------------------------------
-      subroutine MPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,&
-     &kxp,nyhd)
+      subroutine VMPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv&
+     &,kxp,nyhd)
 ! this subroutine solves 2d poisson's equation in fourier space for
 ! force/charge (or convolution of electric field over particle shape)
 ! with periodic boundary conditions, for distributed data.
@@ -140,6 +141,7 @@
       dkx = dnx*real(j + joff)
       wp = 0.0d0
       if ((j+joff).gt.0) then
+!dir$ ivdep
          do 40 k = 2, nyh
          k1 = ny2 - k
          at1 = real(ffc(k,j))*aimag(ffc(k,j))
@@ -151,7 +153,8 @@
          fxy(2,k,j) = at3*zt1
          fxy(1,k1,j) = at2*zt2
          fxy(2,k1,j) = -at3*zt2
-         wp = wp + at1*(q(k,j)*conjg(q(k,j)) + q(k1,j)*conjg(q(k1,j)))
+         at1 = at1*(q(k,j)*conjg(q(k,j)) + q(k1,j)*conjg(q(k1,j)))
+         wp = wp + dble(at1)
    40    continue
 ! mode numbers ky = 0, ny/2
          k1 = nyh + 1
@@ -162,7 +165,8 @@
          fxy(2,1,j) = zero
          fxy(1,k1,j) = zero
          fxy(2,k1,j) = zero
-         wp = wp + at1*(q(1,j)*conjg(q(1,j)))
+         at1 = at1*(q(1,j)*conjg(q(1,j)))
+         wp = wp + dble(at1)
       endif
       sum1 = sum1 + wp
    50 continue
@@ -170,6 +174,7 @@
       wp = 0.0d0
 ! mode numbers kx = 0, nx/2
       if (ks.eq.0) then
+!dir$ ivdep
          do 60 k = 2, nyh
          k1 = ny2 - k
          at1 = real(ffc(k,1))*aimag(ffc(k,1))
@@ -179,7 +184,8 @@
          fxy(2,k,1) = at2*zt1
          fxy(1,k1,1) = zero
          fxy(2,k1,1) = zero
-         wp = wp + at1*(q(k,1)*conjg(q(k,1)))
+         at1 = at1*(q(k,1)*conjg(q(k,1)))
+         wp = wp + dble(at1)
    60    continue
          k1 = nyh + 1
          fxy(1,1,1) = zero
@@ -193,8 +199,8 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MPPOIS23(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,&
-     &kxp,nyhd)
+      subroutine VMPPOIS23(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv&
+     &,kxp,nyhd)
 ! this subroutine solves 2-1/2d poisson's equation in fourier space for
 ! force/charge (or convolution of electric field over particle shape)
 ! with periodic boundary conditions.  Zeros out z component.
@@ -283,6 +289,7 @@
       dkx = dnx*real(j + joff)
       wp = 0.0d0
       if ((j+joff).gt.0) then
+!dir$ ivdep
          do 40 k = 2, nyh
          k1 = ny2 - k
          at1 = real(ffc(k,j))*aimag(ffc(k,j))
@@ -296,7 +303,8 @@
          fxy(1,k1,j) = at2*zt2
          fxy(2,k1,j) = -at3*zt2
          fxy(3,k1,j) = zero
-         wp = wp + at1*(q(k,j)*conjg(q(k,j)) + q(k1,j)*conjg(q(k1,j)))
+         at1 = at1*(q(k,j)*conjg(q(k,j)) + q(k1,j)*conjg(q(k1,j)))
+         wp = wp + dble(at1)
    40    continue
 ! mode numbers ky = 0, ny/2
          k1 = nyh + 1
@@ -309,7 +317,8 @@
          fxy(1,k1,j) = zero
          fxy(2,k1,j) = zero
          fxy(3,k1,j) = zero
-         wp = wp + at1*(q(1,j)*conjg(q(1,j)))
+         at1 = at1*(q(1,j)*conjg(q(1,j)))
+         wp = wp + dble(at1)
       endif
       sum1 = sum1 + wp
    50 continue
@@ -317,6 +326,7 @@
       wp = 0.0d0
 ! mode numbers kx = 0, nx/2
       if (ks.eq.0) then
+!dir$ ivdep
          do 60 k = 2, nyh
          k1 = ny2 - k
          at1 = real(ffc(k,1))*aimag(ffc(k,1))
@@ -328,7 +338,8 @@
          fxy(1,k1,1) = zero
          fxy(2,k1,1) = zero
          fxy(3,k1,1) = zero
-         wp = wp + at1*(q(k,1)*conjg(q(k,1)))
+         at1 = at1*(q(k,1)*conjg(q(k,1)))
+         wp = wp + dble(at1)
    60    continue
          k1 = nyh + 1
          fxy(1,1,1) = zero
@@ -448,7 +459,8 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MIPPBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,nyhd)
+      subroutine VMIPPBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,nyhd&
+     &)
 ! this subroutine solves 2-1/2d poisson's equation in fourier space for
 ! magnetic field with periodic boundary conditions for distributed data.
 ! input: cu,ffc,ci,nx,ny,kstrt,nyv,kxp,jblok,nyhd, output: bxy,wm
@@ -513,6 +525,7 @@
       dkx = dnx*real(j + joff)
       wp = 0.0d0
       if ((j+joff).gt.0) then
+!dir$ ivdep
          do 10 k = 2, nyh
          k1 = ny2 - k
          dky = dny*real(k - 1)
@@ -532,10 +545,11 @@
          bxy(1,k1,j) = -at2*zt1
          bxy(2,k1,j) = -at3*zt1
          bxy(3,k1,j) = at3*zt2 + at2*zt3
-         wp = wp + at1*(cu(1,k,j)*conjg(cu(1,k,j))                      &
+         at1 = at1*(cu(1,k,j)*conjg(cu(1,k,j))                          &
      &   + cu(2,k,j)*conjg(cu(2,k,j)) + cu(3,k,j)*conjg(cu(3,k,j))      &
      &   + cu(1,k1,j)*conjg(cu(1,k1,j)) + cu(2,k1,j)*conjg(cu(2,k1,j))  &
      &   + cu(3,k1,j)*conjg(cu(3,k1,j)))
+         wp = wp + dble(at1)
    10    continue
 ! mode numbers ky = 0, ny/2
          k1 = nyh + 1
@@ -550,8 +564,9 @@
          bxy(1,k1,j) = zero
          bxy(2,k1,j) = zero
          bxy(3,k1,j) = zero
-         wp = wp + at1*(cu(1,1,j)*conjg(cu(1,1,j))                      &
+         at1 = at1*(cu(1,1,j)*conjg(cu(1,1,j))                          &
      &   + cu(2,1,j)*conjg(cu(2,1,j)) + cu(3,1,j)*conjg(cu(3,1,j)))
+         wp = wp + dble(at1)
       endif
       sum1 = sum1 + wp
    20 continue
@@ -559,6 +574,7 @@
       wp = 0.0d0
 ! mode numbers kx = 0, nx/2
       if (ks.eq.0) then
+!dir$ ivdep
          do 30 k = 2, nyh
          k1 = ny2 - k
          dky = dny*real(k - 1)
@@ -573,8 +589,9 @@
          bxy(1,k1,1) = zero
          bxy(2,k1,1) = zero
          bxy(3,k1,1) = zero
-         wp = wp + at1*(cu(1,k,1)*conjg(cu(1,k,1))                      &
+         at1 = at1*(cu(1,k,1)*conjg(cu(1,k,1))                          &
      &   + cu(2,k,1)*conjg(cu(2,k,1)) + cu(3,k,1)*conjg(cu(3,k,1)))
+         wp = wp + dble(at1)
    30    continue
          k1 = nyh + 1
          bxy(1,1,1) = zero
@@ -590,8 +607,8 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MPPMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny,kstrt,&
-     &nyv,kxp,nyhd)
+      subroutine VMPPMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny,kstrt&
+     &,nyv,kxp,nyhd)
 ! this subroutine solves 2d maxwell's equation in fourier space for
 ! transverse electric and magnetic fields with periodic boundary
 ! conditions.
@@ -647,6 +664,7 @@
       integer nxh, nyh, ny2, ks, joff, kxps, j, k, k1
       real dnx, dny, dth, c2, cdt, adt, anorm, dkx, dky, afdt
       complex zero, zt1, zt2, zt3, zt4, zt5, zt6, zt7, zt8, zt9
+      real at1
       double precision wp, ws, sum1, sum2
       if (ci.le.0.0) return
       nxh = nx/2
@@ -677,6 +695,7 @@
       ws = 0.0d0
       wp = 0.0d0
       if ((j+joff).gt.0) then
+!dir$ ivdep
          do 10 k = 2, nyh
          k1 = ny2 - k
          dky = dny*real(k - 1)
@@ -702,16 +721,16 @@
          exy(1,k,j) = zt7
          exy(2,k,j) = zt8
          exy(3,k,j) = zt9
-         ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)               &
-     &                  + zt9*conjg(zt9))
+         at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8) + zt9*conjg(zt9))
+         ws = ws + dble(at1)
          zt4 = zt4 - dth*(dky*zt1)
          zt5 = zt5 + dth*(dkx*zt1)
          zt6 = zt6 - dth*(dkx*zt2 - dky*zt3)
          bxy(1,k,j) = zt4
          bxy(2,k,j) = zt5
          bxy(3,k,j) = zt6
-         wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)               &
-     &                  + zt6*conjg(zt6))
+         at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5) + zt6*conjg(zt6))
+         wp = wp + dble(at1)
 ! update magnetic field half time step, ky < 0
          zt1 = cmplx(-aimag(exy(3,k1,j)),real(exy(3,k1,j)))
          zt2 = cmplx(-aimag(exy(2,k1,j)),real(exy(2,k1,j)))
@@ -733,16 +752,16 @@
          exy(1,k1,j) = zt7
          exy(2,k1,j) = zt8
          exy(3,k1,j) = zt9
-         ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)               &
-     &                  + zt9*conjg(zt9))
+         at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8) + zt9*conjg(zt9))
+         ws = ws + dble(at1)
          zt4 = zt4 + dth*(dky*zt1)
          zt5 = zt5 + dth*(dkx*zt1)
          zt6 = zt6 - dth*(dkx*zt2 + dky*zt3)
          bxy(1,k1,j) = zt4
          bxy(2,k1,j) = zt5
          bxy(3,k1,j) = zt6
-         wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)               &
-     &                  + zt6*conjg(zt6))
+         at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5) + zt6*conjg(zt6))
+         wp = wp + dble(at1)
    10    continue
 ! mode numbers ky = 0, ny/2
          k1 = nyh + 1
@@ -763,13 +782,15 @@
          exy(1,1,j) = zero
          exy(2,1,j) = zt8
          exy(3,1,j) = zt9
-         ws = ws + anorm*(zt8*conjg(zt8) + zt9*conjg(zt9))
+         at1 = anorm*(zt8*conjg(zt8) + zt9*conjg(zt9))
+         ws = ws + dble(at1)
          zt5 = zt5 + dth*(dkx*zt1)
          zt6 = zt6 - dth*(dkx*zt2)
          bxy(1,1,j) = zero
          bxy(2,1,j) = zt5
          bxy(3,1,j) = zt6
-         wp = wp + anorm*(zt5*conjg(zt5) + zt6*conjg(zt6))
+         at1 = anorm*(zt5*conjg(zt5) + zt6*conjg(zt6))
+         wp = wp + dble(at1)
          bxy(1,k1,j) = zero
          bxy(2,k1,j) = zero
          bxy(3,k1,j) = zero
@@ -785,6 +806,7 @@
       wp = 0.0d0
 ! mode numbers kx = 0, nx/2
       if (ks.eq.0) then
+!dir$ ivdep
          do 30 k = 2, nyh
          k1 = ny2 - k
          dky = dny*real(k - 1)
@@ -805,13 +827,15 @@
          exy(1,k,1) = zt7
          exy(2,k,1) = zero
          exy(3,k,1) = zt9
-         ws = ws + anorm*(zt7*conjg(zt7) + zt9*conjg(zt9))
+         at1 = anorm*(zt7*conjg(zt7) + zt9*conjg(zt9))
+         ws = ws + dble(at1)
          zt4 = zt4 - dth*(dky*zt1)
          zt6 = zt6 + dth*(dky*zt3)
          bxy(1,k,1) = zt4
          bxy(2,k,1) = zero
          bxy(3,k,1) = zt6
-         wp = wp + anorm*(zt4*conjg(zt4) + zt6*conjg(zt6))
+         at1 = anorm*(zt4*conjg(zt4) + zt6*conjg(zt6))
+         wp = wp + dble(at1)
          bxy(1,k1,1) = zero
          bxy(2,k1,1) = zero
          bxy(3,k1,1) = zero
@@ -869,6 +893,7 @@
          do 20 k = 2, nyh
          k1 = ny2 - k
          at1 = aimag(ffc(k,j))
+!dir$ ivdep
          do 10 i = 1, 3
          fxy(i,k,j) = fxy(i,k,j) + exy(i,k,j)*at1
          fxy(i,k1,j) = fxy(i,k1,j) + exy(i,k1,j)*at1
@@ -877,6 +902,7 @@
 ! mode numbers ky = 0, ny/2
          k1 = nyh + 1
          at1 = aimag(ffc(1,j))
+!dir$ ivdep
          do 30 i = 1, 3
          fxy(i,1,j) = fxy(i,1,j) + exy(i,1,j)*at1
          fxy(i,k1,j) = fxy(i,k1,j) + exy(i,k1,j)*at1
@@ -891,6 +917,7 @@
          do 60 k = 2, nyh
          k1 = ny2 - k
          at1 = aimag(ffc(k,j))
+!dir$ ivdep
          do 50 i = 1, 3
          fxy(i,k,j) = exy(i,k,j)*at1
          fxy(i,k1,j) = exy(i,k1,j)*at1
@@ -899,6 +926,7 @@
 ! mode numbers ky = 0, ny/2
          k1 = nyh + 1
          at1 = aimag(ffc(1,j))
+!dir$ ivdep
          do 70 i = 1, 3
          fxy(i,1,j) = exy(i,1,j)*at1
          fxy(i,k1,j) = exy(i,k1,j)*at1
@@ -1010,7 +1038,8 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MPPBBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,nyhd)
+      subroutine VMPPBBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,nyhd&
+     &)
 ! this subroutine solves 2-1/2d poisson's equation in fourier space for
 ! magnetic field (or convolution of magnetic field over particle shape)
 ! with periodic boundary conditions for distributed data.
@@ -1076,6 +1105,7 @@
       dkx = dnx*real(j + joff)
       wp = 0.0d0
       if ((j+joff).gt.0) then
+!dir$ ivdep
          do 10 k = 2, nyh
          k1 = ny2 - k
          dky = dny*real(k - 1)
@@ -1094,10 +1124,11 @@
          bxy(1,k1,j) = -at2*zt1
          bxy(2,k1,j) = -at3*zt1
          bxy(3,k1,j) = at3*zt2 + at2*zt3
-         wp = wp + at1*(cu(1,k,j)*conjg(cu(1,k,j))                      &
+         at1 = at1*(cu(1,k,j)*conjg(cu(1,k,j))                          &
      &   + cu(2,k,j)*conjg(cu(2,k,j)) + cu(3,k,j)*conjg(cu(3,k,j))      &
      &   + cu(1,k1,j)*conjg(cu(1,k1,j)) + cu(2,k1,j)*conjg(cu(2,k1,j))  &
      &   + cu(3,k1,j)*conjg(cu(3,k1,j)))
+         wp = wp + dble(at1)
    10    continue
 ! mode numbers ky = 0, ny/2
          k1 = nyh + 1
@@ -1111,8 +1142,9 @@
          bxy(1,k1,j) = zero
          bxy(2,k1,j) = zero
          bxy(3,k1,j) = zero
-         wp = wp + at1*(cu(1,1,j)*conjg(cu(1,1,j))                      &
+         at1 = at1*(cu(1,1,j)*conjg(cu(1,1,j))                          &
      &   + cu(2,1,j)*conjg(cu(2,1,j)) + cu(3,1,j)*conjg(cu(3,1,j)))
+         wp = wp + dble(at1)
       endif
       sum1 = sum1 + wp
    20 continue
@@ -1120,6 +1152,7 @@
       wp = 0.0d0
 ! mode numbers kx = 0, nx/2
       if (ks.eq.0) then
+!dir$ ivdep
          do 30 k = 2, nyh
          k1 = ny2 - k
          dky = dny*real(k - 1)
@@ -1133,8 +1166,9 @@
          bxy(1,k1,1) = zero
          bxy(2,k1,1) = zero
          bxy(3,k1,1) = zero
-         wp = wp + at1*(cu(1,k,1)*conjg(cu(1,k,1))                      &
+         at1 = at1*(cu(1,k,1)*conjg(cu(1,k,1))                          &
      &   + cu(2,k,1)*conjg(cu(2,k,1)) + cu(3,k,1)*conjg(cu(3,k,1)))
+         wp = wp + dble(at1)
    30    continue
          k1 = nyh + 1
          bxy(1,1,1) = zero
@@ -1393,7 +1427,7 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MPPEPOISP23(dcu,exy,isign,ffe,ax,ay,affp,wp0,ci,wf,nx, &
+      subroutine VMPPEPOISP23(dcu,exy,isign,ffe,ax,ay,affp,wp0,ci,wf,nx,&
      &ny,kstrt,nyv,kxp,nyhd)
 ! this subroutine solves 2-1/2d poisson's equation in fourier space for
 ! transverse electric field (or convolution of transverse electric field
@@ -1496,6 +1530,7 @@
       do 50 j = 1, kxps
       wp = 0.0d0
       if ((j+joff).gt.0) then
+!dir$ ivdep
          do 40 k = 2, nyh
          k1 = ny2 - k
          at2 = -ci2*real(ffe(k,j))
@@ -1507,11 +1542,12 @@
          exy(1,k1,j) = at1*dcu(1,k1,j)
          exy(2,k1,j) = at1*dcu(2,k1,j)
          exy(3,k1,j) = at1*dcu(3,k1,j)
-         wp = wp + at2*(dcu(1,k,j)*conjg(dcu(1,k,j))                    &
+         at1 = at2*(dcu(1,k,j)*conjg(dcu(1,k,j))                        &
      &   + dcu(2,k,j)*conjg(dcu(2,k,j)) + dcu(3,k,j)*conjg(dcu(3,k,j))  &
      &   + dcu(1,k1,j)*conjg(dcu(1,k1,j))                               &
      &   + dcu(2,k1,j)*conjg(dcu(2,k1,j))                               &
      &   + dcu(3,k1,j)*conjg(dcu(3,k1,j)))
+         wp = wp + dble(at1)
    40    continue
 ! mode numbers ky = 0, ny/2
          k1 = nyh + 1
@@ -1524,8 +1560,9 @@
          exy(1,k1,j) = zero
          exy(2,k1,j) = zero
          exy(3,k1,j) = zero
-         wp = wp + at2*(dcu(1,1,j)*conjg(dcu(1,1,j))                    &
+         at1 = at2*(dcu(1,1,j)*conjg(dcu(1,1,j))                        &
      &   + dcu(2,1,j)*conjg(dcu(2,1,j)) + dcu(3,1,j)*conjg(dcu(3,1,j)))
+         wp = wp + dble(at1)
       endif
       sum1 = sum1 + wp
    50 continue
@@ -1533,6 +1570,7 @@
       wp = 0.0d0
 ! mode numbers kx = 0, nx/2
       if (ks.eq.0) then
+!dir$ ivdep
          do 60 k = 2, nyh
          k1 = ny2 - k
          at2 = -ci2*real(ffe(k,1))
@@ -1544,8 +1582,9 @@
          exy(1,k1,1) = zero
          exy(2,k1,1) = zero
          exy(3,k1,1) = zero
-         wp = wp + at2*(dcu(1,k,1)*conjg(dcu(1,k,1))                    &
+         at1 = at2*(dcu(1,k,1)*conjg(dcu(1,k,1))                        &
      &   + dcu(2,k,1)*conjg(dcu(2,k,1)) + dcu(3,k,1)*conjg(dcu(3,k,1)))
+         wp = wp + dble(at1)
    60    continue
          k1 = nyh + 1
          exy(1,1,1) = zero
@@ -1567,6 +1606,7 @@
       do 100 j = 1, kxps
       wp = 0.0d0
       if ((j+joff).gt.0) then
+!dir$ ivdep
          do 90 k = 2, nyh
          k1 = ny2 - k
          at2 = -ci2*real(ffe(k,j))
@@ -1577,11 +1617,12 @@
          exy(1,k1,j) = at2*dcu(1,k1,j)
          exy(2,k1,j) = at2*dcu(2,k1,j)
          exy(3,k1,j) = at2*dcu(3,k1,j)
-         wp = wp + at1*(dcu(1,k,j)*conjg(dcu(1,k,j))                    &
+         at1 = at1*(dcu(1,k,j)*conjg(dcu(1,k,j))                        &
      &   + dcu(2,k,j)*conjg(dcu(2,k,j)) + dcu(3,k,j)*conjg(dcu(3,k,j))  &
      &   + dcu(1,k1,j)*conjg(dcu(1,k1,j))                               &
      &   + dcu(2,k1,j)*conjg(dcu(2,k1,j))                               &
      &   + dcu(3,k1,j)*conjg(dcu(3,k1,j)))
+         wp = wp + dble(at1)
    90    continue
 ! mode numbers ky = 0, ny/2
          k1 = nyh + 1
@@ -1593,8 +1634,9 @@
          exy(1,k1,j) = zero
          exy(2,k1,j) = zero
          exy(3,k1,j) = zero
-         wp = wp + at1*(dcu(1,1,j)*conjg(dcu(1,1,j))                    &
+         at1 = at1*(dcu(1,1,j)*conjg(dcu(1,1,j))                        &
      &   + dcu(2,1,j)*conjg(dcu(2,1,j)) + dcu(3,1,j)*conjg(dcu(3,1,j)))
+         wp = wp + dble(at1)
       endif
       sum1 = sum1 + wp
   100 continue
@@ -1602,6 +1644,7 @@
       wp = 0.0d0
 ! mode numbers kx = 0, nx/2
       if (ks.eq.0) then
+!dir$ ivdep
          do 110 k = 2, nyh
          k1 = ny2 - k
          at2 = -ci2*real(ffe(k,1))
@@ -1612,8 +1655,9 @@
          exy(1,k1,1) = zero
          exy(2,k1,1) = zero
          exy(3,k1,1) = zero
-         wp = wp + at1*(dcu(1,k,1)*conjg(dcu(1,k,1))                    &
+         at1 = at1*(dcu(1,k,1)*conjg(dcu(1,k,1))                        &
      &   + dcu(2,k,1)*conjg(dcu(2,k,1)) + dcu(3,k,1)*conjg(dcu(3,k,1)))
+         wp = wp + dble(at1)
   110    continue
          k1 = nyh + 1
          exy(1,1,1) = zero
@@ -3319,6 +3363,76 @@
             endif
          endif
   150    continue
+      endif
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine SET_PCVZERO2(exy,nx,ny,kstrt,ndim,nyv,kxp)
+! for 3d code, this subroutine zeros out transverse field array.
+! for Intel NUMA architecture with first touch policy, this associates
+! array segments with appropriate threads
+! OpenMP version
+! input: all, output: exy
+! exy(i,j,k) = complex transverse electric field
+! nx/ny = system length in x/y direction
+! kstrt = starting data block number
+! ndim = first dimension of field array
+! nyv = first dimension of field arrays, must be >= ny
+! kxp = number of complex grids in each field partition in x direction
+      implicit none
+      integer nx, ny, kstrt, ndim, nyv ,kxp
+      complex exy
+      dimension exy(ndim,nyv,kxp)
+! local data
+      integer nxh, nyh, ny2, ks, joff, kxps, i, j, k, k1
+      complex zero
+      nxh = nx/2
+      nyh = max(1,ny/2)
+      ny2 = ny + 2
+      zero = cmplx(0.0,0.0)
+      ks = kstrt - 1
+      joff = kxp*ks
+      kxps = min(kxp,max(0,nxh-joff))
+      joff = joff - 1
+      if (kstrt.gt.nxh) return
+! loop over mode numbers
+! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
+!$OMP PARALLEL DO PRIVATE(i,j,k,k1)
+      do 40 j = 1, kxps
+      if ((j+joff).gt.0) then
+         do 20 k = 2, nyh
+         k1 = ny2 - k
+!dir$ ivdep
+         do 10 i = 1, ndim
+         exy(i,k,j) = zero
+         exy(i,k1,j) = zero
+   10    continue
+   20    continue
+         k1 = nyh + 1
+!dir$ ivdep
+         do 30 i = 1, ndim
+         exy(i,1,j) = zero
+         exy(i,k1,j) = zero
+   30    continue
+      endif
+   40 continue
+!$OMP END PARALLEL DO
+! mode numbers kx = 0, nx/2
+      if (ks.eq.0) then
+         do 60 k = 2, nyh
+         k1 = ny2 - k
+!dir$ ivdep
+         do 50 i = 1, ndim
+         exy(i,k,1) = zero
+         exy(i,k1,1) = zero
+   50    continue
+   60    continue
+         k1 = nyh + 1
+!dir$ ivdep
+         do 70 i = 1, ndim
+         exy(i,1,1) = zero
+         exy(i,k1,1) = zero
+   70    continue
       endif
       return
       end

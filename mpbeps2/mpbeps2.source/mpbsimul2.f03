@@ -13,9 +13,9 @@
 !
 ! written by Viktor K. Decyk, UCLA
 ! copyright 1999-2017, regents of the university of california
-! update: october 21, 2017
-      module mpbsimul2
-      use mpsimul2
+! update: august 6, 2018
+      module fb2
+      use f2
 !     use mbpush1
 !     use mcurd1
       implicit none

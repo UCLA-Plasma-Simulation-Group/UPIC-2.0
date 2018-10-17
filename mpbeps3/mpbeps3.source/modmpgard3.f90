@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !
-      module modmpgard3
+      module mgard3
 !
 ! Fortran90 wrappers to 3d MPI/OpenMP PIC library libmpgard3.f
 ! mpdguard3x replicates local periodic scalar field
@@ -13,7 +13,7 @@
 !             calls PPACGUARD32XL
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 13, 2016
+! update: may 16, 2016
 !
       use libmpgard3_h
       implicit none

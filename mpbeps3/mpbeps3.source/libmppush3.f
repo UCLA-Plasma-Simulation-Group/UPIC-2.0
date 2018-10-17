@@ -4,6 +4,8 @@
 ! 3D MPI/OpenMP PIC Codes:
 ! PPPMOVIN3L sorts particles by x,y,z grid in tiles of mx, my, mz and
 !            copies to segmented array ppart
+! PPPMOVIN3LP sorts particles by x,y,z grid in tiles of mx, my, mz and
+!             copies to segmented array ppart for NUMA architectures
 ! PPPCOPYOUT3 copies segmented particle data ppart to the array part
 ! PPPCOPYIN3 copies linear array part to segmented particle data ppart
 ! PPPCHECK3L performs a sanity check to make sure particles sorted
@@ -38,9 +40,11 @@
 !                tile
 ! PPGPPOST32L calculates particle charge density using linear
 !             interpolation
+! SET_SZERO3 zeros out charge density array.
+! SET_PVZERO3 zeros out current density array.
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 15, 2018
+! update: july 31, 2018
 !-----------------------------------------------------------------------
       subroutine PPPMOVIN3L(part,ppart,kpic,npp,noff,nppmx,idimp,npmax, &
      &mx,my,mz,mx1,myp1,mxyzp1,idds,irc)
@@ -109,6 +113,93 @@
       kpic(m) = ip
    30 continue
       if (ierr.gt.0) irc = ierr
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PPPMOVIN3LP(part,ppart,kpic,kp,npp,noff,nppmx,idimp,   &
+     &npmax,mx,my,mz,mx1,myp1,mxyzp1,idds,irc)
+! this subroutine sorts particles by x,y,z grid in tiles of mx, my, mz
+! and copies to segmented array ppart
+! designed for NUMA architectures, where memory is associated with the
+! processor which first writes a memory location.
+! linear interpolation, spatial decomposition in y/z direction
+! input: all except ppart, kpic, kp, output: ppart, kpic, kp
+! part/ppart = input/output particle arrays
+! part(1,n) = position x of particle n in partition
+! part(2,n) = position y of particle n in partition
+! part(3,n) = position z of particle n in partition
+! ppart(1,n,m) = position x of particle n in tile m
+! ppart(2,n,m) = position y of particle n in tile m
+! ppart(3,n,m) = position z of particle n in tile m
+! ppart(4,n,m) = velocity vx of particle n in tile m
+! ppart(5,n,m) = velocity vy of particle n in tile m
+! ppart(6,n,m) = velocity vz of particle n in tile m
+! kpic = output number of particles per tile
+! kp = original location of reordered particle
+! npp = number of particles in partition
+! noff(1) = lowermost global gridpoint in y in particle partition
+! noff(2) = backmost global gridpoint in z in particle partition
+! nppmx = maximum number of particles in tile
+! idimp = size of phase space = 6
+! npmax = maximum number of particles in each partition
+! mx/my/mz = number of grids in sorting cell in x, y and z
+! mx1 = (system length in x direction - 1)/mx + 1
+! myp1 = (partition length in y direction - 1)/my + 1
+! mxyzp1 = mx1*myp1*mzp1,
+! where mzp1 = (partition length in z direction - 1)/mz + 1
+! idds = dimensionality of domain decomposition
+! irc = maximum overflow, returned only if error occurs, when irc > 0
+      implicit none
+      integer npp, nppmx, idimp, npmax, mx, my, mz, mx1, myp1, mxyzp1
+      integer idds, irc
+      integer kpic, kp, noff
+      real part, ppart
+      dimension part(idimp,npmax), ppart(idimp,nppmx,mxyzp1)
+      dimension kpic(mxyzp1), kp(nppmx,mxyzp1), noff(idds)
+! local data
+      integer i, j, k, n, m, l, mnoff, lnoff, mxyp1, ip, nppp, ierr
+      mnoff = noff(1)
+      lnoff = noff(2)
+      ierr = 0
+      mxyp1 = mx1*myp1
+! clear counter array
+      do 10 k = 1, mxyzp1
+      kpic(k) = 0
+   10 continue
+! find addresses of particles at each tile to reorder particles
+      do 20 j = 1, npp
+      n = part(1,j)
+      n = n/mx + 1
+      m = part(2,j)
+      m = (m - mnoff)/my
+      l = part(3,j)
+      l = (l - lnoff)/mz
+      m = n + mx1*m + mxyp1*l
+      ip = kpic(m) + 1
+      if (ip.le.nppmx) then
+         kp(ip,m) = j
+      else
+         ierr = max(ierr,ip-nppmx)
+      endif
+      kpic(m) = ip
+   20 continue
+! check for overflow
+      if (ierr.gt.0) then
+         irc = ierr
+         return
+      endif
+! copy reordered particles
+!$OMP PARALLEL DO PRIVATE(i,j,k,m,nppp)
+      do 50 k = 1, mxyzp1
+      nppp = kpic(k)
+      do 40 j = 1, nppp
+      m = kp(j,k)
+      do 30 i = 1, idimp
+      ppart(i,j,k) = part(i,m)
+   30 continue
+   40 continue
+   50 continue
+!$OMP END PARALLEL DO
       return
       end
 !-----------------------------------------------------------------------
@@ -358,8 +449,8 @@
       real x, y, z, dxp, dyp, dzp, amx, amy, amz, dx1, dx, dy, dz
       real vx, vy, vz
       real sfxyz
-      dimension sfxyz(3,MXV,MYV,MZV)
-!     dimension sfxyz(3,mx+1,my+1,mz+1)
+!     dimension sfxyz(3,MXV,MYV,MZV)
+      dimension sfxyz(3,mx+1,my+1,mz+1)
       double precision sum1, sum2
       mxyp1 = mx1*myp1
       qtm = qbm*dt
@@ -604,8 +695,8 @@
       real vx, vy, vz
       real anx, any, anz, edgelx, edgely, edgelz, edgerx, edgery, edgerz
       real sfxyz
-      dimension sfxyz(3,MXV,MYV,MZV)
-!     dimension sfxyz(3,mx+1,my+1,mz+1)
+!     dimension sfxyz(3,MXV,MYV,MZV)
+      dimension sfxyz(3,mx+1,my+1,mz+1)
       double precision sum1, sum2
       mxyp1 = mx1*myp1
       qtm = qbm*dt
@@ -798,10 +889,9 @@
      &idimp,nppmx,nx,ny,nz,mx,my,mz,nxv,nypmx,nzpmx,mx1,myp1,mxyzp1,idds&
      &,ipbc)
 ! for 3d code, this subroutine updates particle co-ordinates and
-! velocities using leap-frog scheme in time and first-order linear
+! momenta using leap-frog scheme in time and first-order linear
 ! interpolation in space, for relativistic particles
 ! with various boundary conditions.
-! with 2D spatial decomposition
 ! OpenMP version using guard cells,
 ! for distributed data with 2D spatial decomposition
 ! data read in tiles
@@ -887,8 +977,8 @@
       real x, y, z, dxp, dyp, dzp, amx, amy, amz, dx1, dx, dy, dz
       real vx, vy, vz, acx, acy, acz, p2, dtg
       real sfxyz
-      dimension sfxyz(3,MXV,MYV,MZV)
-!     dimension sfxyz(3,mx+1,my+1,mz+1)
+!     dimension sfxyz(3,MXV,MYV,MZV)
+      dimension sfxyz(3,mx+1,my+1,mz+1)
       double precision sum1, sum2
       mxyp1 = mx1*myp1
       qtmh = 0.5*qbm*dt
@@ -1050,7 +1140,7 @@
      &dt,ci,ek,idimp,nppmx,nx,ny,nz,mx,my,mz,nxv,nypmx,nzpmx,mx1,myp1,  &
      &mxyzp1,ntmax,idds,irc)
 ! for 3d code, this subroutine updates particle co-ordinates and
-! velocities using leap-frog scheme in time and first-order linear
+! momenta using leap-frog scheme in time and first-order linear
 ! interpolation in space, for relativistic particles
 ! with periodic boundary conditions.
 ! also determines list of particles which are leaving this tile
@@ -1147,8 +1237,8 @@
       real qtmh, ci2, vx, vy, vz, acx, acy, acz, p2, dtg
       real anx, any, anz, edgelx, edgely, edgelz, edgerx, edgery, edgerz
       real sfxyz
-      dimension sfxyz(3,MXV,MYV,MZV)
-!     dimension sfxyz(3,mx+1,my+1,mz+1)
+!     dimension sfxyz(3,MXV,MYV,MZV)
+      dimension sfxyz(3,mx+1,my+1,mz+1)
       double precision sum1, sum2
       mxyp1 = mx1*myp1
       qtmh = 0.5*qbm*dt
@@ -1565,7 +1655,7 @@
       dy = ppart(5,j,l)
       dz = ppart(6,j,l)
 ! average kinetic energy
-      sum1 = sum1 + (dx*dx + dy*dy+ dz*dz)
+      sum1 = sum1 + (dx*dx + dy*dy + dz*dz)
 ! new position
       dx = ppart(1,j,l) + dx*dt
       dy = ppart(2,j,l) + dy*dt
@@ -2172,6 +2262,116 @@
   140    continue
       endif
   150 continue
+!$OMP END PARALLEL DO
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine SET_PSZERO3(q,mx,my,mz,nxv,nypmx,nzpmx,mx1,myp1,mzp1)
+! for 3d code, this subroutine zeros out charge density array.
+! for Intel NUMA architecture with first touch policy, this associates
+! array segments with appropriate threads
+! OpenMP version
+! input: all, output: q
+! q(j,k,l) = charge density at grid point j,k,l
+! mx/my/mz = number of grids in sorting cell in x/y/z
+! nxv = first dimension of charge array, must be >= nx+1
+! nypmx = second dimension of charge array
+! nzpmx = third dimension of charge array
+! mx1 = (system length in x direction - 1)/mx + 1
+! myp1 = (partition length in y direction - 1)/my + 1
+! mzp1 = (partition length in z direction - 1)/mz + 1
+      implicit none
+      integer mx, my, mz, nxv, nypmx, nzpmx, mx1, myp1, mzp1
+      real q
+      dimension q(nxv,nypmx,nzpmx)
+! local data
+      integer mxyp1, mxyzp1, noffp, moffp, loffp
+      integer i, j, k, l, nn, mm, ll
+      mxyp1 = mx1*myp1
+      mxyzp1 = mxyp1*mzp1
+! loop over tiles
+!$OMP PARALLEL DO PRIVATE(i,j,k,l,noffp,moffp,loffp,nn,mm,ll)
+      do 40 l = 1, mxyzp1
+      i = (l - 1)/mxyp1
+      k = l - mxyp1*i
+      loffp = mz*i
+      ll = mz
+      if ((i+1).eq.mzp1) ll = nzpmx - loffp
+      j = (k - 1)/mx1
+      moffp = my*j
+      mm = my
+      if ((j+1).eq.myp1) mm = nypmx - moffp
+      k = k - mx1*j
+      noffp = mx*(k - 1)
+      nn = mx
+      if (k.eq.mx1) nn = nxv - noffp
+! zero charge in global array
+      do 30 k = 1, ll
+      do 20 j = 1, mm
+!dir$ ivdep
+      do 10 i = 1, nn
+      q(i+noffp,j+moffp,k+loffp) = 0.0
+   10 continue
+   20 continue
+   30 continue
+   40 continue
+!$OMP END PARALLEL DO
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine SET_PVZERO3(cu,mx,my,mz,ndim,nxv,nypmx,nzpmx,mx1,myp1, &
+     &mzp1)
+! for 3d code, this subroutine zeros out current density array.
+! for Intel NUMA architecture with first touch policy, this associates
+! array segments with appropriate threads
+! OpenMP version
+! input: all, output: cu
+! cu(m,j,k,l) = current density at grid point m,j,k,l
+! mx/my/mz = number of grids in sorting cell in x/y/z
+! ndim = first dimension of current array
+! nxv = second dimension of current array, must be >= nx+1
+! nypmx = third dimension of current array
+! nzpmx = fourth dimension of current array
+! mx1 = (system length in x direction - 1)/mx + 1
+! myp1 = (partition length in y direction - 1)/my + 1
+! mzp1 = (partition length in z direction - 1)/mz + 1
+      implicit none
+      integer mx, my, mz, ndim, nxv, nypmx, nzpmx, mx1, myp1, mzp1
+      real cu
+      dimension cu(ndim,nxv,nypmx,nzpmx)
+! local data
+      integer mxyp1, mxyzp1, noffp, moffp, loffp
+      integer i, j, k, l, m, nn, mm, ll
+      mxyp1 = mx1*myp1
+      mxyzp1 = mxyp1*mzp1
+! loop over tiles
+!$OMP PARALLEL DO PRIVATE(i,j,k,l,m,noffp,moffp,loffp,nn,mm,ll)
+      do 50 l = 1, mxyzp1
+      i = (l - 1)/mxyp1
+      k = l - mxyp1*i
+      loffp = mz*i
+      ll = mz
+      if ((i+1).eq.mzp1) ll = nzpmx - loffp
+      j = (k - 1)/mx1
+      moffp = my*j
+      mm = my
+      if ((j+1).eq.myp1) mm = nypmx - moffp
+      k = k - mx1*j
+      noffp = mx*(k - 1)
+      nn = mx
+      if (k.eq.mx1) nn = nxv - noffp
+! zero current in global array
+      do 40 k = 1, ll
+      do 30 j = 1, mm
+      do 20 i = 1, nn
+!dir$ ivdep
+      do 10 m = 1, ndim
+      cu(m,i+noffp,j+moffp,k+loffp) = 0.0
+   10 continue
+   20 continue
+   30 continue
+   40 continue
+   50 continue
 !$OMP END PARALLEL DO
       return
       end

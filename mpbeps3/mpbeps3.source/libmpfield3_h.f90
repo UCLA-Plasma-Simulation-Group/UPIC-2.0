@@ -4,8 +4,8 @@
       implicit none
 !
       interface
-         subroutine MPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz&
-     &,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+         subroutine VMPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny, &
+     &nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
          implicit none
          integer, intent(in) :: isign, nx, ny, nz, kstrt, nvpy, nvpz
          integer, intent(in) :: nzv, kxyp, kyzp, nzhd
@@ -38,8 +38,8 @@
       end interface
 !
       interface
-         subroutine MIPPBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,&
-     &nvpz,nzv,kxyp,kyzp,nzhd)
+         subroutine VMIPPBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy&
+     &,nvpz,nzv,kxyp,kyzp,nzhd)
          implicit none
          integer, intent(in) :: nx, ny, nz, kstrt, nvpy, nvpz
          integer, intent(in) :: nzv, kxyp, kyzp, nzhd
@@ -52,8 +52,8 @@
       end interface
 !
       interface
-         subroutine MPPMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx,ny,&
-     &nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+         subroutine VMPPMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx,ny&
+     &,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
          implicit none
          integer, intent(in) :: nx, ny, nz, kstrt, nvpy, nvpz
          integer, intent(in) :: nzv, kxyp, kyzp, nzhd
@@ -119,8 +119,8 @@
       end interface
 !
       interface
-         subroutine MPPBBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,&
-     &nvpz,nzv,kxyp,kyzp,nzhd)
+         subroutine VMPPBBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy&
+     &,nvpz,nzv,kxyp,kyzp,nzhd)
          implicit none
          integer, intent(in) :: nx, ny, nz, kstrt, nvpy, nvpz
          integer, intent(in) :: nzv, kxyp, kyzp, nzhd
@@ -155,8 +155,8 @@
       end interface
 !
       interface
-         subroutine MPPEPOISP332(dcu,exyz,isign,ffe,ax,ay,az,affp,wp0,ci&
-     &,wf,nx,ny,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+         subroutine VMPPEPOISP332(dcu,exyz,isign,ffe,ax,ay,az,affp,wp0, &
+     &ci,wf,nx,ny,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
          implicit none
          integer, intent(in) :: isign, nx, ny, nz, kstrt, nvpy, nvpz
          integer, intent(in) :: nzv, kxyp, kyzp, nzhd
@@ -275,8 +275,8 @@
       end interface
 !
       interface
-         subroutine MPPETFIELD332(dcu,exyz,ffe,affp,ci,wf,nx,ny,nz,kstrt&
-     &,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+         subroutine VMPPETFIELD332(dcu,exyz,ffe,affp,ci,wf,nx,ny,nz,    &
+     &kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
          implicit none
          integer, intent(in) :: nx, ny, nz, kstrt, nvpy, nvpz, nzv
          integer, intent(in) :: kxyp, kyzp, nzhd
@@ -363,6 +363,16 @@
          complex, dimension(ndim,nzv,kxyp,kyzp), intent(inout) :: vpot
          complex, dimension(ndim,modeszd,modesxpd,modesypd), intent(in) &
      &:: vpott
+         end subroutine
+      end interface
+!
+      interface
+         subroutine SET_PCVZERO3(exyz,nx,ny,nz,kstrt,nvpy,nvpz,ndim,nzv,&
+     &kxyp,kyzp)
+         implicit none
+         integer, intent(in) :: nx, ny, nz, kstrt, nvpy, nvpz
+         integer, intent(in) :: ndim, nzv, kxyp, kyzp
+         complex, dimension(ndim,nzv,kxyp,kyzp), intent(inout) :: exyz
          end subroutine
       end interface
 !

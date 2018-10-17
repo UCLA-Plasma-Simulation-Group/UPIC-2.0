@@ -30,8 +30,8 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine PCARPET(f,g,nvp,label,isc,ist,nx,ny,nxv,nypmx,chr,ntc, &
-     &irc)
+      subroutine PCARPET(f,g,nyp,nvp,label,isc,ist,nx,ny,nxv,nypmx,chr, &
+     &ntc,irc)
 ! this subroutine displays an array f as a color raster image, for
 ! distributed data
 ! a 256 color palette must have been defined prior to this call. 
@@ -62,7 +62,7 @@
 ! ntc = number of valid colors, should be power of 2, <= 256
 ! irc = return code (0 = normal return)
       implicit none
-      integer, intent(in) :: nvp, isc, ist, nx, ny, nxv, nypmx, ntc
+      integer, intent(in) :: nyp, nvp, isc, ist, nx, ny, nxv, nypmx, ntc
       integer, intent(inout) :: irc
       character(len=*), intent(in) :: label, chr
       real, dimension(nxv,nypmx), intent(in) :: f
@@ -71,8 +71,8 @@
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine PCONTUR(f,g,lf,nvp,label,isc,ist,nx,ny,nxv,nypmx,chr,nc&
-     &,irc)
+      subroutine PCONTUR(f,g,lf,nyp,nvp,label,isc,ist,nx,ny,nxv,nypmx,  &
+     &chr,nc,irc)
 ! this subroutine displays an array f as a contour plot.
 ! a maximum of ncols colors are used, used in order from lowest to
 ! highest contour: blue, green, cyan, foreground, yellow, magenta, red
@@ -104,7 +104,7 @@
 ! nc = number of contour lines
 ! irc = return code (0 = normal return)
       implicit none
-      integer, intent(in) :: nvp, isc, ist, nx, ny, nxv, nypmx, nc
+      integer, intent(in) :: nyp, nvp, isc, ist, nx, ny, nxv, nypmx, nc
       integer, intent(inout) :: irc
       character(len=*), intent(in) :: label, chr
       real, dimension(nxv,nypmx), intent(in) :: f
@@ -134,8 +134,8 @@
 ! irc = return code (0 = normal return)
       implicit none
       integer, intent(in) :: npp
-      integer, intent(in) :: itime, isc, nx, ny, idimp, npmax
-      integer, intent(inout) :: iyp, ixp, irc
+      integer, intent(in) :: itime, isc, nx, ny, idimp, npmax, iyp, ixp
+      integer, intent(inout) :: irc
       character(len=*), intent(in) :: label
       real, dimension(idimp,npmax), intent(in) :: part
       real, dimension(2*npmax), intent(inout) :: f

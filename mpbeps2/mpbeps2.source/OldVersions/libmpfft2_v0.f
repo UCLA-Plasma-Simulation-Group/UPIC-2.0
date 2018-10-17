@@ -17,7 +17,7 @@
 ! MPPSWAPC2N swaps components for multiple ffts
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 26, 2018
+! update: october 16, 2018
 !-----------------------------------------------------------------------
       subroutine WPFFT2RINIT(mixup,sct,indx,indy,nxhyd,nxyhd)
 ! this subroutine calculates tables needed by a two dimensional

@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !
-      module modmpdpush2
+      module mdpush2
 !
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpdpush2.f
 ! mpfwpminx2 calculates maximum and minimum plasma frequency
@@ -8,18 +8,18 @@
 ! mpfwptminx2 calculates maximum and minimum total plasma frequency
 !             calls PPFWPTMINMX2
 ! mpgdjpost2 calculates particle momentum flux and acceleration density
-!            calls PPGDJPPOST2L
+!            calls PPGDJPPOST2L or VPPGDJPPOST2L
 ! mpgdcjpost2 calculates particle momentum flux, acceleration density
 !             and current density
-!             calls PPGDCJPPOST2L
+!             calls PPGDCJPPOST2L or VPPGDCJPPOST2L
 ! mpgrdjpost2 calculates particle momentum flux and acceleration density
 !             with relativistic particles
-!             calls PPGRDJPPOST2L
+!             calls PPGRDJPPOST2L or VPPGRDJPPOST2L
 ! mpgrdcjpost2 calculates particle momentum flux, acceleration density
 !              and current density with relativistic particles
-!              calls PPGRDCJPPOST2L
+!              calls PPGRDCJPPOST2L or VPPGRDCJPPOST2L
 ! mpascfguard2 add scaled vector field to extended periodic field
-!              calls PPASCFGUARD2L
+!              calls MPPASCFGUARD2L
 ! wmpgdjpost2 generic procedure to calculate particle momentum flux and
 !             acceleration density
 !             calls mpgrdjpost2 or mpgdjpost2
@@ -28,9 +28,10 @@
 !              calls mpgrdcjpost2 or mpgdcjpost2
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 2, 2017
+! update: august 6, 2018
 !
       use libmpdpush2_h
+      use libvmpdpush2_h
       implicit none
 !
       contains  
@@ -69,10 +70,10 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpgdjpost2(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm, &
-     &dt,tdcjpost,nx,mx,my,mx1)
+     &dt,tdcjpost,nx,mx,my,mx1,popt)
 ! deposit time derivative of current
       implicit none
-      integer, intent(in) :: nx, mx, my, mx1
+      integer, intent(in) :: nx, mx, my, mx1, popt
       integer, intent(in) :: noff, nyp
       real, intent(in) ::  qm, qbm, dt
       real, intent(inout) :: tdcjpost
@@ -92,8 +93,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGDJPPOST2L(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm,dt,  &
-     &idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+      select case(popt)
+! vector deposit
+      case (2)
+         call VPPGDJPPOST2L(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm, &
+     &dt,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+! standard deposit
+      case default
+         call PPGDJPPOST2L(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm,dt&
+     &,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tdcjpost = tdcjpost + real(dtime)
@@ -101,10 +110,10 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpgdcjpost2(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm, &
-     &qbm,dt,tdcjpost,nx,mx,my,mx1)
+     &qbm,dt,tdcjpost,nx,mx,my,mx1,popt)
 ! deposit current and time derivative of current
       implicit none
-      integer, intent(in) :: nx, mx, my, mx1
+      integer, intent(in) :: nx, mx, my, mx1, popt
       integer, intent(in) :: noff, nyp
       real, intent(in) ::  qm, qbm, dt
       real, intent(inout) :: tdcjpost
@@ -124,8 +133,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGDCJPPOST2L(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm,qbm, &
-     &dt,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+      select case(popt)
+! vector deposit
+      case (2)
+         call VPPGDCJPPOST2L(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm, &
+     &qbm,dt,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+! standard deposit
+      case default
+         call PPGDCJPPOST2L(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm,  &
+     &qbm,dt,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tdcjpost = tdcjpost + real(dtime)
@@ -133,11 +150,11 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpgrdjpost2(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm,&
-     &dt,ci,tdcjpost,nx,mx,my,mx1)
+     &dt,ci,tdcjpost,nx,mx,my,mx1,popt)
 ! deposit relativistic time derivative of current with relativistic
 ! particles
       implicit none
-      integer, intent(in) :: nx, mx, my, mx1
+      integer, intent(in) :: nx, mx, my, mx1, popt
       integer, intent(in) :: noff, nyp
       real, intent(in) ::  qm, qbm, dt, ci
       real, intent(inout) :: tdcjpost
@@ -157,8 +174,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGRDJPPOST2L(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm,dt, &
-     &ci,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+      select case(popt)
+! vector deposit
+      case (2)
+         call VPPGRDJPPOST2L(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm,&
+     &dt,ci,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+! standard deposit
+      case default
+         call PPGRDJPPOST2L(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm, &
+     &dt,ci,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tdcjpost = tdcjpost + real(dtime)
@@ -166,11 +191,11 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpgrdcjpost2(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm,&
-     &qbm,dt,ci,tdcjpost,nx,mx,my,mx1)
+     &qbm,dt,ci,tdcjpost,nx,mx,my,mx1,popt)
 ! deposit relativistic current and time derivative of current with
 ! relativistic particles
       implicit none
-      integer, intent(in) :: nx, mx, my, mx1
+      integer, intent(in) :: nx, mx, my, mx1, popt
       integer, intent(in) :: noff, nyp
       real, intent(in) ::  qm, qbm, dt, ci
       real, intent(inout) :: tdcjpost
@@ -190,8 +215,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGRDCJPPOST2L(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm,qbm,&
-     &dt,ci,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+      select case(popt)
+! vector deposit
+      case (2)
+         call VPPGRDCJPPOST2L(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm,&
+     &qbm,dt,ci,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+! standard deposit
+      case default
+         call PPGRDCJPPOST2L(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm, &
+     &qbm,dt,ci,idimp,nppmx,nx,mx,my,nxv,nypmx,mx1,mxyp1)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tdcjpost = tdcjpost + real(dtime)
@@ -215,7 +248,7 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPASCFGUARD2L(dcu,cus,nyp,q2m0,nx,nxe,nypmx)
+      call MPPASCFGUARD2L(dcu,cus,nyp,q2m0,nx,nxe,nypmx)
 ! record time
       call dtimer(dtime,itime,1)
       tdcjpost = tdcjpost + real(dtime)
@@ -223,11 +256,12 @@
 !
 !-----------------------------------------------------------------------
       subroutine wmpgdjpost2(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm,&
-     &dt,ci,tdcjpost,nx,mx,my,mx1,relativity)
+     &dt,ci,tdcjpost,nx,mx,my,mx1,popt,relativity)
 ! generic procedure to calculate particle momentum flux and acceleration
 ! density
       implicit none
-      integer, intent(in) :: noff, nyp, nx, mx, my, mx1, relativity
+      integer, intent(in) :: noff, nyp, nx, mx, my, mx1, popt
+      integer, intent(in) :: relativity
       real, intent(in) ::  qm, qbm, dt, ci
       real, intent(inout) :: tdcjpost
       real, dimension(:,:,:), intent(in) :: ppart
@@ -238,20 +272,21 @@
 ! updates dcu, amu
       if (relativity==1) then
          call mpgrdjpost2(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm,dt,&
-     &ci,tdcjpost,nx,mx,my,mx1)
+     &ci,tdcjpost,nx,mx,my,mx1,popt)
       else
          call mpgdjpost2(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,qbm,dt, &
-     &tdcjpost,nx,mx,my,mx1)
+     &tdcjpost,nx,mx,my,mx1,popt)
       endif
       end subroutine
 !
 !-----------------------------------------------------------------------
       subroutine wmpgdcjpost2(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm,&
-     &qbm,dt,ci,tdcjpost,nx,mx,my,mx1,relativity)
+     &qbm,dt,ci,tdcjpost,nx,mx,my,mx1,popt,relativity)
 ! generic procedure to calculate particle momentum flux, acceleration
 ! density and current
       implicit none
-      integer, intent(in) :: noff, nyp, nx, mx, my, mx1, relativity
+      integer, intent(in) :: noff, nyp, nx, mx, my, mx1, popt
+      integer, intent(in) :: relativity
       real, intent(in) ::  qm, qbm, dt, ci
       real, intent(inout) :: tdcjpost
       real, dimension(:,:,:), intent(in) :: ppart
@@ -262,10 +297,10 @@
 ! updates cue, dcu, amu
       if (relativity==1) then
          call mpgrdcjpost2(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm,qbm&
-     &,dt,ci,tdcjpost,nx,mx,my,mx1)
+     &,dt,ci,tdcjpost,nx,mx,my,mx1,popt)
       else
          call mpgdcjpost2(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,qm,qbm,&
-     &dt,tdcjpost,nx,mx,my,mx1)
+     &dt,tdcjpost,nx,mx,my,mx1,popt)
       endif
       end subroutine
 !

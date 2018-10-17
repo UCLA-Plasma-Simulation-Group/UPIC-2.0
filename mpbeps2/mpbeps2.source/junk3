@@ -1,0 +1,42 @@
+libvmpbpush2.f:      subroutine VPPGBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ek&
+libvmpbpush2.f:      subroutine VPPGBPPUSHF23L(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,  &
+libvmpbpush2.f:      subroutine VPPGRBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc, &
+libvmpbpush2.f:      subroutine VPPGRBPPUSHF23L(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp, &
+libvmpcurd2.f:      subroutine VPPGJPPOST2L(ppart,cu,kpic,noff,qm,dt,nppmx,idimp,nx,ny&
+libvmpcurd2.f:      subroutine V2PPGJPPOST2L(ppart,cu,kpic,noff,qm,dt,nppmx,idimp,nx, &
+libvmpcurd2.f:      subroutine VPPGJPPOSTF2L(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,  &
+libvmpcurd2.f:      subroutine VPPGRJPPOST2L(ppart,cu,kpic,noff,qm,dt,ci,nppmx,idimp, &
+libvmpcurd2.f:      subroutine VPPGRJPPOSTF2L(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt, &
+libvmpcurd2.f:      subroutine VPPGMJPPOST2L(ppart,amu,kpic,noff,qm,nppmx,idimp,mx,my,&
+libvmpcurd2.f:      subroutine VPPGRMJPPOST2L(ppart,amu,kpic,noff,qm,ci,nppmx,idimp,mx&
+libvmpdpush2.f:      subroutine VPPGDJPPOST2L(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm,  &
+libvmpdpush2.f:      subroutine VPPGDCJPPOST2L(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp, &
+libvmpdpush2.f:      subroutine VPPGRDJPPOST2L(ppart,fxy,bxy,dcu,amu,kpic,noff,nyp,qm, &
+libvmpdpush2.f:      subroutine VPPGRDCJPPOST2L(ppart,fxy,bxy,cu,dcu,amu,kpic,noff,nyp,&
+libvmpfft2.f:      subroutine WPFFT2RINIT(mixup,sct,indx,indy,nxhyd,nxyhd)
+libvmpfft2.f:      subroutine WPPFFT2RVM(f,g,bs,br,isign,ntpose,mixup,sct,ttp,indx,  &
+libvmpfft2.f:      subroutine WPPFFT2RVM2(f,g,bs,br,isign,ntpose,mixup,sct,ttp,indx,  &
+libvmpfft2.f:      subroutine WPPFFT2RVM3(f,g,bs,br,isign,ntpose,mixup,sct,ttp,indx, &
+libvmpfft2.f:      subroutine WPPFFT2RVMN(f,g,bs,br,ss,isign,ntpose,mixup,sct,ttp,   &
+libvmpfft2.f:      subroutine PPFFT2RVMXX(f,isign,mixup,sct,indx,indy,kstrt,kypi,kypp&
+libvmpfft2.f:      subroutine PPFFT2RVMXY(g,isign,mixup,sct,indx,indy,kstrt,kxpi,kxpp&
+libvmpfft2.f:      subroutine PPFFT2RVM2XX(f,isign,mixup,sct,indx,indy,kstrt,kypi,   &
+libvmpfft2.f:      subroutine PPFFT2RVM2XY(g,isign,mixup,sct,indx,indy,kstrt,kxpi,   &
+libvmpfft2.f:      subroutine PPFFT2RVM3XX(f,isign,mixup,sct,indx,indy,kstrt,kypi,   &
+libvmpfft2.f:      subroutine PPFFT2RVM3XY(g,isign,mixup,sct,indx,indy,kstrt,kxpi,   &
+libvmpfft2.f:      subroutine PPFFT2RVMNXX(f,ss,isign,mixup,sct,indx,indy,kstrt,kypi,&
+libvmpfft2.f:      subroutine PPFFT2RVMNXY(g,isign,mixup,sct,indx,indy,kstrt,kxpi,   &
+libvmpfft2.f:      subroutine MPPSWAPC2N(f,s,isign,nxh,kypi,kypt,nxvh,kypd,ndim)
+libvmppush2.f:      subroutine VPPGPPUSH2L(ppart,fxy,kpic,noff,nyp,qbm,dt,ek,nx,ny,mx,&
+libvmppush2.f:      subroutine VPPGPPUSHF2L(ppart,fxy,kpic,ncl,ihole,noff,nyp,qbm,dt, &
+libvmppush2.f:      subroutine VPPGRPPUSH2L(ppart,fxy,kpic,noff,nyp,qbm,dt,ci,ek,nx,ny&
+libvmppush2.f:      subroutine VPPGRPPUSHF2L(ppart,fxy,kpic,ncl,ihole,noff,nyp,qbm,dt,&
+libvmppush2.f:      subroutine VPPGPPUSH2ZF(ppart,kpic,dt,ek,nx,ny,idimp,nppmx,mxyp1, &
+libvmppush2.f:      subroutine VPPGPPUSHF2ZF(ppart,kpic,ncl,ihole,noff,nyp,dt,ek,nx,ny&
+libvmppush2.f:      subroutine VPPGRPPUSH2ZF(ppart,kpic,dt,ci,ek,nx,ny,idimp,nppmx,   &
+libvmppush2.f:      subroutine VPPGRPPUSHF2ZF(ppart,kpic,ncl,ihole,noff,nyp,dt,ci,ek, &
+libvmppush2.f:      subroutine VPPGPPOST2L(ppart,q,kpic,noff,qm,idimp,nppmx,mx,my,nxv,&
+libvmppush2.f:      subroutine V2PPGPPOST2L(ppart,q,kpic,noff,qm,idimp,nppmx,mx,my,nxv&
+libvmpsort2.f:      subroutine VPPPORDER2LA(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,  &
+libvmpsort2.f:      subroutine VPPPORDERF2LA(ppart,ppbuff,sbufl,sbufr,ncl,ihole,ncll, &
+libvmpsort2.f:      subroutine VPPPORDER2LB(ppart,ppbuff,rbufl,rbufr,kpic,ncl,ihole,  &

@@ -17,6 +17,9 @@
 !          profile for 2d or 2-1/2d code
 ! PFDISTR2 calculates initial particle co-ordinates with general
 !          distribution in space for 2d or 2-1/2d code
+! PGFDISTR2 initializes x and co-ordinate for 2d or 2-1/2d code, with
+!           general distribution in space with limited x and y
+!           coordinate range
 ! PVDISTR2 calculates initial particle velocities with maxwellian
 !          velocity with drift for 2d code
 ! PVDISTR2H calculates initial particle velocities with maxwellian
@@ -32,6 +35,9 @@
 ! PPDBLKP2L finds the maximum number of particles in each tile
 ! PFEDGES2 = finds new partitions boundaries (edges,noff,nyp)
 !            from analytic general density profile.
+! PGFEDGES2 = finds new partitions boundaries (edges,noff,nyp)
+!             from analytic general density profile with limited y
+!             coordinate range
 ! PFHOLES2 determines list of particles which are leaving this node
 ! ranorm gaussian random number generator
 ! randum uniform random number generator
@@ -52,7 +58,7 @@
 !          for a gaussian density profile with no background density
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: march 2, 2018
+! update: july 24, 2018
 !-----------------------------------------------------------------------
       subroutine NEXTRAN2(nextrand,ndim,np)
 ! for 2d code, this subroutine skips over nextrand groups of random
@@ -709,6 +715,199 @@
 ! find normalization for function
       anx = real(nx) - edgelx
       any = real(ny) - edgely
+      x0 = fnx(dble(edgelx),argx1,argx2,argx3,1)
+      y0 = fny(dble(edgely),argy1,argy2,argy3,1)
+      bnx = real(npx)/(fnx(dble(anx),argx1,argx2,argx3,1) - x0)
+      bny = real(npy)/(fny(dble(any),argy1,argy2,argy3,1) - y0)
+      x0 = bnx*x0 - 0.5
+      y0 = bny*y0 - 0.5
+! density profile in x
+      do 20 j = 1, npx
+      xn = real(j) + x0
+! guess next value for xt
+      if (j.eq.1) then
+         xt0 = edgelx
+         xt = xt0
+         fp = bnx*fnx(xt,argx1,argx2,argx3,0)
+         if (fp.gt.0.0) xt = xt + 0.5/fp
+      else
+         fp = bnx*fnx(xt,argx1,argx2,argx3,0)
+         if (fp.eq.0.0) fp = 1.0
+         xt = xt + 1.0/fp
+      endif
+      xt = max(edgelx,min(xt,anx))
+      i = 0
+   10 f = bnx*fnx(xt,argx1,argx2,argx3,1) - dble(xn)
+! find improved value for xt
+      if (abs(f).ge.eps) then
+         fp = bnx*fnx(xt,argx1,argx2,argx3,0)
+! newton's method
+         if ((abs(f).lt.big).and.(fp.gt.0.0)) then
+            xt0 = xt
+            xt = xt - f/fp
+            xt = max(edgelx,min(xt,anx))
+! bisection method
+         else if (f.gt.0.0) then
+            fp = 0.5*abs(xt0 - xt)
+            xt = xt0 - fp
+         else
+            fp = abs(xt - xt0)
+            xt0 = xt
+            xt = xt + fp
+         endif
+         i = i + 1
+         if (i.lt.imax) go to 10
+!        write (*,*) j,'newton iteration max exceeded, xt = ', xt
+         ierr = ierr + 1
+      endif
+      part(1,j+npp) = xt
+      xt0 = xt
+   20 continue
+! quit if error
+      if (ierr.ne.0) return
+! density profile in y
+      moff = mpy*ks
+      do 50 k = 1, mpys + moff
+      kk = k - moff
+      yn = real(k) + y0
+! guess next value for yt
+      if (k.eq.1) then
+         yt0 = edgely
+         yt = yt0
+         fp = bny*fny(yt,argy1,argy2,argy3,0)
+         if (fp.gt.0.0) yt = yt + 0.5/fp
+      else
+         fp = bny*fny(yt,argy1,argy2,argy3,0)
+         if (fp.eq.0.0) fp = 1.0
+         yt = yt + 1.0/fp
+      endif
+      yt = max(edgely,min(yt,any))
+      i = 0
+   30 f = bny*fny(yt,argy1,argy2,argy3,1) - dble(yn)
+! find improved value for yt
+      if (abs(f).ge.eps) then
+         fp = bny*fny(yt,argy1,argy2,argy3,0)
+! newton's method
+         if ((abs(f).lt.big).and.(fp.gt.0.0)) then
+            yt0 = yt
+            yt = yt - f/fp
+            yt = max(edgely,min(yt,any))
+! bisection method
+         else if (f.gt.0.0) then
+            fp = 0.5*abs(yt0 - yt)
+            yt = yt0 - fp
+          else
+            fp = abs(yt - yt0)
+            yt0 = yt
+            yt = yt + fp
+         endif
+         i = i + 1
+         if (i.lt.imax) go to 30
+!        write (*,*) k,'newton iteration max exceeded, yt = ', yt
+         ierr = ierr + 1
+      endif
+! store co-ordinates
+      if ((kk.ge.1).and.(kk.le.mpys)) then
+         joff = npx*(kk-1) + npp
+         do 40 j = 1, npx
+         part(1,j+joff) = part(1,j+npp)
+         part(2,j+joff) = yt
+   40    continue
+      endif
+      yt0 = yt
+   50 continue
+! quit if error
+      if (ierr.ne.0) return
+! update number of particles
+      npp = npt
+! check if not all particles were distributed
+      dnpxy = dble(npx)*dble(npy)
+      sum1(1) = dble(npp-nps)
+      call PPDSUM(sum1,work1,1)
+      dnpxy = sum1(1) - dnpxy
+      if (dnpxy.ne.0.0d0) ierr = -1
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PGFDISTR2(part,npp,fnx,argx1,argx2,argx3,fny,argy1,    &
+     &argy2,argy3,xmin,xmax,ymin,ymax,npx,npy,nx,ny,kstrt,nvp,idimp,    &
+     &npmax,ierr)
+! for 2d code, this subroutine calculates initial particle co-ordinates
+! with general density profile n(x,y) = n(x)*n(y), 
+! where density in x is given by n(x) = fnx(x,argx1,argx2,argx3,0)
+! and integral of the density is given by = fnx(x,argx1,argx2,argx3,1)
+! and where density in y is given by n(y) = fny(y,argy1,argy2,argy3,0)
+! and integral of the density is given by = fny(y,argy1,argy2,argy3,1)
+! for distributed data.
+! x/y co-ordinates will be within range 0 < x < nx and 0 < y < ny
+! the algorithm partitions the number of particles distributed in the
+! y direction uniformly (with possible remainders).
+! particles are not necessarily in the correct processor, and may need
+! to be moved to another processor.
+! part(1,n) = position x of particle n in partition
+! part(2,n) = position y of particle n in partition
+! npp = number of particles in partition, updated in this procedure
+! fnx/fny = density and density integral function in x/y direction
+! argx1,argx2,argx3 = arguments to fnx
+! argy1,argy2,argy3 = arguments to fny
+! xmin/xmax = minimum/maximum range of particle coordinates in x
+! ymin/ymax = minimum/maximum range of particle coordinates in y
+! npx/npy = initial number of particles distributed in x/y direction
+! nx/ny = system length in x/y direction
+! kstrt = starting data block number
+! nvp = number of real or virtual processors
+! idimp = size of phase space = 4 or 5
+! npmax = maximum number of particles in each partition
+! ierr = (0,1) = (no,yes) error condition exists
+! with spatial decomposition
+      implicit none
+      integer npp, npx, npy, nx, ny, kstrt, nvp, idimp, npmax, ierr
+      double precision argx1, argx2, argx3, argy1, argy2, argy3
+      real xmin, xmax, ymin, ymax
+      real part
+      dimension part(idimp,npmax)
+      double precision fnx, fny
+      external fnx, fny
+! local data
+      integer nps, npt, ks, i, j, k, kk, mpy, mpys, imax, joff, moff
+      real edgelx, edgely, anx, any, bnx, bny, xt0, yt0, x0, y0
+      real xn, yn, eps, big, f, fp
+      double precision xt, yt, dnpxy
+      integer ierr1, iwork1
+      double precision sum1, work1
+      dimension ierr1(1), iwork1(1), sum1(1), work1(1)
+      nps = npp
+! particle distribution constants
+      ks = kstrt - 1
+! mpy = number of particles per processor in y direction
+      mpy = (npy - 1)/nvp + 1
+      mpys = min(mpy,max(0,npy-mpy*ks))
+! check if particle overflow will occurr
+      npt = npp + npx*mpys
+      ierr1(1) = npt
+      call PPIMAX(ierr1,iwork1,1)
+      ierr = ierr1(1)
+      if (ierr.gt.npmax) return
+      ierr = 0
+! eps = convergence criterion
+      imax = max(nx,ny)
+      eps = 0.0001
+      big = 0.25
+! set boundary value in x
+      if ((xmin.lt.0.0).or.(xmin.ge.xmax).or.(xmax.gt.real(nx))) then
+         ierr = -1
+         return
+      endif
+      edgelx = xmin
+! set boundary value in y
+      if ((ymin.lt.0.0).or.(ymin.ge.ymax).or.(ymax.gt.real(ny))) then
+         ierr = -2
+         return
+      endif
+      edgely = ymin
+! find normalization for function
+      anx = xmax
+      any = ymax
       x0 = fnx(dble(edgelx),argx1,argx2,argx3,1)
       y0 = fny(dble(edgely),argy1,argy2,argy3,1)
       bnx = real(npx)/(fnx(dble(anx),argx1,argx2,argx3,1) - x0)
@@ -1495,6 +1694,97 @@
       edges(2) = at2
 ! set rightmost edge to ny
       if ((kb+1).eq.nvp) edges(2) = any
+! calculate number of grids and offsets in new partitions
+      noff = edges(1) + 0.5
+      kb = edges(2) + 0.5
+      nyp = kb - noff
+      edges(1) = real(noff)
+      edges(2) = real(kb)
+! find maximum/minimum partition size
+      mypm(1) = nyp
+      mypm(2) = -nyp
+      call PPIMAX(mypm,iwork2,2)
+      nypmx = mypm(1) + 1
+      nypmn = -mypm(2)
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine PGFEDGES2(edges,nyp,noff,fny,argy1,argy2,argy3,ymin,   &
+     &ymax,nypmx,nypmn,ny,kstrt,nvp,idps)
+! this subroutines finds new partitions boundaries (edges,noff,nyp)
+! from density integral given by fny(y,argy1,argy2,argy3,1)
+! edges(1) = lower boundary of particle partition
+! edges(2) = upper boundary of particle partition
+! nyp = number of primary (complete) gridpoints in particle partition
+! noff = lowermost global gridpoint in particle partition
+! fny = density and density integral function
+! argy1,argy2,argy3 = arguments to fny
+! ymin/ymax = minimum/maximum range of particle coordinates in y
+! nypmx = maximum size of particle partition, including guard cells
+! nypmn = minimum value of nyp
+! ny = system length in y direction
+! kstrt = starting data block number (processor id + 1)
+! nvp = number of real or virtual processors
+! idps = number of partition boundaries
+      implicit none
+      integer nyp, noff, nypmx, nypmn, ny, kstrt, nvp, idps
+      double precision argy1, argy2, argy3
+      real ymin, ymax
+      real edges
+      dimension edges(idps)
+      double precision fny
+      external fny
+! local data
+      integer kb
+      real edgely, any, y0, y1, anpav, anpl, anpr, sum1, at1, at2
+      real ymn, ymx
+      integer mypm, iwork2
+      dimension mypm(2), iwork2(2)
+! particle distribution constants
+      kb = kstrt - 1
+! set boundary value in y
+      ymn = ymin
+      ymx = ymax
+      if ((ymin.lt.0.0).or.(ymin.ge.ymax).or.(ymax.gt.real(ny))) then
+         if (ymin.lt.0.0) ymn = 0.0
+         if (ymax.gt.real(ny)) ymx = real(ny)
+         if (kstrt.eq.1) then
+            write (*,*) 'PGFEDGES2: invalid ymin,ymax=', ymin, ymax
+         endif
+      endif
+      edgely = ymn
+! find normalization for function
+      any = ymx
+      y0 = fny(dble(edgely),argy1,argy2,argy3,1)
+! anpav = desired number of particles per processor
+      anpav = (fny(dble(any),argy1,argy2,argy3,1) - y0)/real(nvp)
+! search for boundaries
+      anpl = real(kb)*anpav
+      anpr = real(kb+1)*anpav
+      y1 = edgely
+      sum1 = 0.0
+! first find left boundary
+   10 at1 = sum1
+      sum1 = fny(dble(y1),argy1,argy2,argy3,1) - y0
+      y1 = y1 + 1.0
+      if ((sum1.lt.anpl).and.(y1.le.any)) go to 10 
+      if (sum1.gt.at1) then
+         at2 = (y1 - 2.0) + (anpl - at1)/(sum1 - at1)
+      else
+         at2 = y1 - 1.0
+      endif
+      edges(1) = at2
+! set leftmost edge to zero
+      if (kb.eq.0) edges(1) = 0.0
+! then find right boundary
+   20 at1 = sum1
+      sum1 = fny(dble(y1),argy1,argy2,argy3,1) - y0
+      y1 = y1 + 1.0
+      if ((sum1.lt.anpr).and.(y1.le.any)) go to 20
+      at2 = (y1 - 2.0) + (anpr - at1)/(sum1 - at1)
+      edges(2) = at2
+! set rightmost edge to ny
+      if ((kb+1).eq.nvp) edges(2) = real(ny)
 ! calculate number of grids and offsets in new partitions
       noff = edges(1) + 0.5
       kb = edges(2) + 0.5

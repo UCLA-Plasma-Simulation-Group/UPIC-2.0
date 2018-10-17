@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !
-      module mpdiag3
+      module mdiag3
 !
 ! Fortran90 wrappers to 3d MPI/OpenMP PIC library libmpdiag3.f
 ! get_funit returns an unconnected fortran unit number
@@ -11,6 +11,7 @@
 ! dafopenvc3 opens new binary file for complex 1d vector data.
 ! dafopenfv3 opens new binary file for real velocity-space data.
 ! dafopentr3 opens new binary file for real trajectory data.
+! fnopens3: opens a new fortran unformatted stream file
 ! mpvpdist3 calculates 3 component velocity distribution, velocity
 !           moments, and entropy with segmented particle array
 !           PPVDIST32
@@ -74,7 +75,7 @@
 ! dafwritetr3  writes trajectory record in direct access binary file
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: march 21, 2018
+! update: june 28, 2018
 !
       use mppmod3, only: mpsum2
       use libmpdiag3_h
@@ -238,6 +239,19 @@
       open(unit=iunit,file=fname,form='unformatted',access='direct',    &
      &recl=lrec,status='replace')
       nrec = 1
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine fnopens3(iunit,fname)
+! this subroutine opens a new fortran unformatted stream file
+! this is a Fortran2003 feature
+! iunit = fortran unit number to be used 
+! fname = file name
+      implicit none
+      integer, intent(in) :: iunit
+      character(len=*), intent(in) :: fname
+      open(unit=iunit,file=fname,access='stream',form='unformatted',    &
+     &status='replace')
       end subroutine
 !
 !-----------------------------------------------------------------------
@@ -742,7 +756,7 @@
       mxyzp1 = size(kpic,1); idps = size(tedges,1)
 ! call low level procedure
       if (idimp > 6) then
-         call PSTPTRAJ3(ppart,tedges,kpic,iprobt,kstrt,nst,vtx,vtsx,   &
+         call PSTPTRAJ3(ppart,tedges,kpic,iprobt,kstrt,nst,vtx,vtsx,    &
      &dvtx,nvpy,nvpz,idimp,nppmx,mxyzp1,idps,np,nprobt)
       else
          if (kstrt==1) then

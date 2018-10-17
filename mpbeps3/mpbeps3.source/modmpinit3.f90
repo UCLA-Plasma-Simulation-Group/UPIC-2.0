@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !
-      module modmpinit3
+      module minit3
 !
 ! Fortran90 wrappers to 3d MPI/OpenMP PIC library libmpinit3.f
 ! mnextran3 skips over nextrand groups of random numbers in order to
@@ -8,6 +8,8 @@
 !           calls NEXTRAN3
 ! mpdcomp3 determines spatial decomposition for uniform distribution
 !          calls PDNICOMP32L
+! mpfcomp3 determines optimal partition for nvp processors
+!          calls FCOMP32
 ! mpdistr3 calculates initial particle co-ordinates and velocities
 !          with uniform density and maxwellian velocity with drift
 !          for 3d code
@@ -47,7 +49,7 @@
 !            calls mpvdistr3 or mpvrdistr3
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: march 23, 2018
+! update: may 16, 2018
 !
       use libmpinit3_h
       implicit none
@@ -93,6 +95,16 @@
          call PPEXIT()
          stop
       endif
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpfcomp3(nvp,nx,ny,nz,nvpy,nvpz,ierr)
+! determines optimal partition for nvp processors
+      implicit none
+      integer, intent(in) :: nvp, nx, ny, nz
+      integer, intent(inout) :: nvpy, nvpz, ierr
+! call low level procedure
+      call FCOMP32(nvp,nx,ny,nz,nvpy,nvpz,ierr)
       end subroutine
 !
 !-----------------------------------------------------------------------

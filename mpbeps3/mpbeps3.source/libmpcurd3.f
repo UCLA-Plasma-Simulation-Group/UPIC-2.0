@@ -23,7 +23,7 @@
 !                linear interpolation
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 15, 2018
+! update: may 9, 2018
 !-----------------------------------------------------------------------
       subroutine PPGJPPOST32L(ppart,cu,kpic,noff,qm,dt,nppmx,idimp,nx,ny&
      &,nz,mx,my,mz,nxv,nypmx,nzpmx,mx1,myp1,mxyzp1,idds,ipbc)
@@ -91,8 +91,8 @@
       real dxp, dyp, dzp, amx, amy, amz, dx1, dx, dy, dz, vx, vy, vz
       real x, y, z
       real scu
-      dimension scu(3,MXV,MYV,MZV)
-!     dimension scu(3,mx+1,my+1,mz+1)
+!     dimension scu(3,MXV,MYV,MZV)
+      dimension scu(3,mx+1,my+1,mz+1)
       mxyp1 = mx1*myp1
 ! set boundary values
       edgelx = 0.0
@@ -443,8 +443,8 @@
       real x, y, z
       real anx, any, anz, edgelx, edgely, edgelz, edgerx, edgery, edgerz
       real scu
-      dimension scu(3,MXV,MYV,MZV)
-!     dimension scu(3,mx+1,my+1,mz+1)
+!     dimension scu(3,MXV,MYV,MZV)
+      dimension scu(3,mx+1,my+1,mz+1)
       mxyp1 = mx1*myp1
       anx = real(nx)
       any = real(ny)
@@ -832,8 +832,8 @@
       real dxp, dyp, dzp, amx, amy, amz, dx1, dx, dy, dz, vx, vy, vz
       real x, y, z, p2, gami
       real scu
-      dimension scu(3,MXV,MYV,MZV)
-!     dimension scu(3,mx+1,my+1,mz+1)
+!     dimension scu(3,MXV,MYV,MZV)
+      dimension scu(3,mx+1,my+1,mz+1)
       mxyp1 = mx1*myp1
       ci2 = ci*ci
 ! set boundary values
@@ -1194,8 +1194,8 @@
       real x, y, z, ci2, p2, gami
       real anx, any, anz, edgelx, edgely, edgelz, edgerx, edgery, edgerz
       real scu
-      dimension scu(3,MXV,MYV,MZV)
-!     dimension scu(3,mx+1,my+1,mz+1)
+!     dimension scu(3,MXV,MYV,MZV)
+      dimension scu(3,mx+1,my+1,mz+1)
       mxyp1 = mx1*myp1
       ci2 = ci*ci
       anx = real(nx)
@@ -1587,8 +1587,8 @@
       real dxp, dyp, dzp, amx, amy, amz, dx1, dx, dy, vx, vy, vz
       real x, y, z, v1, v2, v3, v4, v5, v6
       real samu
-      dimension samu(6,MXV,MYV,MZV)
-!     dimension samu(6,mx+1,my+1,mz+1)
+!     dimension samu(6,MXV,MYV,MZV)
+      dimension samu(6,mx+1,my+1,mz+1)
       mxyp1 = mx1*myp1
 ! error if local array is too small
 !     if ((mx.ge.MXV).or.(my.ge.MYV).or.(mz.ge.MZV)) return
@@ -1709,7 +1709,7 @@
       samu(5,nn+1,mm+1,ll+1) = samu(5,nn+1,mm+1,ll+1) + v5*dy
       samu(6,nn+1,mm+1,ll+1) = samu(6,nn+1,mm+1,ll+1) + v6*dy
    40 continue
-! deposit charge to interior points in global array
+! deposit momentum flux to interior points in global array
       nn = min(mx,nxv-noffp)
       mm = min(my,nypmx-moffp)
       ll = min(mz,nzpmx-loffp)
@@ -1731,7 +1731,7 @@
    50 continue
    60 continue
    70 continue
-! deposit charge to edge points in global array
+! deposit momentum flux to edge points in global array
       lm = min(mz+1,nzpmx-loffp)
       do 90 j = 2, mm
       do 80 i = 2, nn
@@ -2012,8 +2012,8 @@
       real ci2, gami2, dxp, dyp, dzp, amx, amy, amz, dx1, dx, dy
       real vx, vy, vz, x, y, z, p2, v1, v2, v3, v4, v5, v6
       real samu
-      dimension samu(6,MXV,MYV,MZV)
-!     dimension samu(6,mx+1,my+1,mz+1)
+!     dimension samu(6,MXV,MYV,MZV)
+      dimension samu(6,mx+1,my+1,mz+1)
       ci2 = ci*ci
       mxyp1 = mx1*myp1
 ! error if local array is too small
@@ -2139,7 +2139,7 @@
       samu(5,nn+1,mm+1,ll+1) = samu(5,nn+1,mm+1,ll+1) + v5*dy
       samu(6,nn+1,mm+1,ll+1) = samu(6,nn+1,mm+1,ll+1) + v6*dy
    40 continue
-! deposit charge to interior points in global array
+! deposit momentum flux to interior points in global array
       nn = min(mx,nxv-noffp)
       mm = min(my,nypmx-moffp)
       ll = min(mz,nzpmx-loffp)
@@ -2161,7 +2161,7 @@
    50 continue
    60 continue
    70 continue
-! deposit charge to edge points in global array
+! deposit momentum flux to edge points in global array
       lm = min(mz+1,nzpmx-loffp)
       do 90 j = 2, mm
       do 80 i = 2, nn

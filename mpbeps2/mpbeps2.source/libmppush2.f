@@ -4,6 +4,8 @@
 ! 2D MPI/OpenMP PIC Codes:
 ! PPPMOVIN2L sorts particles by x,y grid in tiles of mx, my and
 !            copies to segmented array ppart
+! PPPMOVIN2LP sorts particles by x,ygrid in tiles of mx, my and
+!             copies to segmented array ppart for NUMA architectures
 ! PPPCOPYOUT2 copies segmented particle data ppart to the array part
 ! PPPCOPYIN2 copies linear array part to segmented particle data ppart
 ! PPPCHECK2L performs a sanity check to make sure particles sorted
@@ -18,7 +20,7 @@
 ! PPGRPPUSH2L updates relativistic particle co-ordinates and momenta
 !             using electric field only, with linear interpolation and
 !             various particle boundary conditions
-! PPGRPPUSHF2L updates relativistic particle co-ordinates and velocities
+! PPGRPPUSHF2L updates relativistic particle co-ordinates and momenta
 !              using electric field only, with linear interpolation and
 !              periodic particle boundary conditions.  also determines
 !              list of particles which are leaving each tile
@@ -36,9 +38,11 @@
 !               determines list of particles which are leaving each tile
 ! PPGPPOST2L calculates particle charge density using linear
 !            interpolation
+! SET_SZERO2 zeros out charge density array.
+! SET_PVZERO2 zeros out current density array.
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 26, 2018
+! update: july 31, 2018
 !-----------------------------------------------------------------------
       subroutine PPPMOVIN2L(part,ppart,kpic,npp,noff,nppmx,idimp,npmax, &
      &mx,my,mx1,mxyp1,irc)
@@ -94,6 +98,77 @@
       return
       end
 !-----------------------------------------------------------------------
+      subroutine PPPMOVIN2LP(part,ppart,kpic,kp,npp,noff,nppmx,idimp,   &
+     &npmax,mx,my,mx1,mxyp1,irc)
+! this subroutine sorts particles by x,y grid in tiles of
+! mx, my and copies to segmented array ppart
+! designed for NUMA architectures, where memory is associated with the
+! processor which first writes a memory location.
+! linear interpolation, spatial decomposition in y direction
+! input: all except ppart, kpic, kp, output: ppart, kpic, kp
+! part/ppart = input/output particle arrays
+! part(1,n) = position x of particle n in partition
+! part(2,n) = position y of particle n in partition
+! kpic = output number of particles per tile
+! kp = original location of reordered particle
+! nppmx = maximum number of particles in tile
+! npp = number of particles in partition
+! noff = backmost global gridpoint in particle partition
+! idimp = size of phase space = 4
+! npmax = maximum number of particles in each partition
+! mx/my = number of grids in sorting cell in x and y
+! mx1 = (system length in x direction - 1)/mx + 1
+! mxyp1 = mx1*myp1, where myp1=(partition length in y direction-1)/my+1
+! irc = maximum overflow, returned only if error occurs, when irc > 0
+      implicit none
+      integer nppmx, idimp, npmax, mx, my, mx1, mxyp1, irc
+      integer kpic, kp, npp, noff
+      real part, ppart
+      dimension part(idimp,npmax), ppart(idimp,nppmx,mxyp1)
+      dimension kpic(mxyp1), kp(nppmx,mxyp1)
+! local data
+      integer i, j, k, n, m, mnoff, ip, nppp, ierr
+      mnoff = noff
+      ierr = 0
+! clear counter array
+      do 10 k = 1, mxyp1
+      kpic(k) = 0
+   10 continue
+! find addresses of particles at each tile to reorder particles
+      do 20 j = 1, npp
+      n = part(1,j)
+      n = n/mx + 1
+      m = part(2,j)
+      m = (m - mnoff)/my
+      m = n + mx1*m
+      ip = kpic(m) + 1
+      if (ip.le.nppmx) then
+         kp(ip,m) = j
+      else
+         ierr = max(ierr,ip-nppmx)
+      endif
+      kpic(m) = ip
+   20 continue
+! check for overflow
+      if (ierr.gt.0) then
+         irc = ierr
+         return
+      endif
+! copy reordered particles
+!$OMP PARALLEL DO PRIVATE(i,j,k,m,nppp)
+      do 50 k = 1, mxyp1
+      nppp = kpic(k)
+      do 40 j = 1, nppp
+      m = kp(j,k)
+      do 30 i = 1, idimp
+      ppart(i,j,k) = part(i,m)
+   30 continue
+   40 continue
+   50 continue
+!$OMP END PARALLEL DO
+      return
+      end
+!-----------------------------------------------------------------------
       subroutine PPPCOPYOUT2(part,ppart,kpic,npp,npmax,nppmx,idimp,mxyp1&
      &,irc)
 ! for 2d code, this subroutine copies segmented particle data ppart to
@@ -116,25 +191,29 @@
       dimension part(idimp,npmax), ppart(idimp,nppmx,mxyp1)
       dimension kpic(mxyp1)
 ! local data
-      integer i, j, k, npoff, nppp, ne, ierr
-      npoff = 0
-      ierr = 0
-! loop over tiles
-      do 30 k = 1, mxyp1
-      nppp = kpic(k)
-      ne = nppp + npoff
-      if (ne.gt.npmax) ierr = max(ierr,ne-npmax)
-      if (ierr.gt.0) nppp = 0
-! loop over particles in tile
-      do 20 j = 1, nppp
-      do 10 i = 1, idimp
-      part(i,j+npoff) = ppart(i,j,k)
+      integer i, j, k, npoff, nppp
+! check for overflow
+      nppp = 0
+      do 10 k = 1, mxyp1
+      nppp = nppp + kpic(k)
    10 continue
+      if (nppp.gt.npmax) then
+         irc = nppp
+         return
+      endif
+      npp = nppp
+! loop over tiles
+      npoff = 0
+      do 40 k = 1, mxyp1
+      nppp = kpic(k)
+! loop over particles in tile
+      do 30 j = 1, nppp
+      do 20 i = 1, idimp
+      part(i,j+npoff) = ppart(i,j,k)
    20 continue
-      npoff = npoff + nppp
    30 continue
-      npp = npoff
-      if (ierr.gt.0) irc = ierr
+      npoff = npoff + nppp
+   40 continue
       return
       end
 !-----------------------------------------------------------------------
@@ -159,24 +238,28 @@
       dimension part(idimp,npmax), ppart(idimp,nppmx,mxyp1)
       dimension kpic(mxyp1)
 ! local data
-      integer i, j, k, npoff, nppp, ne, ierr
-      npoff = 0
-      ierr = 0
-! loop over tiles
-      do 30 k = 1, mxyp1
-      nppp = kpic(k)
-      ne = nppp + npoff
-      if (ne.gt.npmax) ierr = max(ierr,ne-npmax)
-      if (ierr.gt.0) nppp = 0
-! loop over particles in tile
-      do 20 j = 1, nppp
-      do 10 i = 1, idimp
-      ppart(i,j,k) = part(i,j+npoff)
+      integer i, j, k, npoff, nppp
+! check for overflow
+      nppp = 0
+      do 10 k = 1, mxyp1
+      nppp = nppp + kpic(k)
    10 continue
+      if (nppp.gt.npmax) then
+         irc = nppp
+         return
+      endif
+! loop over tiles
+      npoff = 0
+      do 40 k = 1, mxyp1
+      nppp = kpic(k)
+! loop over particles in tile
+      do 30 j = 1, nppp
+      do 20 i = 1, idimp
+      ppart(i,j,k) = part(i,j+npoff)
    20 continue
-      npoff = npoff + nppp
    30 continue
-      if (ierr.gt.0) irc = ierr
+      npoff = npoff + nppp
+   40 continue
       return
       end
 !-----------------------------------------------------------------------
@@ -618,7 +701,7 @@
       subroutine PPGRPPUSH2L(ppart,fxy,kpic,noff,nyp,qbm,dt,ci,ek,nx,ny,&
      &mx,my,idimp,nppmx,nxv,nypmx,mx1,mxyp1,ipbc)
 ! for 2d code, this subroutine updates particle co-ordinates and
-! velocities using leap-frog scheme in time and first-order linear
+! momenta using leap-frog scheme in time and first-order linear
 ! interpolation in space, for relativistic particles
 ! with various boundary conditions
 ! OpenMP version using guard cells, for distributed data
@@ -1631,6 +1714,95 @@
       endif
    70 continue
    80 continue
+!$OMP END PARALLEL DO
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine SET_PSZERO2(q,mx,my,nxv,nypmx,mx1,myp1)
+! for 2d code, this subroutine zeros out charge density array.
+! for Intel NUMA architecture with first touch policy, this associates
+! array segments with appropriate threads
+! OpenMP version
+! input: all, output: q
+! q(j,k) = charge density at grid point j,k
+! mx/my = number of grids in sorting cell in x/y
+! nxv = first dimension of charge array, must be >= nx+1
+! nypmx = second dimension of charge array
+! mx1 = (system length in x direction - 1)/mx + 1
+! myp1 = (partition length in y direction-1)/my+1
+      implicit none
+      integer mx, my, nxv, nypmx, mx1, myp1
+      real q
+      dimension q(nxv,nypmx)
+! local data
+      integer mxyp1, noffp, moffp
+      integer i, j, k, nn, mm
+      mxyp1 = mx1*myp1
+! loop over tiles
+!$OMP PARALLEL DO PRIVATE(i,j,k,noffp,moffp,nn,mm)
+      do 30 k = 1, mxyp1
+      j = (k - 1)/mx1
+      moffp = my*j
+      mm = my
+      if ((j+1).eq.myp1) mm = nypmx - moffp
+      i = k - mx1*j
+      noffp = mx*(i - 1)
+      nn = mx
+      if (i.eq.mx1) nn = nxv - noffp
+! zero charge in global array
+      do 20 j = 1, mm
+!dir$ ivdep
+      do 10 i = 1, nn
+      q(i+noffp,j+moffp) = 0.0
+   10 continue
+   20 continue
+   30 continue
+!$OMP END PARALLEL DO
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine SET_PVZERO2(cu,mx,my,ndim,nxv,nypmx,mx1,myp1)
+! for 2d code, this subroutine zeros out current density array.
+! for Intel NUMA architecture with first touch policy, this associates
+! array segments with appropriate threads
+! OpenMP version
+! input: all, output: cu
+! cu(m,j,k) = current density at grid point m,j,k
+! mx/my = number of grids in sorting cell in x/y
+! ndim = first dimension of current array
+! nxv = second dimension of current array, must be >= nx+1
+! nypmx = third dimension of current array
+! mx1 = (system length in x direction - 1)/mx + 1
+! myp1 = (partition length in y direction - 1)/my + 1
+      implicit none
+      integer mx, my, ndim, nxv, nypmx, mx1, myp1
+      real cu
+      dimension cu(ndim,nxv,nypmx)
+! local data
+      integer mxyp1, noffp, moffp
+      integer i, j, k, m, nn, mm
+      mxyp1 = mx1*myp1
+! loop over tiles
+!$OMP PARALLEL DO PRIVATE(i,j,k,m,noffp,moffp,nn,mm)
+      do 40 k = 1, mxyp1
+      j = (k - 1)/mx1
+      moffp = my*j
+      mm = my
+      if ((j+1).eq.myp1) mm = nypmx - moffp
+      i = k - mx1*j
+      noffp = mx*(i - 1)
+      nn = mx
+      if (i.eq.mx1) nn = nxv - noffp
+! zero current in global array
+      do 30 j = 1, mm
+      do 20 i = 1, nn
+!dir$ ivdep
+      do 10 m = 1, ndim
+      cu(m,i+noffp,j+moffp) = 0.0
+   10 continue
+   20 continue
+   30 continue
+   40 continue
 !$OMP END PARALLEL DO
       return
       end

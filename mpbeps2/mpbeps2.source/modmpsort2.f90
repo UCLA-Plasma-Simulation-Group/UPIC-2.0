@@ -1,15 +1,15 @@
 !-----------------------------------------------------------------------
 !
-      module modmpsort2
+      module msort2
 !
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpsort2.f
 ! mporder2a creates list of particles which are leaving tile, and
 !           buffers outgoing particles
-!           calls PPPORDER2LA
+!           calls PPPORDER2LA or VPPPORDER2LA
 ! mporderf2a buffers outgoing particles
-!            calls PPPORDERF2LA
+!            calls PPPORDERF2LA or VPPPORDERF2LA
 ! mporder2b copies buffers into particle array
-!           calls PPPORDER2LB
+!           calls PPPORDER2LB or VPPPORDER2LB
 ! mprsncl2 restores initial values of address offset ncl
 !          calls PPPRSNCL2L
 ! mporderf2af performs final section of first part of particle sort
@@ -18,19 +18,20 @@
 !          calls PPPRSTOR2L
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 30, 2017
+! update: august 1, 2018
 !
       use libmpsort2_h
+      use libvmpsort2_h
       implicit none
 !
       contains
 !
 !-----------------------------------------------------------------------
       subroutine mporder2a(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,ncll,&
-     &nclr,noff,nyp,tsort,kstrt,nx,ny,mx,my,irc2)
+     &nclr,noff,nyp,tsort,kstrt,nx,ny,mx,my,popt,irc2)
 ! performs first part of particle reordering into tiles
       implicit none
-      integer, intent(in) :: kstrt, nx, ny, mx, my
+      integer, intent(in) :: kstrt, nx, ny, mx, my, popt
       integer, intent(in) :: noff, nyp
       real, intent(inout) :: tsort
       real, dimension(:,:,:), intent(inout) :: ppart
@@ -53,8 +54,18 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPPORDER2LA(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,ncll,nclr&
-     &,noff,nyp,idimp,nppmx,nx,ny,mx,my,mx1,myp1,npbmx,ntmax,nbmax,irc2)
+      select case(popt)
+! vector sort
+      case (2)
+         call VPPPORDER2LA(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,ncll,&
+     &nclr,noff,nyp,idimp,nppmx,nx,ny,mx,my,mx1,myp1,npbmx,ntmax,nbmax, &
+     &irc2)
+! standard sort
+      case default
+         call PPPORDER2LA(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,ncll, &
+     &nclr,noff,nyp,idimp,nppmx,nx,ny,mx,my,mx1,myp1,npbmx,ntmax,nbmax, &
+     &irc2)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tsort = tsort + real(dtime)
@@ -65,11 +76,11 @@
 !
 !-----------------------------------------------------------------------
       subroutine mporderf2a(ppart,ppbuff,sbufl,sbufr,ncl,ihole,ncll,nclr&
-     &,tsort,kstrt,irc2)
+     &,tsort,kstrt,popt,irc2)
 ! performs first part of particle reordering into tiles,
 ! does not create list of particles which are leaving tile
       implicit none
-      integer, intent(in) :: kstrt
+      integer, intent(in) :: kstrt, popt
       real, intent(inout) :: tsort
       real, dimension(:,:,:), intent(inout) :: ppart
       real, dimension(:,:,:), intent(inout) :: ppbuff
@@ -90,8 +101,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPPORDERF2LA(ppart,ppbuff,sbufl,sbufr,ncl,ihole,ncll,nclr,   &
+      select case(popt)
+! vector sort
+      case (2)
+         call VPPPORDERF2LA(ppart,ppbuff,sbufl,sbufr,ncl,ihole,ncll,nclr&
+     &,idimp,nppmx,mx1,myp1,npbmx,ntmax,nbmax,irc2)
+! standard sort
+      case default
+         call PPPORDERF2LA(ppart,ppbuff,sbufl,sbufr,ncl,ihole,ncll,nclr,&
      &idimp,nppmx,mx1,myp1,npbmx,ntmax,nbmax,irc2)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tsort = tsort + real(dtime)
@@ -102,10 +121,10 @@
 !
 !-----------------------------------------------------------------------
       subroutine mporder2b(ppart,ppbuff,rbufl,rbufr,kpic,ncl,ihole,mcll,&
-     &mclr,tsort,kstrt,nx,ny,irc2)
+     &mclr,tsort,kstrt,nx,ny,popt,irc2)
 ! performs second part of particle reordering into tiles
       implicit none
-      integer, intent(in) :: kstrt, nx, ny
+      integer, intent(in) :: kstrt, nx, ny, popt
       real, intent(inout) :: tsort
       real, dimension(:,:,:), intent(inout) :: ppart
       real, dimension(:,:,:), intent(in) :: ppbuff
@@ -127,8 +146,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPPORDER2LB(ppart,ppbuff,rbufl,rbufr,kpic,ncl,ihole,mcll,mclr&
-     &,idimp,nppmx,nx,ny,mx1,myp1,npbmx,ntmax,nbmax,irc2)
+      select case(popt)
+! vector sort
+      case (2)
+         call VPPPORDER2LB(ppart,ppbuff,rbufl,rbufr,kpic,ncl,ihole,mcll,&
+     &mclr,idimp,nppmx,nx,ny,mx1,myp1,npbmx,ntmax,nbmax,irc2)
+! standard sort
+      case default
+         call PPPORDER2LB(ppart,ppbuff,rbufl,rbufr,kpic,ncl,ihole,mcll, &
+     &mclr,idimp,nppmx,nx,ny,mx1,myp1,npbmx,ntmax,nbmax,irc2)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tsort = tsort + real(dtime)

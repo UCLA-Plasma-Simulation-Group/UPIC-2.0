@@ -25,6 +25,9 @@
 ! mpdsum finds parallel sum for each element of a double precision 1d
 !        vector
 !        calls PPDSUM
+! mpdmax finds parallel maximum for each element of a double precision
+!        1d vector
+!        calls PPDMAX
 ! mpsum2 finds parallel sum for each element of a real 2d vector
 !        calls PPSUM
 ! mpimax finds parallel maximum for each element of an integer vector
@@ -87,7 +90,7 @@
 !              calls PPWRVNDATA2
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: march 22, 2018
+! update: august 10, 2018
 !
       use mpplib2
       implicit none
@@ -451,6 +454,35 @@
       call dtimer(dtime,itime,-1)
 ! call low level procedure
       call PPDSUM(f,dg,nxp)
+! record time
+      call dtimer(dtime,itime,1)
+      tdiag = tdiag + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpdmax(f,tdiag)
+! finds parallel maximum for each element of a double precision 1d
+! vector
+      implicit none
+      real, intent(inout) :: tdiag
+      double precision, dimension(:), intent(inout) :: f
+! local data
+      integer :: nxp
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      nxp = size(f)
+! check if required size of buffer has increased
+      if (szdg < nxp) then
+         if (szdg > 0) deallocate(dg)
+! allocate new buffer
+         allocate(dg(nxp))
+         szdg = nxp
+      endif
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call PPDMAX(f,dg,nxp)
 ! record time
       call dtimer(dtime,itime,1)
       tdiag = tdiag + real(dtime)

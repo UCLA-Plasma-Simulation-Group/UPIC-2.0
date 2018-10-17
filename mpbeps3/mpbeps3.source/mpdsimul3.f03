@@ -10,10 +10,10 @@
 !
 ! written by Viktor K. Decyk, UCLA
 ! copyright 1999-2016, regents of the university of california
-! update: october 30, 2017
-      module mpdsimul3
-      use mpsimul3
-      use mpbsimul3
+! update: may 16, 2018
+      module fd3
+      use f3
+      use fb3
 !     use mdpush1
       implicit none
 !

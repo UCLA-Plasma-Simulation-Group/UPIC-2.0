@@ -8,9 +8,13 @@
 ! writnml2 writes final diagnostic metafile to unit iudm
 ! written by viktor k. decyk, ucla
 ! copyright 2011, regents of the university of california
-! update: March 12, 2018
+! update: July 26, 2018
 !
       implicit none
+!
+      integer, parameter :: LINEAR = 1
+      integer, parameter :: STANDARD = 1, VECTOR = 2
+      integer, parameter :: PERIODIC_2D = 1
 !
 ! Basic Input Namelist
       save
@@ -23,8 +27,8 @@
 ! indx/indy = exponent which determines grid points in x/y direction:
 ! nx = 2**indx, ny = 2**indy.
       integer :: indx =   9, indy =   9
-! psolve = type of poisson solver = (1,2,3)
-!     integer :: psolve = PERIODIC_2D
+! psolve = type of poisson solver = (1) = (PERIODIC_2D)
+      integer :: psolve = PERIODIC_2D
 ! relativity = (no,yes) = (0,1) = relativity is used
       integer :: relativity = 0
 ! ci = reciprocal of velocity of light
@@ -65,12 +69,9 @@
       real :: tend = 10.000, dt = 0.1
 !
 ! Numerical Parameters:
-! inorder = interpolation order
-! popt = particle optimization scheme
-! dopt = charge deposit optimization scheme
-! djopt = current deposit optimization scheme
-!     integer :: inorder = LINEAR, popt = STANDARD, dopt = LOOKAHEAD
-!     integer :: djopt = STANDARD
+! inorder = interpolation order = (1) = (LINEAR)
+! popt = performance optimization scheme = (1,2) = (STANDARD,VECTOR)
+      integer :: inorder = LINEAR, popt = STANDARD
 ! ax/ay = smoothed particle size in x/y direction
 !     real :: ax = .816497, ay = .816497
 !     real :: ax = .866025, ay = .866025
@@ -99,6 +100,15 @@
 ! shiftdx/shiftdy = shift of spatial coordinate in x/y
       real :: ampdx = 0.0, scaledx = 0.0, shiftdx = 0.0
       real :: ampdy = 0.0, scaledy = 0.0, shiftdy = 0.0
+! if movion==0, the fixed background ion density is set to one of:
+! ionbkg = (0,1) = (uniform,negative of initial electron density)
+      integer :: ionbkg = 1
+! to confine initial plasma density to some subregion, set:
+! 0 <= dxmin < 1.0, 0 < dxmax <= 1.0, 0 <= dymin < 1.0, 0 < dymax <= 1.0
+! this will constrain particle coordinates to the region:
+! dxmin*NX <= x <= dxmax*NX, dymin*NY <= y <= dymax*NY,
+! where NX = 2**indx and NY = 2**indy
+      real :: dxmin = 0, dxmax = 1.0, dymin = 0.0, dymax = 1.0
 !
 ! Zero Force Parameter:
 ! mzf = (0,1) = (no,yes) set forces to zero
@@ -245,62 +255,66 @@
       integer :: monitor = 0
 !
 ! define namelist
-      namelist /input2/ idrun, idcode, indx, indy, mx, my, npx, npy,    &
-     &npxb, npyb, qme, vtx, vty, vtz, vx0, vy0, vz0, vdx, vdy, vdz,     &
-     &vtdx, vtdy, vtdz, relativity, ci, xtras, ndim, nvdist, treverse,  &
-     &tend, dt, ax, ay, nextrand, mzf, ndprof, ampdx, scaledx, shiftdx, &
-     &ampdy, scaledy, shiftdy, amodex, freq, trmp, toff, el0, er0, ntw, &
-     &ndw, ntde, modesxde, modesyde, nderec, ntp, ndp, modesxp, modesyp,&
-     &nprec, ntel, modesxel, modesyel, nelrec, wmin, wmax, dw, ntfm,    &
-     &ndfm, npro, nferec, nfirec, ntv, ndv, nmv, nvft, nverec, nvirec,  &
-     &ntt, ndt, nst, nprobt, vtsx, dvtx, ntrec, nts, nds, mvx, mvy,     &
-     &nserec, nsirec, movion, emf, nustrt, ntr, idrun0, nplot, ndstyle, &
-     &nvpp, imbalance, monitor
+      namelist /input2/ idrun, idcode, indx, indy, mx, my, psolve,      &
+     &inorder, popt, npx, npy, npxb, npyb, qme, vtx, vty, vtz, vx0, vy0,&
+     &vz0, vdx, vdy, vdz, vtdx, vtdy, vtdz, relativity, ci, xtras, ndim,&
+     &nvdist, treverse, tend, dt, ax, ay, nextrand, mzf, ndprof, ampdx, &
+     &scaledx, shiftdx, ampdy, scaledy, shiftdy, ionbkg, dxmin, dxmax,  &
+     &dymin, dymax, amodex, freq, trmp, toff, el0, er0, ntw, ndw, ntde, &
+     &modesxde, modesyde, nderec, ntp, ndp, modesxp, modesyp, nprec,    &
+     &ntel, modesxel, modesyel, nelrec, wmin, wmax, dw, ntfm, ndfm,     &
+     &npro, nferec, nfirec, ntv, ndv, nmv, nvft, nverec, nvirec, ntt,   &
+     &ndt, nst, nprobt, vtsx, dvtx, ntrec, nts, nds, mvx, mvy, nserec,  &
+     &nsirec, movion, emf, nustrt, ntr, idrun0, nplot, ndstyle, nvpp,   &
+     &imbalance, monitor
 !
 ! equivalence data to simplify MPI broadcast
-      integer, parameter :: lnin2 = 100
+      integer, parameter :: lnin2 = 108
       double precision, dimension(lnin2) :: ddin2
       private :: lnin2, ddin2
 !     equivalence (ddin2(1),idrun), (ddin2(2),idcode), (ddin2(3),indx)
 !     equivalence (ddin2(4),indy), (ddin2(5),mx), (ddin2(6),my)
-!     equivalence (ddin2(7),npx), (ddin2(8),npy), (ddin2(9),npxb)
-!     equivalence (ddin2(10),npyb), (ddin2(11),qme), (ddin2(12),vtx)
-!     equivalence (ddin2(13),vty), (ddin2(14),vtz), (ddin2(15),vx0)
-!     equivalence (ddin2(16),vy0), (ddin2(17),vz0), (ddin2(18),vdx)
-!     equivalence (ddin2(19),vdy), (ddin2(20),vdz), (ddin2(21),vtdx)
-!     equivalence (ddin2(22),vtdy), (ddin2(23),vtdz)
-!     equivalence (ddin2(24),relativity), (ddin2(25),ci)
-!     equivalence (ddin2(26),xtras), (ddin2(27),ndim)
-!     equivalence (ddin2(28),nvdist), (ddin2(29),treverse)
-!     equivalence (ddin2(30),tend), (ddin2(31),dt), (ddin2(32),ax)
-!     equivalence (ddin2(33),ay), (ddin2(34),nextrand), (ddin2(35),mzf)
-!     equivalence (ddin2(36),ndprof), (ddin2(37),ampdx)
-!     equivalence (ddin2(38),scaledx), (ddin2(39),shiftdx)
-!     equivalence (ddin2(40),ampdy), (ddin2(41),scaledy)
-!     equivalence (ddin2(42),shiftdy), (ddin2(43),amodex)
-!     equivalence (ddin2(44),freq), (ddin2(45),trmp), (ddin2(46),toff)
-!     equivalence (ddin2(47),el0), (ddin2(48),er0), (ddin2(49),ntw)
-!     equivalence (ddin2(50),ndw), (ddin2(51),ntde)
-!     equivalence (ddin2(52),modesxde), (ddin2(53),modesyde)
-!     equivalence (ddin2(54),nderec), (ddin2(55),ntp), (ddin2(56),ndp)
-!     equivalence (ddin2(57),modesxp), (ddin2(58),modesyp)
-!     equivalence (ddin2(59),nprec), (ddin2(60),ntel)
-!     equivalence (ddin2(61),modesxel), (ddin2(62),modesyel)
-!     equivalence (ddin2(63),nelrec), (ddin2(64),wmin), (ddin2(65),wmax)
-!     equivalence (ddin2(66),dw), (ddin2(67),ntfm), (ddin2(68),ndfm)
-!     equivalence (ddin2(69),npro), (ddin2(70),nferec)
-!     equivalence (ddin2(71),nfirec), (ddin2(72),ntv), (ddin2(73),ndv)
-!     equivalence (ddin2(74),nmv), (ddin2(75),nvft), (ddin2(76),nverec)
-!     equivalence (ddin2(77),nvirec), (ddin2(78),ntt), (ddin2(79),ndt)
-!     equivalence (ddin2(80),nst), (ddin2(81),nprobt), (ddin2(82),vtsx)
-!     equivalence (ddin2(83),dvtx), (ddin2(84),ntrec), (ddin2(85),nts)
-!     equivalence (ddin2(86),nds), (ddin2(87),mvx), (ddin2(88),mvy)
-!     equivalence (ddin2(89),nserec), (ddin2(90),nsirec)
-!     equivalence (ddin2(91),movion), (ddin2(92),emf)
-!     equivalence (ddin2(93),nustrt), (ddin2(94),ntr)
-!     equivalence (ddin2(95),idrun0), (ddin2(96),nplot)
-!     equivalence (ddin2(97),ndstyle), (ddin2(98),nvpp)
-!     equivalence (ddin2(99),imbalance), (ddin2(100),monitor)
+!     equivalence (ddin2(7),psolve), (ddin2(8),inorder), (ddin2(9),popt)
+!     equivalence (ddin2(10),npx), (ddin2(11),npy), (ddin2(12),npxb)
+!     equivalence (ddin2(13),npyb), (ddin2(14),qme), (ddin2(15),vtx)
+!     equivalence (ddin2(16),vty), (ddin2(17),vtz), (ddin2(18),vx0)
+!     equivalence (ddin2(19),vy0), (ddin2(20),vz0), (ddin2(21),vdx)
+!     equivalence (ddin2(22),vdy), (ddin2(23),vdz), (ddin2(24),vtdx)
+!     equivalence (ddin2(25),vtdy), (ddin2(26),vtdz)
+!     equivalence (ddin2(27),relativity), (ddin2(28),ci)
+!     equivalence (ddin2(29),xtras), (ddin2(30),ndim)
+!     equivalence (ddin2(31),nvdist), (ddin2(32),treverse)
+!     equivalence (ddin2(33),tend), (ddin2(34),dt), (ddin2(35),ax)
+!     equivalence (ddin2(36),ay), (ddin2(37),nextrand), (ddin2(38),mzf)
+!     equivalence (ddin2(39),ndprof), (ddin2(40),ampdx)
+!     equivalence (ddin2(41),scaledx), (ddin2(42),shiftdx)
+!     equivalence (ddin2(43),ampdy), (ddin2(44),scaledy)
+!     equivalence (ddin2(45),shiftdy), (ddin2(46),amodex)
+!     equivalence (ddin2(47),ionbkg), (ddin2(48),dxmin)
+!     equivalence (ddin2(49),dxmax), (ddin2(50),dymin)
+!     equivalence (ddin2(51),dymax), (ddin2(52),freq), (ddin2(53),trmp)
+!     equivalence (ddin2(54),toff), (ddin2(55),el0), (ddin2(56),er0)
+!     equivalence (ddin2(57),ntw), (ddin2(58),ndw), (ddin2(59),ntde)
+!     equivalence (ddin2(60),modesxde), (ddin2(61),modesyde)
+!     equivalence (ddin2(62),nderec), (ddin2(63),ntp), (ddin2(64),ndp)
+!     equivalence (ddin2(65),modesxp), (ddin2(66),modesyp)
+!     equivalence (ddin2(67),nprec), (ddin2(68),ntel)
+!     equivalence (ddin2(69),modesxel), (ddin2(70),modesyel)
+!     equivalence (ddin2(71),nelrec), (ddin2(72),wmin), (ddin2(73),wmax)
+!     equivalence (ddin2(74),dw), (ddin2(75),ntfm), (ddin2(76),ndfm)
+!     equivalence (ddin2(77),npro), (ddin2(78),nferec)
+!     equivalence (ddin2(79),nfirec), (ddin2(80),ntv), (ddin2(81),ndv)
+!     equivalence (ddin2(82),nmv), (ddin2(83),nvft), (ddin2(84),nverec)
+!     equivalence (ddin2(85),nvirec), (ddin2(86),ntt), (ddin2(87),ndt)
+!     equivalence (ddin2(88),nst), (ddin2(89),nprobt), (ddin2(90),vtsx)
+!     equivalence (ddin2(91),dvtx), (ddin2(92),ntrec), (ddin2(93),nts)
+!     equivalence (ddin2(94),nds), (ddin2(95),mvx), (ddin2(96),mvy)
+!     equivalence (ddin2(97),nserec), (ddin2(98),nsirec)
+!     equivalence (ddin2(99),movion), (ddin2(100),emf)
+!     equivalence (ddin2(101),nustrt), (ddin2(102),ntr)
+!     equivalence (ddin2(103),idrun0), (ddin2(104),nplot)
+!     equivalence (ddin2(105),ndstyle), (ddin2(106),nvpp)
+!     equivalence (ddin2(107),imbalance), (ddin2(108),monitor)
 !
 ! Electromagnetic Namelist
 ! External Magnetic Field Parameters:
@@ -417,7 +431,7 @@
 ! vdxi/vdyi/vdzi = drift velocity of beam ions in x/y/z direction
       real :: vdxi = 0.0, vdyi = 0.0, vdzi = 0.0
 ! rtempdxi/rtempdyi/rtempdzi = electron/ion temperature ratio of beam
-! ions in x/y/z direction
+! electrons to beam ions  in x/y/z direction
       real :: rtempdxi = 1.0, rtempdyi = 1.0, rtempdzi = 1.0
 !
 ! Initial Ion Density Parameters:
@@ -482,6 +496,7 @@
 !     equivalence (ddion2(29),modesydi), (ddion2(30),ndirec)
 !     equivalence (ddion2(31),ntji), (ddion2(32),ndji)
 !     equivalence (ddion2(33),modesxji), (ddion2(34),modesyji)
+!     equivalence (ddion2(35),njirec), (ddion2(36),wimin)
 !     equivalence (ddion2(37),wimax), (ddion2(38),dwi)
 !
 ! Output namelists

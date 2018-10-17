@@ -1,23 +1,23 @@
 !-----------------------------------------------------------------------
 !
-      module modmpfield2
+      module mfield2
 !
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpfield2.f
 ! mppois2_init calculates table needed by 2d poisson solver
-!              calls MPPOIS22
+!              calls VMPPOIS22
 ! mppois2 solves 2d or 2-1/2d poisson's equation for smoothed electric
 !         field
-!         calls MPPOIS22 or MPPOIS23
+!         calls VMPPOIS22 or VMPPOIS23
 ! mpaddqei2 adds electron and ion densities
 !           calls MPADDQEI2
 ! mpcuperp2 calculates the transverse current in fourier space
 !           calls MPPCUPERP2
 ! mpibpois2 solves 2-1/2d poisson's equation for unsmoothed magnetic
 !           field
-!           calls MIPPBPOISP23
+!           calls VMIPPBPOISP23
 ! mpmaxwel2 solves 2-1/2d maxwell's equation for unsmoothed transverse
 !           electric and magnetic fields
-!           calls MPPMAXWEL2
+!           calls VMPPMAXWEL2
 ! mpemfield2 adds and smooths or copies and smooths complex vector
 !            fields in fourier space
 !            calls MPPEMFIELD2
@@ -31,7 +31,7 @@
 !               calls PPADDVRFIELD2
 ! mpbbpois2 solves 2-1/2d poisson's equation in fourier space for
 !           smoothed magnetic field
-!           calls MPPBBPOISP23
+!           calls VMPPBBPOISP23
 ! mpdcuperp2 calculates transverse part of the derivative of the current
 !            density from the momentum flux
 !            calls MPPDCUPERP23
@@ -41,10 +41,10 @@
 !             calls MPPADCUPERP23
 ! mpepois2_init calculates table needed by 2-1/2d poisson solver for
 !               transverse electric field
-!               calls MPPEPOISP23
+!               calls VMPPEPOISP23
 ! mpepois2 solves 2-1/2d poisson's equation for smoothed transverse
 !          electric field
-!          calls MPPEPOISP23
+!          calls VMPPEPOISP23
 ! mppot2 solves 2d poisson's equation for potential
 !        calls MPPOTP2
 ! mpelfield2 solves 2d or 2-1/2d poisson's equation for unsmoothed
@@ -84,9 +84,11 @@
 ! mpwrvmodes2 reads and copies lowest order vector modes to packed array
 !             writing zeroes to high order modes
 !             calls PPWRVMODES2
+! mpset_pcvzero2 zeros out transverse field array.
+!                calls SET_PCVZERO2
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: april 21, 2017
+! update: august 1, 2018
 !
       use libmpfield2_h
       implicit none
@@ -108,7 +110,7 @@
       complex, dimension(2,1,1) :: fxy
       nyv = size(q,1)
       nyhd = size(ffc,1); kxp = size(ffc,2)
-      call MPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,kxp,  &
+      call VMPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,kxp, &
      &nyhd)
       end subroutine
 !
@@ -135,11 +137,11 @@
 ! call low level procedure
       select case(ndim)
       case (2)
-         call MPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,kxp&
-     &,nyhd)
+         call VMPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,  &
+     &kxp,nyhd)
       case (3)
-         call MPPOIS23(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,kxp&
-     &,nyhd)
+         call VMPPOIS23(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv,  &
+     &kxp,nyhd)
       case default
          write (*,*) 'mppois2: unsupported dimension ndim = ' , ndim
       end select
@@ -213,7 +215,7 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MIPPBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,nyhd)
+      call VMIPPBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,nyhd)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)
@@ -241,7 +243,7 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MPPMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny,kstrt,nyv,  &
+      call VMPPMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny,kstrt,nyv, &
      &kxp,nyhd)
 ! record time
       call dtimer(dtime,itime,1)
@@ -386,7 +388,7 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MPPBBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,nyhd)
+      call VMPPBBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,nyhd)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)
@@ -456,7 +458,7 @@
       complex, dimension(3,1,1) :: exy
       nyv = size(dcu,2)
       nyhd = size(ffe,1); kxp = size(ffe,2)
-      call MPPEPOISP23(dcu,exy,isign,ffe,ax,ay,affp,wp0,ci,wf,nx,ny,    &
+      call VMPPEPOISP23(dcu,exy,isign,ffe,ax,ay,affp,wp0,ci,wf,nx,ny,   &
      &kstrt,nyv,kxp,nyhd)
       end subroutine
 !
@@ -483,7 +485,7 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MPPEPOISP23(dcu,exy,isign,ffe,ax,ay,affp,wp0,ci,wf,nx,ny,    &
+      call VMPPEPOISP23(dcu,exy,isign,ffe,ax,ay,affp,wp0,ci,wf,nx,ny,   &
      &kstrt,nyv,kxp,nyhd)
 ! record time
       call dtimer(dtime,itime,1)
@@ -892,6 +894,28 @@
 ! call low level procedure
       call PPWRVMODES2(vpot,vpott,nx,ny,modesx,modesy,ndim,kstrt,nyv,kxp&
      &,modesxpd,modesyd)
+! record time
+      call dtimer(dtime,itime,1)
+      tfield = tfield + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpset_pcvzero2(exy,tfield,nx,ny,kstrt)
+! zeros out transverse field array.
+      implicit none
+      integer, intent(in) :: nx, ny, kstrt
+      real, intent(inout) :: tfield
+      complex, dimension(:,:,:), intent(inout) :: exy
+! local data
+      integer :: ndim, nyv, kxp
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      ndim = size(exy,1); nyv = size(exy,2); kxp = size(exy,3)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call SET_PCVZERO2(exy,nx,ny,kstrt,ndim,nyv,kxp)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)

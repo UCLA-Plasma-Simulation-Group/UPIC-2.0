@@ -4,7 +4,7 @@
       implicit none
 !
       interface
-         subroutine MPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt, &
+         subroutine VMPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,&
      &nyv,kxp,nyhd)
          implicit none
          integer, intent(in) :: isign, nx, ny, kstrt, nyv, kxp, nyhd
@@ -17,7 +17,7 @@
       end interface
 !
       interface
-         subroutine MPPOIS23(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt, &
+         subroutine VMPPOIS23(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,&
      &nyv,kxp,nyhd)
          implicit none
          integer, intent(in) :: isign, nx, ny, kstrt, nyv, kxp, nyhd
@@ -47,7 +47,7 @@
       end interface
 !
       interface
-         subroutine MIPPBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,  &
+         subroutine VMIPPBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp, &
      &nyhd)
          implicit none
          integer, intent(in) :: nx, ny, kstrt, nyv, kxp, nyhd
@@ -60,7 +60,7 @@
       end interface
 !
       interface
-         subroutine MPPMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny,   &
+         subroutine VMPPMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny,  &
      &kstrt,nyv,kxp,nyhd)
          implicit none
          integer, intent(in) :: nx, ny, kstrt, nyv, kxp, nyhd
@@ -120,7 +120,7 @@
       end interface
 !
       interface
-         subroutine MPPBBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp,  &
+         subroutine VMPPBBPOISP23(cu,bxy,ffc,ci,wm,nx,ny,kstrt,nyv,kxp, &
      &nyhd)
          implicit none
          integer, intent(in) :: nx, ny, kstrt, nyv, kxp, nyhd
@@ -151,7 +151,7 @@
       end interface
 !
       interface
-         subroutine MPPEPOISP23(dcu,exy,isign,ffe,ax,ay,affp,wp0,ci,wf, &
+         subroutine VMPPEPOISP23(dcu,exy,isign,ffe,ax,ay,affp,wp0,ci,wf,&
      &nx,ny,kstrt,nyv,kxp,nyhd)
          implicit none
          integer, intent(in) :: isign, nx, ny, kstrt, nyv, kxp, nyhd
@@ -341,6 +341,14 @@
          integer, intent(in) :: nyv, kxp, modesxpd, modesyd
          complex, dimension(ndim,nyv,kxp), intent(inout) :: vpot
          complex, dimension(ndim,modesyd,modesxpd), intent(in) :: vpott
+         end subroutine
+      end interface
+!
+      interface
+         subroutine SET_PCVZERO2(exy,nx,ny,kstrt,ndim,nyv,kxp)
+         implicit none
+         integer, intent(in) :: nx, ny, kstrt, ndim, nyv, kxp
+         complex, dimension(ndim,nyv,kxp), intent(inout) :: exy
          end subroutine
       end interface
 !

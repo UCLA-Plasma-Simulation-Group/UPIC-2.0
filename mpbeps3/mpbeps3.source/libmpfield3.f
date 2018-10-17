@@ -1,28 +1,28 @@
 !-----------------------------------------------------------------------
 ! Fortran library for spectral field solvers
 ! 3D MPI/OpenMP PIC Code:
-! MPPOIS332 solves 3d poisson's equation for smoothed electric field
+! VMPPOIS332 solves 3d poisson's equation for smoothed electric field
 ! MPADDQEI32 adds electron and ion densities
 ! MPPCUPERP32 calculates the transverse current in fourier space
-! MIPPBPOISP332 solves 3d poisson's equation for unsmoothed magnetic
+! VMIPPBPOISP332 solves 3d poisson's equation for unsmoothed magnetic
 !               field
-! MPPMAXWEL32 solves 3d maxwell's equation for unsmoothed transverse
-!             electric and magnetic fields
+! VMPPMAXWEL32 solves 3d maxwell's equation for unsmoothed transverse
+!              electric and magnetic fields
 ! MPPEMFIELD32 adds and smooths or copies and smooths complex vector
 !              fields in fourier space
 ! MPADDCUEI32 adds electron and ion current densities
 ! MPADDAMUI32 adds electron and ion momentum flux densities
 ! MPPBADDEXT32 adds constant to magnetic field for 3d code
 ! MPPADDVRFIELD32 calculates a = b + c
-! MPPBBPOISP332 solves 3d poisson's equation in fourier space for
-!               smoothed magnetic field
+! VMPPBBPOISP332 solves 3d poisson's equation in fourier space for
+!                smoothed magnetic field
 ! MPPDCUPERP32 calculates transverse part of the derivative of the
 !              current density from the momentum flux
 ! MPPADCUPERP32 calculates transverse part of the derivative of the
 !               current density from the momentum flux and acceleration
 !               density
-! MPPEPOISP332 solves 3d poisson's equation in fourier space for
-!              smoothed or unsmoothed transverse electric field
+! VMPPEPOISP332 solves 3d poisson's equation in fourier space for
+!               smoothed or unsmoothed transverse electric field
 ! MPPOTP32 solves 3d poisson's equation for potential
 ! MPPELFIELD32 solves 3d poisson's equation for unsmoothed electric
 !              field
@@ -34,8 +34,8 @@
 ! MPPAVRPOT332 solves 3d poisson's equation for the radiative part of	
 !              the vector potential
 ! MPPAPOTP32 solves 3d poisson's equation for vector potential
-! MPPETFIELD332 solves 3d poisson's equation in fourier space for
-!               unsmoothed transverse electric field
+! VMPPETFIELD332 solves 3d poisson's equation in fourier space for
+!                unsmoothed transverse electric field
 ! MPPSMOOTH32 provides a 3d scalar smoothing function
 ! MPPSMOOTH332 provides a 3d vector smoothing function
 ! PPRDMODES32 extracts lowest order scalar modes from packed array
@@ -46,11 +46,12 @@
 !              stores them into a location in an unpacked array
 ! PPWRVMODES32 extracts lowest order vector modes from a location in an
 !              unpacked array and stores them into a packed array
+! SET_PCVZERO3 zeros out transverse field array.
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 15, 2018
+! update: may 10, 2018
 !-----------------------------------------------------------------------
-      subroutine MPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz,  &
+      subroutine VMPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz, &
      &kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
 ! this subroutine solves 3d poisson's equation in fourier space for
 ! force/charge (or convolution of electric field over particle shape)
@@ -163,7 +164,7 @@
    40 sum1 = 0.0d0
       if (kstrt.gt.(nvpy*nvpz)) go to 160
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL                                                          &
+!$OMP PARALLEL
 !$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,wp)     &
 !$OMP& REDUCTION(+:sum1)
       do 60 kk = 1, kyzps*kxyps
@@ -177,6 +178,7 @@
          dky = dny*real(k1)
          dkx = dnx*real(j + joff)
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 50 l = 2, nzh
             l1 = nz2 - l
             at1 = real(ffc(l,j,k))*aimag(ffc(l,j,k))
@@ -191,8 +193,9 @@
             fxyz(1,l1,j,k) = at2*zt2
             fxyz(2,l1,j,k) = at3*zt2
             fxyz(3,l1,j,k) = -at4*zt2
-            wp = wp + at1*(q(l,j,k)*conjg(q(l,j,k))                     &
-     &              + q(l1,j,k)*conjg(q(l1,j,k)))
+            at1 = at1*(q(l,j,k)*conjg(q(l,j,k))                         &
+     &               + q(l1,j,k)*conjg(q(l1,j,k)))
+            wp = wp + dble(at1)
    50       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -206,7 +209,8 @@
             fxyz(1,l1,j,k) = zero
             fxyz(2,l1,j,k) = zero
             fxyz(3,l1,j,k) = zero
-            wp = wp + at1*(q(1,j,k)*conjg(q(1,j,k)))
+            at1 = at1*(q(1,j,k)*conjg(q(1,j,k)))
+            wp = wp + dble(at1)
          endif
       endif
       sum1 = sum1 + wp
@@ -226,6 +230,7 @@
          if (js.eq.0) then
 ! keep kx = 0
             if (k1.gt.0) then
+!dir$ ivdep
                do 70 l = 2, nzh
                l1 = nz2 - l
                at1 = real(ffc(l,1,k))*aimag(ffc(l,1,k))
@@ -239,8 +244,9 @@
                fxyz(1,l1,1,k) = zero
                fxyz(2,l1,1,k) = at3*zt2
                fxyz(3,l1,1,k) = -at4*zt2
-               wp = wp + at1*(q(l,1,k)*conjg(q(l,1,k))                  &
-     &                 + q(l1,1,k)*conjg(q(l1,1,k)))
+               at1 = at1*(q(l,1,k)*conjg(q(l,1,k))                      &
+     &                  + q(l1,1,k)*conjg(q(l1,1,k)))
+               wp = wp + dble(at1)
    70          continue
 ! mode numbers kz = 0, nz/2
                l1 = nzh + 1
@@ -253,7 +259,8 @@
                fxyz(1,l1,1,k) = zero
                fxyz(2,l1,1,k) = zero
                fxyz(3,l1,1,k) = zero
-               wp = wp + at1*(q(1,1,k)*conjg(q(1,1,k)))
+               at1 = at1*(q(1,1,k)*conjg(q(1,1,k)))
+               wp = wp + dble(at1)
 ! throw away kx = nx/2
             else
                do 80 l = 1, nz
@@ -278,6 +285,7 @@
          dkx = dnx*real(j + joff)
          wp = 0.0d0
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 100 l = 2, nzh
             l1 = nz2 - l
             at1 = real(ffc(l,j,1))*aimag(ffc(l,j,1))
@@ -291,8 +299,9 @@
             fxyz(1,l1,j,1) = at2*zt2
             fxyz(2,l1,j,1) = zero
             fxyz(3,l1,j,1) = -at4*zt2
-            wp = wp + at1*(q(l,j,1)*conjg(q(l,j,1))                     &
-     &              + q(l1,j,1)*conjg(q(l1,j,1)))
+            at1 = at1*(q(l,j,1)*conjg(q(l,j,1))                         &
+     &               + q(l1,j,1)*conjg(q(l1,j,1)))
+            wp = wp + dble(at1)
   100       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -305,7 +314,8 @@
             fxyz(1,l1,j,1) = zero
             fxyz(2,l1,j,1) = zero
             fxyz(3,l1,j,1) = zero
-            wp = wp + at1*(q(1,j,1)*conjg(q(1,j,1)))
+            at1 = at1*(q(1,j,1)*conjg(q(1,j,1)))
+            wp = wp + dble(at1)
          endif
          sum2 = sum2 + wp
   110    continue
@@ -313,6 +323,7 @@
          wp = 0.0d0
 ! mode numbers kx = 0, nx/2
          if (js.eq.0) then
+!dir$ ivdep
             do 120 l = 2, nzh
             l1 = nz2 - l
             at1 = real(ffc(l,1,1))*aimag(ffc(l,1,1))
@@ -324,7 +335,8 @@
             fxyz(1,l1,1,1) = zero
             fxyz(2,l1,1,1) = zero
             fxyz(3,l1,1,1) = zero
-            wp = wp + at1*(q(l,1,1)*conjg(q(l,1,1)))
+            at1= at1*(q(l,1,1)*conjg(q(l,1,1)))
+            wp = wp + dble(at1)
   120       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -607,7 +619,7 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MIPPBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,   &
+      subroutine VMIPPBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,  &
      &nvpz,nzv,kxyp,kyzp,nzhd)
 ! this subroutine solves 3d poisson's equation in fourier space for
 ! magnetic field with periodic boundary conditions, for distributed data
@@ -688,7 +700,7 @@
       sum1 = 0.0d0
       if (kstrt.gt.(nvpy*nvpz)) go to 120
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL                                                          &
+!$OMP PARALLEL
 !$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,zt3,wp) &
 !$OMP& REDUCTION(+:sum1)
       do 20 kk = 1, kyzps*kxyps
@@ -702,6 +714,7 @@
          dky = dny*real(k1)
          dkx = dnx*real(j + joff)
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 10 l = 2, nzh
             l1 = nz2 - l
             at1 = ci2*real(ffc(l,j,k))
@@ -721,12 +734,13 @@
             bxyz(1,l1,j,k) = at3*zt1 + at4*zt2
             bxyz(2,l1,j,k) = -at4*zt3 - at2*zt1
             bxyz(3,l1,j,k) = at2*zt2 - at3*zt3
-            wp = wp + at1*(cu(1,l,j,k)*conjg(cu(1,l,j,k))               &
+            at1 = at1*(cu(1,l,j,k)*conjg(cu(1,l,j,k))                   &
      &              + cu(2,l,j,k)*conjg(cu(2,l,j,k))                    &
      &              + cu(3,l,j,k)*conjg(cu(3,l,j,k))                    &
      &              + cu(1,l1,j,k)*conjg(cu(1,l1,j,k))                  &
      &              + cu(2,l1,j,k)*conjg(cu(2,l1,j,k))                  &
      &              + cu(3,l1,j,k)*conjg(cu(3,l1,j,k)))
+            wp = wp + dble(at1)
    10       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -743,9 +757,10 @@
             bxyz(1,l1,j,k) = zero
             bxyz(2,l1,j,k) = zero
             bxyz(3,l1,j,k) = zero
-            wp = wp + at1*(cu(1,1,j,k)*conjg(cu(1,1,j,k))               &
+            at1 = at1*(cu(1,1,j,k)*conjg(cu(1,1,j,k))                   &
      &              + cu(2,1,j,k)*conjg(cu(2,1,j,k))                    &
      &              + cu(3,1,j,k)*conjg(cu(3,1,j,k)))
+            wp = wp + dble(at1)
          endif
       endif
       sum1 = sum1 + wp
@@ -765,6 +780,7 @@
          if (js.eq.0) then
 ! keep kx = 0
             if (k1.gt.0) then
+!dir$ ivdep
                do 30 l = 2, nzh
                l1 = nz2 - l
                at1 = ci2*real(ffc(l,1,k))
@@ -783,12 +799,13 @@
                bxyz(1,l1,1,k) = at3*zt1 + at4*zt2
                bxyz(2,l1,1,k) = -at4*zt3
                bxyz(3,l1,1,k) = -at3*zt3
-               wp = wp + at1*(cu(1,l,1,k)*conjg(cu(1,l,1,k))            &
+               at1 = at1*(cu(1,l,1,k)*conjg(cu(1,l,1,k))                &
      &                 + cu(2,l,1,k)*conjg(cu(2,l,1,k))                 &
      &                 + cu(3,l,1,k)*conjg(cu(3,l,1,k))                 &
      &                 + cu(1,l1,1,k)*conjg(cu(1,l1,1,k))               &
      &                 + cu(2,l1,1,k)*conjg(cu(2,l1,1,k))               &
      &                 + cu(3,l1,1,k)*conjg(cu(3,l1,1,k)))
+               wp = wp + dble(at1)
    30          continue
 ! mode numbers kz = 0, nz/2
                l1 = nzh + 1
@@ -803,9 +820,10 @@
                bxyz(1,l1,1,k) = zero
                bxyz(2,l1,1,k) = zero
                bxyz(3,l1,1,k) = zero
-               wp = wp + at1*(cu(1,1,1,k)*conjg(cu(1,1,1,k))            &
+               at1 = at1*(cu(1,1,1,k)*conjg(cu(1,1,1,k))                &
      &                 + cu(2,1,1,k)*conjg(cu(2,1,1,k))                 &
      &                 + cu(3,1,1,k)*conjg(cu(3,1,1,k)))
+               wp = wp + dble(at1)
 ! throw away kx = nx/2
             else
                do 40 l = 1, nz
@@ -830,6 +848,7 @@
          dkx = dnx*real(j + joff)
          wp = 0.0d0
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 60 l = 2, nzh
             l1 = nz2 - l
             at1 = ci2*real(ffc(l,j,1))
@@ -848,12 +867,13 @@
             bxyz(1,l1,j,1) = at4*zt2
             bxyz(2,l1,j,1) = -at4*zt3 - at2*zt1
             bxyz(3,l1,j,1) = at2*zt2
-            wp = wp + at1*(cu(1,l,j,1)*conjg(cu(1,l,j,1))               &
+            at1 = at1*(cu(1,l,j,1)*conjg(cu(1,l,j,1))                   &
      &              + cu(2,l,j,1)*conjg(cu(2,l,j,1))                    &
      &              + cu(3,l,j,1)*conjg(cu(3,l,j,1))                    &
      &              + cu(1,l1,j,1)*conjg(cu(1,l1,j,1))                  &
      &              + cu(2,l1,j,1)*conjg(cu(2,l1,j,1))                  &
      &              + cu(3,l1,j,1)*conjg(cu(3,l1,j,1)))
+            wp = wp + dble(at1)
    60       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -868,9 +888,10 @@
             bxyz(1,l1,j,1) = zero
             bxyz(2,l1,j,1) = zero
             bxyz(3,l1,j,1) = zero
-            wp = wp + at1*(cu(1,1,j,1)*conjg(cu(1,1,j,1))               &
+            at1 = at1*(cu(1,1,j,1)*conjg(cu(1,1,j,1))                   &
      &              + cu(2,1,j,1)*conjg(cu(2,1,j,1))                    &
      &              + cu(3,1,j,1)*conjg(cu(3,1,j,1)))
+            wp = wp + dble(at1)
          endif
          sum2 = sum2 + wp
    70    continue
@@ -878,6 +899,7 @@
          wp = 0.0d0
 ! mode numbers kx = 0, nx/2
          if (js.eq.0) then
+!dir$ ivdep
             do 80 l = 2, nzh
             l1 = nz2 - l
             at1 = ci2*real(ffc(l,1,1))
@@ -891,9 +913,10 @@
             bxyz(1,l1,1,1) = zero
             bxyz(2,l1,1,1) = zero
             bxyz(3,l1,1,1) = zero
-            wp = wp + at1*(cu(1,l,1,1)*conjg(cu(1,l,1,1))               &
+            at1 = at1*(cu(1,l,1,1)*conjg(cu(1,l,1,1))                   &
      &              + cu(2,l,1,1)*conjg(cu(2,l,1,1))                    &
      &              + cu(3,l,1,1)*conjg(cu(3,l,1,1)))
+            wp = wp + dble(at1)
    80       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -934,8 +957,8 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MPPMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx,ny,nz,&
-     &kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+      subroutine VMPPMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx,ny,nz&
+     &,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
 ! this subroutine solves 3d maxwell's equation in fourier space for
 ! transverse electric and magnetic fields with periodic boundary
 ! conditions, for distributed data with 2D spatial decomposition
@@ -1004,6 +1027,7 @@
       integer kxyps, kyzps, k1, l1, kk
       real dnx, dny, dnz, dth, c2, cdt, adt, anorm, dkx, dky, dkz, afdt
       complex zero, zt1, zt2, zt3, zt4, zt5, zt6, zt7, zt8, zt9
+      real at1
       double precision wp, ws, sum1, sum2, sum3, sum4
       if (ci.le.0.0) return
       nxh = nx/2
@@ -1035,9 +1059,9 @@
 ! calculate the electromagnetic fields
       if (kstrt.gt.(nvpy*nvpz)) go to 120
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL                                                          &
-!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkz,dky,dkx,afdt,zt1,zt2,zt3,zt4,zt5,zt6&
-!$OMP& ,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum1,sum2)
+!$OMP PARALLEL
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkz,dky,dkx,afdt,at1,zt1,zt2,zt3,zt4,   &
+!$OMP& zt5,zt6,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum1,sum2)
       do 20 kk = 1, kyzps*kxyps
       k = (kk - 1)/kxyps
       j = kk - kxyps*k
@@ -1050,6 +1074,7 @@
          dky = dny*real(k1)
          dkx = dnx*real(j + joff)
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 10 l = 2, nzh
             l1 = nz2 - l
             dkz = dnz*real(l - 1)
@@ -1078,16 +1103,18 @@
             exyz(1,l,j,k) = zt7
             exyz(2,l,j,k) = zt8
             exyz(3,l,j,k) = zt9
-            ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)            &
+            at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)                &
      &                     + zt9*conjg(zt9))
+            ws = ws + dble(at1)
             zt4 = zt4 - dth*(dky*zt1 - dkz*zt2)
             zt5 = zt5 - dth*(dkz*zt3 - dkx*zt1)
             zt6 = zt6 - dth*(dkx*zt2 - dky*zt3)
             bxyz(1,l,j,k) = zt4
             bxyz(2,l,j,k) = zt5
             bxyz(3,l,j,k) = zt6
-            wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)            &
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
      &                     + zt6*conjg(zt6))
+            wp = wp + dble(at1)
 ! update magnetic field half time step, ky > 0, kz < 0
             zt1 = cmplx(-aimag(exyz(3,l1,j,k)),real(exyz(3,l1,j,k)))
             zt2 = cmplx(-aimag(exyz(2,l1,j,k)),real(exyz(2,l1,j,k)))
@@ -1112,16 +1139,18 @@
             exyz(1,l1,j,k) = zt7
             exyz(2,l1,j,k) = zt8
             exyz(3,l1,j,k) = zt9
-            ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)            &
+            at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)                &
      &                     + zt9*conjg(zt9))
+            ws = ws + dble(at1)
             zt4 = zt4 - dth*(dky*zt1 + dkz*zt2)
             zt5 = zt5 + dth*(dkz*zt3 + dkx*zt1)
             zt6 = zt6 - dth*(dkx*zt2 - dky*zt3)
             bxyz(1,l1,j,k) = zt4
             bxyz(2,l1,j,k) = zt5
             bxyz(3,l1,j,k) = zt6
-            wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)            &
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
      &                     + zt6*conjg(zt6))
+            wp = wp + dble(at1)
    10       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -1148,16 +1177,18 @@
             exyz(1,1,j,k) = zt7
             exyz(2,1,j,k) = zt8
             exyz(3,1,j,k) = zt9
-            ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)            &
+            at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)                &
      &                     + zt9*conjg(zt9))
+            ws = ws + dble(at1)
             zt4 = zt4 - dth*(dky*zt1)
             zt5 = zt5 + dth*(dkx*zt1)
             zt6 = zt6 - dth*(dkx*zt2 - dky*zt3)
             bxyz(1,1,j,k) = zt4
             bxyz(2,1,j,k) = zt5
             bxyz(3,1,j,k) = zt6
-            wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)            &
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
      &                     + zt6*conjg(zt6))
+            wp = wp + dble(at1)
             bxyz(1,l1,j,k) = zero
             bxyz(2,l1,j,k) = zero
             bxyz(3,l1,j,k) = zero
@@ -1174,8 +1205,8 @@
 ! mode numbers kx = 0, nx/2
       sum3 = 0.0d0
       sum4 = 0.0d0
-!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dkz,dky,afdt,zt1,zt2,zt3,zt4,zt5,zt6&
-!$OMP& ,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum3,sum4)
+!$OMP PARALLEL DO PRIVATE(k,l,k1,l1,dkz,dky,afdt,at1,zt1,zt2,zt3,zt4,zt5&
+!$OMP& ,zt6,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum3,sum4)
       do 50 k = 1, kyzps
       k1 = k + koff
       if ((k1.gt.0).and.(k1.ne.nyh)) then
@@ -1186,6 +1217,7 @@
          if (js.eq.0) then
 ! keep kx = 0
             if (k1.gt.0) then
+!dir$ ivdep
                do 30 l = 2, nzh
                l1 = nz2 - l
                dkz = dnz*real(l - 1)
@@ -1212,16 +1244,18 @@
                exyz(1,l,1,k) = zt7
                exyz(2,l,1,k) = zt8
                exyz(3,l,1,k) = zt9
-               ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)         &
+               at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)             &
      &                        + zt9*conjg(zt9))
+               ws = ws + dble(at1)
                zt4 = zt4 - dth*(dky*zt1 - dkz*zt2)
                zt5 = zt5 - dth*(dkz*zt3)
                zt6 = zt6 + dth*(dky*zt3) 
                bxyz(1,l,1,k) = zt4
                bxyz(2,l,1,k) = zt5
                bxyz(3,l,1,k) = zt6
-               wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)         &
+               at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)             &
      &                        + zt6*conjg(zt6))
+               wp = wp + dble(at1)
 ! update magnetic field half time step, kz < 0
                zt1 = cmplx(-aimag(exyz(3,l1,1,k)),real(exyz(3,l1,1,k)))
                zt2 = cmplx(-aimag(exyz(2,l1,1,k)),real(exyz(2,l1,1,k)))
@@ -1244,16 +1278,18 @@
                exyz(1,l1,1,k) = zt7
                exyz(2,l1,1,k) = zt8
                exyz(3,l1,1,k) = zt9
-               ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)         &
+               at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)             &
      &                        + zt9*conjg(zt9))
+               ws = ws + dble(at1)
                zt4 = zt4 - dth*(dky*zt1 + dkz*zt2)
                zt5 = zt5 + dth*(dkz*zt3)
                zt6 = zt6 + dth*(dky*zt3)
                bxyz(1,l1,1,k) = zt4
                bxyz(2,l1,1,k) = zt5
                bxyz(3,l1,1,k) = zt6
-               wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)         &
+               at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)             &
      &                        + zt6*conjg(zt6))
+               wp = wp + dble(at1)
    30          continue
 ! mode numbers kz = 0, nz/2
                l1 = nzh + 1
@@ -1274,13 +1310,15 @@
                exyz(1,1,1,k) = zt7
                exyz(2,1,1,k) = zero
                exyz(3,1,1,k) = zt9
-               ws = ws + anorm*(zt7*conjg(zt7) + zt9*conjg(zt9))
+               at1 = anorm*(zt7*conjg(zt7) + zt9*conjg(zt9))
+               ws = ws + dble(at1)
                zt4 = zt4 - dth*(dky*zt1)
                zt6 = zt6 + dth*(dky*zt3)
                bxyz(1,1,1,k) = zt4
                bxyz(2,1,1,k) = zero
                bxyz(3,1,1,k) = zt6
-               wp = wp + anorm*(zt4*conjg(zt4) + zt6*conjg(zt6))
+               at1 = anorm*(zt4*conjg(zt4) + zt6*conjg(zt6))
+               wp = wp + dble(at1)
                bxyz(1,l1,1,k) = zero
                bxyz(2,l1,1,k) = zero
                bxyz(3,l1,1,k) = zero
@@ -1311,13 +1349,14 @@
       sum4 = 0.0d0
 ! keep ky = 0
       if (ks.eq.0) then
-!$OMP PARALLEL DO PRIVATE(j,l,k1,l1,dkz,dkx,afdt,zt1,zt2,zt3,zt4,zt5,zt6&
-!$OMP& ,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum3,sum4)
+!$OMP PARALLEL DO PRIVATE(j,l,k1,l1,dkz,dkx,afdt,at1,zt1,zt2,zt3,zt4,zt5&
+!$OMP& ,zt6,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum3,sum4)
          do 70 j = 1, kxyps
          dkx = dnx*real(j + joff)
          ws = 0.0d0
          wp = 0.0d0
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 60 l = 2, nzh
             l1 = nz2 - l
             dkz = dnz*real(l - 1)
@@ -1343,16 +1382,18 @@
             exyz(1,l,j,1) = zt7
             exyz(2,l,j,1) = zt8
             exyz(3,l,j,1) = zt9
-            ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)            &
+            at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)                &
      &                     + zt9*conjg(zt9))
+            ws = ws + dble(at1)
             zt4 = zt4 + dth*(dkz*zt2)
             zt5 = zt5 - dth*(dkz*zt3 - dkx*zt1)
             zt6 = zt6 - dth*(dkx*zt2)
             bxyz(1,l,j,1) = zt4
             bxyz(2,l,j,1) = zt5
             bxyz(3,l,j,1) = zt6
-            wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)            &
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
      &                     + zt6*conjg(zt6))
+            wp = wp + dble(at1)
 ! update magnetic field half time step, kz < 0
             zt1 = cmplx(-aimag(exyz(3,l1,j,1)),real(exyz(3,l1,j,1)))
             zt2 = cmplx(-aimag(exyz(2,l1,j,1)),real(exyz(2,l1,j,1)))
@@ -1375,16 +1416,18 @@
             exyz(1,l1,j,1) = zt7
             exyz(2,l1,j,1) = zt8
             exyz(3,l1,j,1) = zt9
-            ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)            &
+            at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8)                &
      &                     + zt9*conjg(zt9))
+            ws = ws + dble(at1)
             zt4 = zt4 - dth*(dkz*zt2)
             zt5 = zt5 + dth*(dkz*zt3 + dkx*zt1)
             zt6 = zt6 - dth*(dkx*zt2)
             bxyz(1,l1,j,1) = zt4
             bxyz(2,l1,j,1) = zt5
             bxyz(3,l1,j,1) = zt6
-            wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)            &
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
      &                     + zt6*conjg(zt6))
+            wp = wp + dble(at1)
    60       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -1405,13 +1448,15 @@
             exyz(1,1,j,1) = zero
             exyz(2,1,j,1) = zt8
             exyz(3,1,j,1) = zt9
-            ws = ws + anorm*(zt8*conjg(zt8) + zt9*conjg(zt9))
+            at1 = anorm*(zt8*conjg(zt8) + zt9*conjg(zt9))
+            ws = ws + dble(at1)
             zt5 = zt5 + dth*(dkx*zt1)
             zt6 = zt6 - dth*(dkx*zt2)
             bxyz(1,1,j,1) = zero
             bxyz(2,1,j,1) = zt5
             bxyz(3,1,j,1) = zt6
-            wp = wp + anorm*(zt5*conjg(zt5) + zt6*conjg(zt6))
+            at1 = anorm*(zt5*conjg(zt5) + zt6*conjg(zt6))
+            wp = wp + dble(at1)
             bxyz(1,l1,j,1) = zero
             bxyz(2,l1,j,1) = zero
             bxyz(3,l1,j,1) = zero
@@ -1427,6 +1472,7 @@
          wp = 0.0d0
 ! mode numbers kx = 0, nx/2
          if (js.eq.0) then
+!dir$ ivdep
             do 80 l = 2, nzh
             l1 = nz2 - l
             dkz = dnz*real(l - 1)
@@ -1447,13 +1493,15 @@
             exyz(1,l,1,1) = zt7
             exyz(2,l,1,1) = zt8
             exyz(3,l,1,1) = zero
-            ws = ws + anorm*(zt7*conjg(zt7) + zt8*conjg(zt8))
+            at1 = anorm*(zt7*conjg(zt7) + zt8*conjg(zt8))
+            ws = ws + dble(at1)
             zt4 = zt4 + dth*(dkz*zt2)
             zt5 = zt5 - dth*(dkz*zt3)
             bxyz(1,l,1,1) = zt4
             bxyz(2,l,1,1) = zt5
             bxyz(3,l,1,1) = zero
-            wp = wp + anorm*(zt4*conjg(zt4) + zt5*conjg(zt5))
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5))
+            wp = wp + dble(at1)
             bxyz(1,l1,1,1) = zero
             bxyz(2,l1,1,1) = zero
             bxyz(3,l1,1,1) = zero
@@ -1552,6 +1600,7 @@
          do 20 l = 2, nzh
          l1 = nz2 - l
          at1 = aimag(ffc(l,j,k))
+!dir$ ivdep
          do 10 i = 1, 3
          fxyz(i,l,j,k) = fxyz(i,l,j,k) + exyz(i,l,j,k)*at1
          fxyz(i,l1,j,k) = fxyz(i,l1,j,k) + exyz(i,l1,j,k)*at1
@@ -1566,6 +1615,7 @@
          do 50 j = 1, kxyps
          l1 = nzh + 1
          at1 = aimag(ffc(1,j,k))
+!dir$ ivdep
          do 40 i = 1, 3
          fxyz(i,1,j,k) = fxyz(i,1,j,k) + exyz(i,1,j,k)*at1
          fxyz(i,l1,j,k) = fxyz(i,l1,j,k) + exyz(i,l1,j,k)*at1
@@ -1585,6 +1635,7 @@
          do 80 l = 2, nzh
          l1 = nz2 - l
          at1 = aimag(ffc(l,j,k))
+!dir$ ivdep
          do 70 i = 1, 3
          fxyz(i,l,j,k) = exyz(i,l,j,k)*at1
          fxyz(i,l1,j,k) = exyz(i,l1,j,k)*at1
@@ -1599,6 +1650,7 @@
          do 110 j = 1, kxyps
          l1 = nzh + 1
          at1 = aimag(ffc(1,j,k))
+!dir$ ivdep
          do 100 i = 1, 3
          fxyz(i,1,j,k) = exyz(i,1,j,k)*at1
          fxyz(i,l1,j,k) = exyz(i,l1,j,k)*at1
@@ -1738,7 +1790,7 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MPPBBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,   &
+      subroutine VMPPBBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,  &
      &nvpz,nzv,kxyp,kyzp,nzhd)
 ! this subroutine solves 3d poisson's equation in fourier space for
 ! magnetic field (or convolution of magnetic field over particle shape)
@@ -1822,7 +1874,7 @@
       sum1 = 0.0d0
       if (kstrt.gt.(nvpy*nvpz)) go to 120
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL                                                          &
+!$OMP PARALLEL
 !$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,zt3,wp) &
 !$OMP& REDUCTION(+:sum1)
       do 20 kk = 1, kyzps*kxyps
@@ -1836,6 +1888,7 @@
          dky = dny*real(k1)
          dkx = dnx*real(j + joff)
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 10 l = 2, nzh
             l1 = nz2 - l
             at1 = ci2*real(ffc(l,j,k))*aimag(ffc(l,j,k))
@@ -1854,12 +1907,13 @@
             bxyz(1,l1,j,k) = at3*zt1 + at4*zt2
             bxyz(2,l1,j,k) = -at4*zt3 - at2*zt1
             bxyz(3,l1,j,k) = at2*zt2 - at3*zt3
-            wp = wp + at1*(cu(1,l,j,k)*conjg(cu(1,l,j,k))               &
+            at1 = at1*(cu(1,l,j,k)*conjg(cu(1,l,j,k))                   &
      &              + cu(2,l,j,k)*conjg(cu(2,l,j,k))                    &
      &              + cu(3,l,j,k)*conjg(cu(3,l,j,k))                    &
      &              + cu(1,l1,j,k)*conjg(cu(1,l1,j,k))                  &
      &              + cu(2,l1,j,k)*conjg(cu(2,l1,j,k))                  &
      &              + cu(3,l1,j,k)*conjg(cu(3,l1,j,k)))
+            wp = wp + dble(at1)
    10       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -1875,9 +1929,10 @@
             bxyz(1,l1,j,k) = zero
             bxyz(2,l1,j,k) = zero
             bxyz(3,l1,j,k) = zero
-            wp = wp + at1*(cu(1,1,j,k)*conjg(cu(1,1,j,k))               &
+            at1 = at1*(cu(1,1,j,k)*conjg(cu(1,1,j,k))                   &
      &              + cu(2,1,j,k)*conjg(cu(2,1,j,k))                    &
      &              + cu(3,1,j,k)*conjg(cu(3,1,j,k)))
+            wp = wp + dble(at1)
          endif
       endif
       sum1 = sum1 + wp
@@ -1897,6 +1952,7 @@
          if (js.eq.0) then
 ! keep kx = 0
             if (k1.gt.0) then
+!dir$ ivdep
                do 30 l = 2, nzh
                l1 = nz2 - l
                at1 = ci2*real(ffc(l,1,k))*aimag(ffc(l,1,k))
@@ -1914,12 +1970,13 @@
                bxyz(1,l1,1,k) = at3*zt1 + at4*zt2
                bxyz(2,l1,1,k) = -at4*zt3
                bxyz(3,l1,1,k) = -at3*zt3
-               wp = wp + at1*(cu(1,l,1,k)*conjg(cu(1,l,1,k))            &
+               at1 = at1*(cu(1,l,1,k)*conjg(cu(1,l,1,k))                &
      &                 + cu(2,l,1,k)*conjg(cu(2,l,1,k))                 &
      &                 + cu(3,l,1,k)*conjg(cu(3,l,1,k))                 &
      &                 + cu(1,l1,1,k)*conjg(cu(1,l1,1,k))               &
      &                 + cu(2,l1,1,k)*conjg(cu(2,l1,1,k))               &
      &                 + cu(3,l1,1,k)*conjg(cu(3,l1,1,k)))
+               wp = wp + dble(at1)
    30          continue
 ! mode numbers kz = 0, nz/2
                l1 = nzh + 1
@@ -1933,9 +1990,10 @@
                bxyz(1,l1,1,k) = zero
                bxyz(2,l1,1,k) = zero
                bxyz(3,l1,1,k) = zero
-               wp = wp + at1*(cu(1,1,1,k)*conjg(cu(1,1,1,k))            &
+               at1 = at1*(cu(1,1,1,k)*conjg(cu(1,1,1,k))                &
      &                 + cu(2,1,1,k)*conjg(cu(2,1,1,k))                 &
      &                 + cu(3,1,1,k)*conjg(cu(3,1,1,k)))
+               wp = wp + dble(at1)
 ! throw away kx = nx/2
             else
                do 40 l = 1, nz
@@ -1960,6 +2018,7 @@
          dkx = dnx*real(j + joff)
          wp = 0.0d0
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 60 l = 2, nzh
             l1 = nz2 - l
             at1 = ci2*real(ffc(l,j,1))*aimag(ffc(l,j,1))
@@ -1977,12 +2036,13 @@
             bxyz(1,l1,j,1) = at4*zt2
             bxyz(2,l1,j,1) = -at4*zt3 - at2*zt1
             bxyz(3,l1,j,1) = at2*zt2
-            wp = wp + at1*(cu(1,l,j,1)*conjg(cu(1,l,j,1))               &
+            at1 = at1*(cu(1,l,j,1)*conjg(cu(1,l,j,1))                   &
      &              + cu(2,l,j,1)*conjg(cu(2,l,j,1))                    &
      &              + cu(3,l,j,1)*conjg(cu(3,l,j,1))                    &
      &              + cu(1,l1,j,1)*conjg(cu(1,l1,j,1))                  &
      &              + cu(2,l1,j,1)*conjg(cu(2,l1,j,1))                  &
      &              + cu(3,l1,j,1)*conjg(cu(3,l1,j,1)))
+            wp = wp + dble(at1)
    60       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -1996,9 +2056,10 @@
             bxyz(1,l1,j,1) = zero
             bxyz(2,l1,j,1) = zero
             bxyz(3,l1,j,1) = zero
-            wp = wp + at1*(cu(1,1,j,1)*conjg(cu(1,1,j,1))               &
+            at1 = at1*(cu(1,1,j,1)*conjg(cu(1,1,j,1))                   &
      &              + cu(2,1,j,1)*conjg(cu(2,1,j,1))                    &
      &              + cu(3,1,j,1)*conjg(cu(3,1,j,1)))
+            wp = wp + dble(at1)
          endif
          sum2 = sum2 + wp
    70    continue
@@ -2006,6 +2067,7 @@
          wp = 0.0d0
 ! mode numbers kx = 0, nx/2
          if (js.eq.0) then
+!dir$ ivdep
             do 80 l = 2, nzh
             l1 = nz2 - l
             at1 = ci2*real(ffc(l,1,1))*aimag(ffc(l,1,1))
@@ -2018,9 +2080,10 @@
             bxyz(1,l1,1,1) = zero
             bxyz(2,l1,1,1) = zero
             bxyz(3,l1,1,1) = zero
-            wp = wp + at1*(cu(1,l,1,1)*conjg(cu(1,l,1,1))               &
+            at1 = at1*(cu(1,l,1,1)*conjg(cu(1,l,1,1))                   &
      &              + cu(2,l,1,1)*conjg(cu(2,l,1,1))                    &
      &              + cu(3,l,1,1)*conjg(cu(3,l,1,1)))
+            wp = wp + dble(at1)
    80       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -2139,7 +2202,7 @@
 ! calculate transverse part of current
       if (kstrt.gt.(nvpy*nvpz)) return
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL                                                          &
+!$OMP PARALLEL
 !$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,zt1,zt2,zt3, &
 !$OMP& zt4,zt5)
       do 20 kk = 1, kyzps*kxyps
@@ -2154,6 +2217,7 @@
          dkx = dnx*real(j + joff)
          dkxy2 = dkx*dkx + dky2
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 10 l = 2, nzh
             l1 = nz2 - l
             dkz = dnz*real(l - 1)
@@ -2220,6 +2284,7 @@
          if (js.eq.0) then
 ! keep kx = 0
             if (k1.gt.0) then
+!dir$ ivdep
                do 30 l = 2, nzh
                l1 = nz2 - l
                dkz = dnz*real(l - 1)
@@ -2281,6 +2346,7 @@
          dkx = dnx*real(j + joff)
          dkx2 = dkx*dkx
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 60 l = 2, nzh
             l1 = nz2 - l
             dkz = dnz*real(l - 1)
@@ -2327,6 +2393,7 @@
 !$OMP END PARALLEL DO
 ! mode numbers kx = 0, nx/2
          if (js.eq.0) then
+!dir$ ivdep
             do 80 l = 2, nzh
             l1 = nz2 - l
             dkz = dnz*real(l - 1)
@@ -2459,7 +2526,7 @@
 ! calculate transverse part of current
       if (kstrt.gt.(nvpy*nvpz)) return
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL                                                          &
+!$OMP PARALLEL
 !$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,zt1,zt2,zt3, &
 !$OMP& zt4,zt5)
       do 20 kk = 1, kyzps*kxyps
@@ -2696,8 +2763,8 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MPPEPOISP332(dcu,exyz,isign,ffe,ax,ay,az,affp,wp0,ci,wf&
-     &,nx,ny,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+      subroutine VMPPEPOISP332(dcu,exyz,isign,ffe,ax,ay,az,affp,wp0,ci, &
+     &wf,nx,ny,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
 ! this subroutine solves 3d poisson's equation in fourier space for
 ! transverse electric field (or convolution of transverse electric field
 ! over particle shape), with periodic boundary conditions.
@@ -2835,6 +2902,7 @@
       if ((k1.gt.0).and.(k1.ne.nyh)) then
          if (k1.gt.nyh) k1 = k1 - ny
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 50 l = 2, nzh
             l1 = nz2 - l
             at2 = -ci2*real(ffe(l,j,k))
@@ -2846,12 +2914,13 @@
             exyz(1,l1,j,k) = at1*dcu(1,l1,j,k)
             exyz(2,l1,j,k) = at1*dcu(2,l1,j,k)
             exyz(3,l1,j,k) = at1*dcu(3,l1,j,k)
-            wp = wp + at2*(dcu(1,l,j,k)*conjg(dcu(1,l,j,k))             &
+            at1 = at2*(dcu(1,l,j,k)*conjg(dcu(1,l,j,k))                 &
      &              + dcu(2,l,j,k)*conjg(dcu(2,l,j,k))                  &
      &              + dcu(3,l,j,k)*conjg(dcu(3,l,j,k))                  &
      &              + dcu(1,l1,j,k)*conjg(dcu(1,l1,j,k))                &
      &              + dcu(2,l1,j,k)*conjg(dcu(2,l1,j,k))                &
      &              + dcu(3,l1,j,k)*conjg(dcu(3,l1,j,k)))
+            wp = wp + dble(at1)
    50       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -2864,9 +2933,10 @@
             exyz(1,l1,j,k) = zero
             exyz(2,l1,j,k) = zero
             exyz(3,l1,j,k) = zero
-            wp = wp + at2*(dcu(1,1,j,k)*conjg(dcu(1,1,j,k))             &
+            at1 = at2*(dcu(1,1,j,k)*conjg(dcu(1,1,j,k))                 &
      &              + dcu(2,1,j,k)*conjg(dcu(2,1,j,k))                  &
      &              + dcu(3,1,j,k)*conjg(dcu(3,1,j,k)))
+            wp = wp + dble(at1)
          endif
       endif
       sum1 = sum1 + wp
@@ -2884,6 +2954,7 @@
          if (js.eq.0) then
 ! keep kx = 0
             if (k1.gt.0) then
+!dir$ ivdep
                do 70 l = 2, nzh
                l1 = nz2 - l
                at2 = -ci2*real(ffe(l,1,k))
@@ -2895,12 +2966,13 @@
                exyz(1,l1,1,k) = at1*dcu(1,l1,1,k)
                exyz(2,l1,1,k) = at1*dcu(2,l1,1,k)
                exyz(3,l1,1,k) = at1*dcu(3,l1,1,k)
-               wp = wp + at2*(dcu(1,l,1,k)*conjg(dcu(1,l,1,k))          &
+               at1 = at2*(dcu(1,l,1,k)*conjg(dcu(1,l,1,k))              &
      &                 + dcu(2,l,1,k)*conjg(dcu(2,l,1,k))               &
      &                 + dcu(3,l,1,k)*conjg(dcu(3,l,1,k))               &
      &                 + dcu(1,l1,1,k)*conjg(dcu(1,l1,1,k))             &
      &                 + dcu(2,l1,1,k)*conjg(dcu(2,l1,1,k))             &
      &                 + dcu(3,l1,1,k)*conjg(dcu(3,l1,1,k)))
+               wp = wp + dble(at1)
    70          continue
 ! mode numbers kz = 0, nz/2
                l1 = nzh + 1
@@ -2913,9 +2985,10 @@
                exyz(1,l1,1,k) = zero
                exyz(2,l1,1,k) = zero
                exyz(3,l1,1,k) = zero
-               wp = wp + at2*(dcu(1,1,1,k)*conjg(dcu(1,1,1,k))          &
+               at1 = at2*(dcu(1,1,1,k)*conjg(dcu(1,1,1,k))              &
      &                 + dcu(2,1,1,k)*conjg(dcu(2,1,1,k))               &
      &                 + dcu(3,1,1,k)*conjg(dcu(3,1,1,k)))
+               wp = wp + dble(at1)
 ! throw away kx = nx/2
             else
                do 80 l = 1, nz
@@ -2938,6 +3011,7 @@
          do 110 j = 1, kxyps
          wp = 0.0d0
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 100 l = 2, nzh
             l1 = nz2 - l
             at2 = -ci2*real(ffe(l,j,1))
@@ -2949,12 +3023,13 @@
             exyz(1,l1,j,1) = at1*dcu(1,l1,j,1)
             exyz(2,l1,j,1) = at1*dcu(2,l1,j,1)
             exyz(3,l1,j,1) = at1*dcu(3,l1,j,1)
-            wp = wp + at2*(dcu(1,l,j,1)*conjg(dcu(1,l,j,1))             &
+            at1 = at2*(dcu(1,l,j,1)*conjg(dcu(1,l,j,1))                 &
      &              + dcu(2,l,j,1)*conjg(dcu(2,l,j,1))                  &
      &              + dcu(3,l,j,1)*conjg(dcu(3,l,j,1))                  &
      &              + dcu(1,l1,j,1)*conjg(dcu(1,l1,j,1))                &
      &              + dcu(2,l1,j,1)*conjg(dcu(2,l1,j,1))                &
      &              + dcu(3,l1,j,1)*conjg(dcu(3,l1,j,1)))
+            wp = wp + dble(at1)
   100       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -2967,9 +3042,10 @@
             exyz(1,l1,j,1) = zero
             exyz(2,l1,j,1) = zero
             exyz(3,l1,j,1) = zero
-            wp = wp + at2*(dcu(1,1,j,1)*conjg(dcu(1,1,j,1))             &
+            at1 = at2*(dcu(1,1,j,1)*conjg(dcu(1,1,j,1))                 &
      &              + dcu(2,1,j,1)*conjg(dcu(2,1,j,1))                  &
      &              + dcu(3,1,j,1)*conjg(dcu(3,1,j,1)))
+            wp = wp + dble(at1)
          endif
          sum2 = sum2 + wp
   110    continue
@@ -2977,6 +3053,7 @@
          wp = 0.0d0
 ! mode numbers kx = 0, nx/2
          if (js.eq.0) then
+!dir$ ivdep
             do 120 l = 2, nzh
             l1 = nz2 - l
             at2 = -ci2*real(ffe(l,1,1))
@@ -2988,9 +3065,10 @@
             exyz(1,l1,1,1) = zero
             exyz(2,l1,1,1) = zero
             exyz(3,l1,1,1) = zero
-            wp = wp + at2*(dcu(1,l,1,1)*conjg(dcu(1,l,1,1))             &
+            at1 = at2*(dcu(1,l,1,1)*conjg(dcu(1,l,1,1))                 &
      &              + dcu(2,l,1,1)*conjg(dcu(2,l,1,1))                  &
      &              + dcu(3,l,1,1)*conjg(dcu(3,l,1,1)))
+            wp = wp + dble(at1)
   120       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -3044,6 +3122,7 @@
       if ((k1.gt.0).and.(k1.ne.nyh)) then
          if (k1.gt.nyh) k1 = k1 - ny
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 180 l = 2, nzh
             l1 = nz2 - l
             at2 = -ci2*real(ffe(l,j,k))
@@ -3054,12 +3133,13 @@
             exyz(1,l1,j,k) = at2*dcu(1,l1,j,k)
             exyz(2,l1,j,k) = at2*dcu(2,l1,j,k)
             exyz(3,l1,j,k) = at2*dcu(3,l1,j,k)
-            wp = wp + at1*(dcu(1,l,j,k)*conjg(dcu(1,l,j,k))             &
+            at1 = at1*(dcu(1,l,j,k)*conjg(dcu(1,l,j,k))                 &
      &              + dcu(2,l,j,k)*conjg(dcu(2,l,j,k))                  &
      &              + dcu(3,l,j,k)*conjg(dcu(3,l,j,k))                  &
      &              + dcu(1,l1,j,k)*conjg(dcu(1,l1,j,k))                &
      &              + dcu(2,l1,j,k)*conjg(dcu(2,l1,j,k))                &
      &              + dcu(3,l1,j,k)*conjg(dcu(3,l1,j,k)))
+            wp = wp + dble(at1)
   180       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -3071,9 +3151,10 @@
             exyz(1,l1,j,k) = zero
             exyz(2,l1,j,k) = zero
             exyz(3,l1,j,k) = zero
-            wp = wp + at1*(dcu(1,1,j,k)*conjg(dcu(1,1,j,k))             &
+            at1 = at1*(dcu(1,1,j,k)*conjg(dcu(1,1,j,k))                 &
      &              + dcu(2,1,j,k)*conjg(dcu(2,1,j,k))                  &
      &              + dcu(3,1,j,k)*conjg(dcu(3,1,j,k)))
+            wp = wp + dble(at1)
          endif
       endif
       sum1 = sum1 + wp
@@ -3091,6 +3172,7 @@
          if (js.eq.0) then
 ! keep kx = 0
             if (k1.gt.0) then
+!dir$ ivdep
                do 200 l = 2, nzh
                l1 = nz2 - l
                at2 = -ci2*real(ffe(l,1,k))
@@ -3101,12 +3183,13 @@
                exyz(1,l1,1,k) = at2*dcu(1,l1,1,k)
                exyz(2,l1,1,k) = at2*dcu(2,l1,1,k)
                exyz(3,l1,1,k) = at2*dcu(3,l1,1,k)
-               wp = wp + at1*(dcu(1,l,1,k)*conjg(dcu(1,l,1,k))          &
+               at1 = at1*(dcu(1,l,1,k)*conjg(dcu(1,l,1,k))              &
      &                + dcu(2,l,1,k)*conjg(dcu(2,l,1,k))                &
      &                + dcu(3,l,1,k)*conjg(dcu(3,l,1,k))                &
      &                + dcu(1,l1,1,k)*conjg(dcu(1,l1,1,k))              &
      &                + dcu(2,l1,1,k)*conjg(dcu(2,l1,1,k))              &
      &                + dcu(3,l1,1,k)*conjg(dcu(3,l1,1,k)))
+               wp = wp + dble(at1)
   200          continue
 ! mode numbers kz = 0, nz/2
                l1 = nzh + 1
@@ -3118,9 +3201,10 @@
                exyz(1,l1,1,k) = zero
                exyz(2,l1,1,k) = zero
                exyz(3,l1,1,k) = zero
-               wp = wp + at1*(dcu(1,1,1,k)*conjg(dcu(1,1,1,k))          &
+               at1 = at1*(dcu(1,1,1,k)*conjg(dcu(1,1,1,k))              &
      &                 + dcu(2,1,1,k)*conjg(dcu(2,1,1,k))               &
      &                 + dcu(3,1,1,k)*conjg(dcu(3,1,1,k)))
+               wp = wp + dble(at1)
 ! throw away kx = nx/2
             else
                do 210 l = 1, nz
@@ -3143,6 +3227,7 @@
          do 240 j = 1, kxyps
          wp = 0.0d0
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 230 l = 2, nzh
             l1 = nz2 - l
             at2 = -ci2*real(ffe(l,j,1))
@@ -3153,12 +3238,13 @@
             exyz(1,l1,j,1) = at2*dcu(1,l1,j,1)
             exyz(2,l1,j,1) = at2*dcu(2,l1,j,1)
             exyz(3,l1,j,1) = at2*dcu(3,l1,j,1)
-            wp = wp + at1*(dcu(1,l,j,1)*conjg(dcu(1,l,j,1))             &
+            at1 = at1*(dcu(1,l,j,1)*conjg(dcu(1,l,j,1))                 &
      &              + dcu(2,l,j,1)*conjg(dcu(2,l,j,1))                  &
      &              + dcu(3,l,j,1)*conjg(dcu(3,l,j,1))                  &
      &              + dcu(1,l1,j,1)*conjg(dcu(1,l1,j,1))                &
      &              + dcu(2,l1,j,1)*conjg(dcu(2,l1,j,1))                &
      &              + dcu(3,l1,j,1)*conjg(dcu(3,l1,j,1)))
+            wp = wp + dble(at1)
   230       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -3170,9 +3256,10 @@
             exyz(1,l1,j,1) = zero
             exyz(2,l1,j,1) = zero
             exyz(3,l1,j,1) = zero
-            wp = wp + at1*(dcu(1,1,j,1)*conjg(dcu(1,1,j,1))             &
+            at1 = at1*(dcu(1,1,j,1)*conjg(dcu(1,1,j,1))                 &
      &              + dcu(2,1,j,1)*conjg(dcu(2,1,j,1))                  &
      &              + dcu(3,1,j,1)*conjg(dcu(3,1,j,1)))
+            wp = wp + dble(at1)
          endif
          sum2 = sum2 + wp
   240    continue
@@ -3180,6 +3267,7 @@
          wp = 0.0d0
 ! mode numbers kx = 0, nx/2
          if (js.eq.0) then
+!dir$ ivdep
             do 250 l = 2, nzh
             l1 = nz2 - l
             at2 = -ci2*real(ffe(l,1,1))
@@ -3190,9 +3278,10 @@
             exyz(1,l1,1,1) = zero
             exyz(2,l1,1,1) = zero
             exyz(3,l1,1,1) = zero
-            wp = wp + at1*(dcu(1,l,1,1)*conjg(dcu(1,l,1,1))             &
+            at1 = at1*(dcu(1,l,1,1)*conjg(dcu(1,l,1,1))                 &
      &              + dcu(2,l,1,1)*conjg(dcu(2,l,1,1))                  &
      &              + dcu(3,l,1,1)*conjg(dcu(3,l,1,1)))
+            wp = wp + dble(at1)
   250       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -3522,7 +3611,7 @@
       sum1 = 0.0d0
       if (kstrt.gt.(nvpy*nvpz)) go to 120
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL                                                          &
+!$OMP PARALLEL
 !$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,at1,at2,at3,at4,zt1,zt2,wp)     &
 !$OMP& REDUCTION(+:sum1)
       do 20 kk = 1, kyzps*kxyps
@@ -4415,7 +4504,7 @@
 ! calculate vector potential
       if (kstrt.gt.(nvpy*nvpz)) return
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL                                                          &
+!$OMP PARALLEL
 !$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,at2,at3,at4, &
 !$OMP& zt1,zt2,zt3)
       do 20 kk = 1, kyzps*kxyps
@@ -4727,7 +4816,7 @@
 ! calculate the radiative vector potential
       if (kstrt.gt.(nvpy*nvpz)) return
 ! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
-!$OMP PARALLEL                                                          &
+!$OMP PARALLEL
 !$OMP DO PRIVATE(j,k,l,kk,k1,l1,dkx,dky,dkz,dky2,dkxy2,at1,at2,zt1,zt2, &
 !$OMP& zt3)
       do 20 kk = 1, kyzps*kxyps
@@ -5206,7 +5295,7 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine MPPETFIELD332(dcu,exyz,ffe,affp,ci,wf,nx,ny,nz,kstrt,  &
+      subroutine VMPPETFIELD332(dcu,exyz,ffe,affp,ci,wf,nx,ny,nz,kstrt, &
      &nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
 ! this subroutine solves 3d poisson's equation in fourier space for
 ! unsmoothed transverse electric field, with periodic boundary
@@ -5301,6 +5390,7 @@
       if ((k1.gt.0).and.(k1.ne.nyh)) then
          if (k1.gt.nyh) k1 = k1 - ny
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 10 l = 2, nzh
             l1 = nz2 - l
             at2 = -ci2*real(ffe(l,j,k))
@@ -5311,12 +5401,13 @@
             exyz(1,l1,j,k) = at2*dcu(1,l1,j,k)
             exyz(2,l1,j,k) = at2*dcu(2,l1,j,k)
             exyz(3,l1,j,k) = at2*dcu(3,l1,j,k)
-            wp = wp + at1*(dcu(1,l,j,k)*conjg(dcu(1,l,j,k))             &
+            at1 = at1*(dcu(1,l,j,k)*conjg(dcu(1,l,j,k))                 &
      &              + dcu(2,l,j,k)*conjg(dcu(2,l,j,k))                  &
      &              + dcu(3,l,j,k)*conjg(dcu(3,l,j,k))                  &
      &              + dcu(1,l1,j,k)*conjg(dcu(1,l1,j,k))                &
      &              + dcu(2,l1,j,k)*conjg(dcu(2,l1,j,k))                &
      &              + dcu(3,l1,j,k)*conjg(dcu(3,l1,j,k)))
+            wp = wp + dble(at1)
    10       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -5328,9 +5419,10 @@
             exyz(1,l1,j,k) = zero
             exyz(2,l1,j,k) = zero
             exyz(3,l1,j,k) = zero
-            wp = wp + at1*(dcu(1,1,j,k)*conjg(dcu(1,1,j,k))             &
+            at1 = at1*(dcu(1,1,j,k)*conjg(dcu(1,1,j,k))                 &
      &              + dcu(2,1,j,k)*conjg(dcu(2,1,j,k))                  &
      &              + dcu(3,1,j,k)*conjg(dcu(3,1,j,k)))
+            wp = wp + dble(at1)
          endif
       endif
       sum1 = sum1 + wp
@@ -5348,6 +5440,7 @@
          if (js.eq.0) then
 ! keep kx = 0
             if (k1.gt.0) then
+!dir$ ivdep
                do 30 l = 2, nzh
                l1 = nz2 - l
                at2 = -ci2*real(ffe(l,1,k))
@@ -5358,12 +5451,13 @@
                exyz(1,l1,1,k) = at2*dcu(1,l1,1,k)
                exyz(2,l1,1,k) = at2*dcu(2,l1,1,k)
                exyz(3,l1,1,k) = at2*dcu(3,l1,1,k)
-               wp = wp + at1*(dcu(1,l,1,k)*conjg(dcu(1,l,1,k))          &
+               at1 = at1*(dcu(1,l,1,k)*conjg(dcu(1,l,1,k))              &
      &                + dcu(2,l,1,k)*conjg(dcu(2,l,1,k))                &
      &                + dcu(3,l,1,k)*conjg(dcu(3,l,1,k))                &
      &                + dcu(1,l1,1,k)*conjg(dcu(1,l1,1,k))              &
      &                + dcu(2,l1,1,k)*conjg(dcu(2,l1,1,k))              &
      &                + dcu(3,l1,1,k)*conjg(dcu(3,l1,1,k)))
+               wp = wp + dble(at1)
    30          continue
 ! mode numbers kz = 0, nz/2
                l1 = nzh + 1
@@ -5375,9 +5469,10 @@
                exyz(1,l1,1,k) = zero
                exyz(2,l1,1,k) = zero
                exyz(3,l1,1,k) = zero
-               wp = wp + at1*(dcu(1,1,1,k)*conjg(dcu(1,1,1,k))          &
+               at1 = at1*(dcu(1,1,1,k)*conjg(dcu(1,1,1,k))              &
      &                 + dcu(2,1,1,k)*conjg(dcu(2,1,1,k))               &
      &                 + dcu(3,1,1,k)*conjg(dcu(3,1,1,k)))
+               wp = wp + dble(at1)
 ! throw away kx = nx/2
             else
                do 40 l = 1, nz
@@ -5400,6 +5495,7 @@
          do 70 j = 1, kxyps
          wp = 0.0d0
          if ((j+joff).gt.0) then
+!dir$ ivdep
             do 60 l = 2, nzh
             l1 = nz2 - l
             at2 = -ci2*real(ffe(l,j,1))
@@ -5410,12 +5506,13 @@
             exyz(1,l1,j,1) = at2*dcu(1,l1,j,1)
             exyz(2,l1,j,1) = at2*dcu(2,l1,j,1)
             exyz(3,l1,j,1) = at2*dcu(3,l1,j,1)
-            wp = wp + at1*(dcu(1,l,j,1)*conjg(dcu(1,l,j,1))             &
+            at1 = at1*(dcu(1,l,j,1)*conjg(dcu(1,l,j,1))                 &
      &              + dcu(2,l,j,1)*conjg(dcu(2,l,j,1))                  &
      &              + dcu(3,l,j,1)*conjg(dcu(3,l,j,1))                  &
      &              + dcu(1,l1,j,1)*conjg(dcu(1,l1,j,1))                &
      &              + dcu(2,l1,j,1)*conjg(dcu(2,l1,j,1))                &
      &              + dcu(3,l1,j,1)*conjg(dcu(3,l1,j,1)))
+            wp = wp + dble(at1)
    60       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -5427,9 +5524,10 @@
             exyz(1,l1,j,1) = zero
             exyz(2,l1,j,1) = zero
             exyz(3,l1,j,1) = zero
-            wp = wp + at1*(dcu(1,1,j,1)*conjg(dcu(1,1,j,1))             &
+            at1 = at1*(dcu(1,1,j,1)*conjg(dcu(1,1,j,1))                 &
      &              + dcu(2,1,j,1)*conjg(dcu(2,1,j,1))                  &
      &              + dcu(3,1,j,1)*conjg(dcu(3,1,j,1)))
+            wp = wp + dble(at1)
          endif
          sum2 = sum2 + wp
    70    continue
@@ -5437,6 +5535,7 @@
          wp = 0.0d0
 ! mode numbers kx = 0, nx/2
          if (js.eq.0) then
+!dir$ ivdep
             do 80 l = 2, nzh
             l1 = nz2 - l
             at2 = -ci2*real(ffe(l,1,1))
@@ -5447,9 +5546,10 @@
             exyz(1,l1,1,1) = zero
             exyz(2,l1,1,1) = zero
             exyz(3,l1,1,1) = zero
-            wp = wp + at1*(dcu(1,l,1,1)*conjg(dcu(1,l,1,1))             &
+            at1 = at1*(dcu(1,l,1,1)*conjg(dcu(1,l,1,1))                 &
      &              + dcu(2,l,1,1)*conjg(dcu(2,l,1,1))                  &
      &              + dcu(3,l,1,1)*conjg(dcu(3,l,1,1)))
+            wp = wp + dble(at1)
    80       continue
 ! mode numbers kz = 0, nz/2
             l1 = nzh + 1
@@ -7017,3 +7117,157 @@
       endif
       return
       end
+!-----------------------------------------------------------------------
+      subroutine SET_PCVZERO3(exyz,nx,ny,nz,kstrt,nvpy,nvpz,ndim,nzv,   &
+     &kxyp,kyzp)
+! for 3d code, this subroutine zeros out transverse field array.
+! for Intel NUMA architecture with first touch policy, this associates
+! array segments with appropriate threads
+! OpenMP version
+! input: all, output: exyz
+! exyz(i,j,k,l) = complex transverse electric field
+! nx/ny/nz = system length in x/y/z direction
+! ndim = first dimension of field array
+! nzv = second dimension of field arrays, must be >= nz
+! kxyp/kyzp = number of complex grids in each field partition in
+! x/y direction
+      implicit none
+      integer nx, ny, nz, kstrt, nvpy, nvpz, ndim, nzv, kxyp, kyzp
+      complex exyz
+      dimension exyz(ndim,nzv,kxyp,kyzp)
+! local data
+      integer nxh, nyh, nzh, nz2, i, j, k, l, kk, k1, l1
+      integer js, ks, joff, koff, kxyps, kyzps
+      complex zero
+      nxh = nx/2
+      nyh = max(1,ny/2)
+      nzh = max(1,nz/2)
+      nz2 = nz + 2
+      zero = cmplx(0.0,0.0)
+! find processor id and offsets in y/z
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+      ks = (kstrt - 1)/nvpy
+      js = kstrt - nvpy*ks - 1
+      joff = kxyp*js
+      kxyps = min(kxyp,max(0,nxh-joff))
+      joff = joff - 1
+      koff = kyzp*ks
+      kyzps = min(kyzp,max(0,ny-koff))
+      koff = koff - 1
+      if (kstrt.gt.(nvpy*nvpz)) return
+! loop over mode numbers
+! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
+!$OMP PARALLEL DO PRIVATE(i,j,k,l,kk,k1,l1)
+      do 40 kk = 1, kyzps*kxyps
+      k = (kk - 1)/kxyps
+      j = kk - kxyps*k
+      k = k + 1
+      k1 = k + koff
+      if ((k1.gt.0).and.(k1.ne.nyh)) then
+         if (k1.gt.nyh) k1 = k1 - ny
+         if ((j+joff).gt.0) then
+            do 20 l = 2, nzh
+            l1 = nz2 - l
+            do 10 i = 1, ndim
+            exyz(i,l,j,k) = zero
+            exyz(i,l1,j,k) = zero
+   10       continue
+   20       continue
+            l1 = nzh + 1
+            do 30 i = 1, ndim
+            exyz(i,1,j,k) = zero
+            exyz(i,l1,j,k) = zero
+   30       continue
+         endif
+      endif
+   40 continue
+!$OMP END PARALLEL DO
+!$OMP PARALLEL DO PRIVATE(i,k,l,k1,l1)
+      do 100 k = 1, kyzps
+      k1 = k + koff
+      if ((k1.gt.0).and.(k1.ne.nyh)) then
+         if (k1.gt.nyh) k1 = k1 - ny
+         if (js.eq.0) then
+            if (k1.gt.0) then
+               do 60 l = 2, nzh
+               l1 = nz2 - l
+               do 50 i = 1, ndim
+               exyz(i,l,1,k) = zero
+               exyz(i,l1,1,k) = zero
+   50          continue
+   60          continue
+               l1 = nzh + 1
+               do 70 i = 1, ndim
+               exyz(i,1,1,k) = zero
+               exyz(i,l1,1,k) = zero
+   70          continue
+            else
+               do 90 l = 1, nz
+               do 80 i = 1, ndim
+               exyz(i,l,1,k) = zero
+   80          continue
+   90          continue
+            endif
+         endif
+      endif
+  100 continue
+!$OMP END PARALLEL DO
+      if (ks.eq.0) then
+!$OMP PARALLEL DO PRIVATE(i,j,l,k1,l1)
+         do 140 j = 1, kxyps
+         if ((j+joff).gt.0) then
+            do 120 l = 2, nzh
+            l1 = nz2 - l
+            do 110 i = 1, ndim
+            exyz(i,l,j,1) = zero
+            exyz(i,l1,j,1) = zero
+  110       continue
+  120       continue
+! mode numbers kz = 0, nz/2
+            l1 = nzh + 1
+            do 130 i = 1, ndim
+            exyz(i,1,j,1) = zero
+            exyz(i,l1,j,1) = zero
+  130       continue
+         endif
+  140    continue
+!$OMP END PARALLEL DO
+         if (js.eq.0) then
+            do 160 l = 2, nzh
+            l1 = nz2 - l
+            do 150 i = 1, ndim
+            exyz(i,l,1,1) = zero
+            exyz(i,l1,1,1) = zero
+  150       continue
+  160       continue
+! mode numbers kz = 0, nz/2
+            l1 = nzh + 1
+            do 170 i = 1, ndim
+            exyz(i,1,1,1) = zero
+            exyz(i,l1,1,1) = zero
+  170       continue
+         endif
+      endif
+      k1 = nyh/kyzp
+      if (ks.eq.k1) then
+         k1 = nyh - kyzp*k1 + 1
+         do 200 j = 1, kxyps
+         if ((j+joff).gt.0) then
+            do 190 l = 1, nz
+            do 180 i = 1, ndim
+            exyz(i,l,j,k1) = zero
+  180       continue
+  190       continue
+         endif
+  200    continue
+         if (js.eq.0) then
+            do 220 l = 1, nz
+            do 210 i = 1, ndim
+            exyz(i,l,1,k1) = zero
+  210       continue
+  220       continue
+         endif
+      endif   
+      return
+      end
+

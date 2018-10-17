@@ -14,7 +14,7 @@
 ! PPPRSTOR2L restores particle coordinates from ppbuff
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 26, 2018
+! update: july 5, 2018
 !-----------------------------------------------------------------------
       subroutine PPPORDER2LA(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,   &
      &ncll,nclr,noff,nyp,idimp,nppmx,nx,ny,mx,my,mx1,myp1,npbmx,ntmax,  &
@@ -47,7 +47,7 @@
 ! nclr = number offset being sent to upper processor
 ! noff = lowermost global gridpoint in particle partition.
 ! nyp = number of primary (complete) gridpoints in particle partition
-! idimp = size of phase space = 4
+! idimp = size of phase space = 4 or 5
 ! nppmx = maximum number of particles in tile
 ! nx/ny = system length in x/y direction
 ! mx/my = number of grids in sorting cell in x/y
@@ -293,7 +293,7 @@
 ! ihole(1,1,k) = ih, number of holes left (error, if negative)
 ! ncll = number offset being sent to lower processor
 ! nclr = number offset being sent to upper processor
-! idimp = size of phase space = 4
+! idimp = size of phase space = 4 or 5
 ! nppmx = maximum number of particles in tile
 ! mx1 = (system length in x direction - 1)/mx + 1
 ! myp1 = (partition length in y direction - 1)/my + 1
@@ -443,7 +443,7 @@
 ! ihole(1,1,k) = ih, number of holes left (error, if negative)
 ! mcll = number offset being received from lower processor
 ! mclr = number offset being received from upper processor
-! idimp = size of phase space = 4
+! idimp = size of phase space = 4 or 5
 ! nppmx = maximum number of particles in tile
 ! nx/ny = system length in x/y direction
 ! mx1 = (system length in x direction - 1)/mx + 1
@@ -543,12 +543,12 @@
          if (ks(ii).le.0) then
 ! check for periodic boundary conditions
             dx = rbufl(1,j+noff)
-            if (dx.ge.anx) dx = dx - anx
             if (dx.lt.0.0) dx = dx + anx
+            if (dx.ge.anx) dx = dx - anx
             ppart(1,j1,k) = dx
             dy = rbufl(2,j+noff)
-            if (dy.ge.any) dy = dy - any
             if (dy.lt.0.0) dy = dy + any
+            if (dy.ge.any) dy = dy - any
             ppart(2,j1,k) = dy
 ! copy remaining particle data
             do 10 i = 3, idimp
@@ -558,12 +558,12 @@
          else if (ks(ii).gt.mxyp1) then
 ! check for periodic boundary conditions
             dx = rbufr(1,j+moff)
-            if (dx.ge.anx) dx = dx - anx
             if (dx.lt.0.0) dx = dx + anx
+            if (dx.ge.anx) dx = dx - anx
             ppart(1,j1,k) = dx
             dy = rbufr(2,j+moff)
-            if (dy.ge.any) dy = dy - any
             if (dy.lt.0.0) dy = dy + any
+            if (dy.ge.any) dy = dy - any
             ppart(2,j1,k) = dy
 ! copy remaining particle data
             do 20 i = 3, idimp
@@ -573,12 +573,12 @@
          else
 ! check for periodic boundary conditions
             dx = ppbuff(1,j+ncoff,ks(ii))
-            if (dx.ge.anx) dx = dx - anx
             if (dx.lt.0.0) dx = dx + anx
+            if (dx.ge.anx) dx = dx - anx
             ppart(1,j1,k) = dx
             dy = ppbuff(2,j+ncoff,ks(ii))
-            if (dy.ge.any) dy = dy - any
             if (dy.lt.0.0) dy = dy + any
+            if (dy.ge.any) dy = dy - any
             ppart(2,j1,k) = dy
 ! copy remaining particle data
             do 30 i = 3, idimp
@@ -680,7 +680,7 @@
 ! ncl(i,k) = number of particles going to destination i, tile k
 ! ncll = number offset being sent to lower processor
 ! nclr = number offset being sent to upper processor
-! idimp = size of phase space = 4
+! idimp = size of phase space = 4 or 5
 ! mx1 = (system length in x direction - 1)/mx + 1
 ! myp1 = (partition length in y direction - 1)/my + 1
 ! npbmx = size of buffer array ppbuff
@@ -771,7 +771,7 @@
 ! ihole(2,:,k) = direction destination of particle leaving hole
 ! all for tile k
 ! ihole(1,1,k) = ih, number of holes left (error, if negative)
-! idimp = size of phase space = 4
+! idimp = size of phase space = 4 or 5
 ! nppmx = maximum number of particles in tile
 ! mxyp1 = total number of tiles
 ! npbmx = size of buffer array ppbuff

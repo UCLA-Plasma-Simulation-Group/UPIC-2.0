@@ -1,22 +1,22 @@
 !-----------------------------------------------------------------------
 !
-      module modmpcurd2
+      module mcurd2
 !
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpcurd2.f
 ! mpdjpost2 deposit current and update particle positions
-!           calls PPGJPPOST2L
+!           calls PPGJPPOST2L or VPPGJPPOST2L
 ! mpdjpostf2 deposit current and update particle positions
 !            determine which particles are leaving tile
-!            calls PPGJPPOSTF2L
+!            calls PPGJPPOSTF2L or VPPGJPPOSTF2L
 ! mprdjpost2 deposit current and update relativistic particle positions
-!            calls PPGRJPPOST2L
+!            calls PPGRJPPOST2L or VPPGRJPPOST2L
 ! mprdjpostf2 deposit current and update relativistic particle positions
 !             determine which particles are leaving tile
-!             calls PPGRJPPOSTF2L
+!             calls PPGRJPPOSTF2L or VPPGRJPPOSTF2L
 ! mpgmjpost2 deposits momentum flux
-!            calls PPGMJPPOST2L
+!            calls PPGMJPPOST2L or VPPGMJPPOST2L
 ! mpgrmjpost2 deposits relativistic momentum flux
-!             calls PPGRMJPPOST2L
+!             calls PPGRMJPPOST2L or VPPGRMJPPOST2L
 ! wmpdjpost2 generic procedure to deposit current and update particle
 !            positions
 !            calls mprdjpostf2, mpdjpostf2, mprdjpost2, or mpdjpost2
@@ -24,19 +24,20 @@
 !             calls mpgrmjpost2, or mpgmjpost2
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 25, 2017
+! update: august 1, 2018
 !
       use libmpcurd2_h
+      use libvmpcurd2_h
       implicit none
 !
       contains  
 !
 !-----------------------------------------------------------------------
       subroutine mpdjpost2(ppart,cu,kpic,noff,qm,dt,tdjpost,nx,ny,mx,my,&
-     &mx1,ipbc)
+     &mx1,ipbc,popt)
 ! deposit current and update particle positions
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc
+      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc, popt
       integer, intent(in) :: noff
       real, intent(in) :: qm, dt
       real, intent(inout) :: tdjpost
@@ -54,8 +55,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGJPPOST2L(ppart,cu,kpic,noff,qm,dt,nppmx,idimp,nx,ny,mx,my,&
-     &nxv,nypmx,mx1,mxyp1,ipbc)
+      select case(popt)
+! vector current deposit
+      case (2)
+         call VPPGJPPOST2L(ppart,cu,kpic,noff,qm,dt,nppmx,idimp,nx,ny,mx&
+     &,my,nxv,nypmx,mx1,mxyp1,ipbc)
+! standard current deposit
+      case default
+         call PPGJPPOST2L(ppart,cu,kpic,noff,qm,dt,nppmx,idimp,nx,ny,mx,&
+     &my,nxv,nypmx,mx1,mxyp1,ipbc)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tdjpost = tdjpost + real(dtime)
@@ -63,11 +72,11 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpdjpostf2(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,     &
-     &tdjpost,nx,ny,mx,my,mx1,irc)
+     &tdjpost,nx,ny,mx,my,mx1,popt,irc)
 ! deposit current and update particle positions
 ! determine which particles are leaving tile
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1
+      integer, intent(in) :: nx, ny, mx, my, mx1, popt
       integer, intent(in) :: noff, nyp
       integer, intent(inout) :: irc
       real, intent(in) :: qm, dt
@@ -88,8 +97,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGJPPOSTF2L(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,nppmx,   &
+      select case(popt)
+! vector current deposit
+      case (2)
+         call VPPGJPPOSTF2L(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,nppmx&
+     &,idimp,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc)
+! standard current deposit
+      case default
+         call PPGJPPOSTF2L(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,nppmx,&
      &idimp,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tdjpost = tdjpost + real(dtime)
@@ -97,10 +114,10 @@
 !
 !-----------------------------------------------------------------------
       subroutine mprdjpost2(ppart,cu,kpic,noff,qm,dt,ci,tdjpost,nx,ny,mx&
-     &,my,mx1,ipbc)
+     &,my,mx1,ipbc,popt)
 ! deposit current and update relativistic particle positions
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc
+      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc, popt
       integer, intent(in) :: noff
       real, intent(in) :: qm, dt, ci
       real, intent(inout) :: tdjpost
@@ -118,8 +135,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGRJPPOST2L(ppart,cu,kpic,noff,qm,dt,ci,nppmx,idimp,nx,ny,mx&
-     &,my,nxv,nypmx,mx1,mxyp1,ipbc)
+      select case(popt)
+! vector current deposit
+      case (2)
+         call VPPGRJPPOST2L(ppart,cu,kpic,noff,qm,dt,ci,nppmx,idimp,nx, &
+     &ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
+! standard current deposit
+      case default
+         call PPGRJPPOST2L(ppart,cu,kpic,noff,qm,dt,ci,nppmx,idimp,nx,ny&
+     &,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tdjpost = tdjpost + real(dtime)
@@ -127,11 +152,11 @@
 !
 !-----------------------------------------------------------------------
       subroutine mprdjpostf2(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,ci, &
-     &tdjpost,nx,ny,mx,my,mx1,irc)
+     &tdjpost,nx,ny,mx,my,mx1,popt,irc)
 ! deposit current and update relativistic particle positions
 ! determine which particles are leaving tile
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1
+      integer, intent(in) :: nx, ny, mx, my, mx1, popt
       integer, intent(in) :: noff, nyp
       integer, intent(inout) :: irc
       real, intent(in) :: qm, dt, ci
@@ -152,18 +177,27 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGRJPPOSTF2L(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,ci,nppmx&
-     &,idimp,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc)
+      select case(popt)
+! vector current deposit
+      case (2)
+         call VPPGRJPPOSTF2L(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,ci, &
+     &nppmx,idimp,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc)
+! standard current deposit
+      case default
+         call PPGRJPPOSTF2L(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,ci,  &
+     &nppmx,idimp,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tdjpost = tdjpost + real(dtime)
       end subroutine
 !
 !-----------------------------------------------------------------------
-      subroutine mpgmjpost2(ppart,amu,kpic,noff,qm,tdcjpost,mx,my,mx1)
+      subroutine mpgmjpost2(ppart,amu,kpic,noff,qm,tdcjpost,mx,my,mx1,  &
+     &popt)
 ! deposit momentum flux
       implicit none
-      integer, intent(in) :: mx, my, mx1
+      integer, intent(in) :: mx, my, mx1, popt
       integer, intent(in) :: noff
       real, intent(in) ::  qm
       real, intent(inout) :: tdcjpost
@@ -183,8 +217,16 @@
 ! call low level procedure
       select case(mdim)
       case (4)
-         call PPGMJPPOST2L(ppart,amu,kpic,noff,qm,nppmx,idimp,mx,my,nxv,&
-     &nypmx,mx1,mxyp1)
+         select case(popt)
+! vector momentum flux deposit
+         case (2)
+            call VPPGMJPPOST2L(ppart,amu,kpic,noff,qm,nppmx,idimp,mx,my,&
+     &nxv,nypmx,mx1,mxyp1)
+! standard momentum flux deposit
+         case default
+            call PPGMJPPOST2L(ppart,amu,kpic,noff,qm,nppmx,idimp,mx,my, &
+     &nxv,nypmx,mx1,mxyp1)
+         end select
       case default
          write (*,*) 'mpgmjpost2: unsupported dimension mdim = ', mdim
       end select
@@ -195,10 +237,10 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpgrmjpost2(ppart,amu,kpic,noff,qm,ci,tdcjpost,mx,my,  &
-     &mx1)
+     &mx1,popt)
 ! deposit relativistic momentum flux
       implicit none
-      integer, intent(in) :: mx, my, mx1
+      integer, intent(in) :: mx, my, mx1, popt
       integer, intent(in) :: noff
       real, intent(in) ::  qm, ci
       real, intent(inout) :: tdcjpost
@@ -218,8 +260,16 @@
 ! call low level procedure
       select case(mdim)
       case (4)
-         call PPGRMJPPOST2L(ppart,amu,kpic,noff,qm,ci,nppmx,idimp,mx,my,&
-     &nxv,nypmx,mx1,mxyp1)
+         select case(popt)
+! vector momentum flux deposit
+         case (2)
+            call VPPGRMJPPOST2L(ppart,amu,kpic,noff,qm,ci,nppmx,idimp,mx&
+     &,my,nxv,nypmx,mx1,mxyp1)
+! standard momentum flux deposit
+         case default
+            call PPGRMJPPOST2L(ppart,amu,kpic,noff,qm,ci,nppmx,idimp,mx,&
+     &my,nxv,nypmx,mx1,mxyp1)
+         end select
       case default
          write (*,*) 'mpgrmjpost2: unsupported dimension mdim = ', mdim
       end select
@@ -230,11 +280,11 @@
 !
 !-----------------------------------------------------------------------
       subroutine wmpdjpost2(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,ci,  &
-     &tdjpost,nx,ny,mx,my,mx1,ipbc,relativity,plist,irc)
+     &tdjpost,nx,ny,mx,my,mx1,ipbc,popt,relativity,plist,irc)
 ! generic procedure to deposit current and update particle positions
 ! plist = (true,false) = list of particles leaving tiles found in push
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc, relativity
+      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc, popt, relativity
       integer, intent(in) :: noff, nyp
       integer, intent(inout) :: irc
       logical, intent(in) :: plist
@@ -250,33 +300,33 @@
 ! updates ppart, cue, ncl, ihole, irc
          if (relativity==1) then
             call mprdjpostf2(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,ci, &
-     &tdjpost,nx,ny,mx,my,mx1,irc)
+     &tdjpost,nx,ny,mx,my,mx1,popt,irc)
          else
             call mpdjpostf2(ppart,cu,kpic,ncl,ihole,noff,nyp,qm,dt,     &
-     &tdjpost,nx,ny,mx,my,mx1,irc)
+     &tdjpost,nx,ny,mx,my,mx1,popt,irc)
          endif
          if (irc /= 0) then
-            write (*,*) 'info:wmpdjpost2 overflow: irc=', irc
+            write (*,*) 'info:wmpdjpost2 ihole overflow: irc=', irc
          endif
 ! do not also calculate list of particles leaving tile
       else
 ! updates ppart, cue
          if (relativity==1) then
             call mprdjpost2(ppart,cu,kpic,noff,qm,dt,ci,tdjpost,nx,ny,mx&
-     &,my,mx1,ipbc)
+     &,my,mx1,ipbc,popt)
          else
             call mpdjpost2(ppart,cu,kpic,noff,qm,dt,tdjpost,nx,ny,mx,my,&
-     &mx1,ipbc)
+     &mx1,ipbc,popt)
          endif
       endif
       end subroutine
 !
 !-----------------------------------------------------------------------
       subroutine wmpgmjpost2(ppart,amu,kpic,noff,qm,ci,tdcjpost,mx,my,  &
-     &mx1,relativity)
+     &mx1,popt,relativity)
 ! generic procedure to deposit momentum flux
       implicit none
-      integer, intent(in) :: noff, mx, my, mx1, relativity
+      integer, intent(in) :: noff, mx, my, mx1, popt, relativity
       real, intent(in) ::  qm, ci
       real, intent(inout) :: tdcjpost
       real, dimension(:,:,:), intent(in) :: ppart
@@ -284,9 +334,10 @@
       integer, dimension(:), intent(in) :: kpic
 ! updates amu
       if (relativity==1) then
-         call mpgrmjpost2(ppart,amu,kpic,noff,qm,ci,tdcjpost,mx,my,mx1)
+         call mpgrmjpost2(ppart,amu,kpic,noff,qm,ci,tdcjpost,mx,my,mx1, &
+     &popt)
       else
-         call mpgmjpost2(ppart,amu,kpic,noff,qm,tdcjpost,mx,my,mx1)
+         call mpgmjpost2(ppart,amu,kpic,noff,qm,tdcjpost,mx,my,mx1,popt)
       endif
       end subroutine
 !

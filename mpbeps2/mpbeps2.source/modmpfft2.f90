@@ -1,19 +1,19 @@
 !-----------------------------------------------------------------------
 !
-      module modmpfft2
+      module mfft2
 !
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpfft2.f
 ! mpfft2_init calculates tables needed by 2d FFTs
 !             calls WPFFT2RINIT
 ! mpfft2r wrapper function for scalar 2d real/complex FFT
-!         calls WPPFFT2RM
+!         calls WPPFFT2RVM
 ! mpfft2rn wrapper function for vector 2d real/complex FFT
-!          calls WPPFFT2RM2, WPPFFT2RM3, or WPPFFT2RMN
+!          calls WPPFFT2RVM2, WPPFFT2RVM3, or WPPFFT2RVMN
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 11, 2016
+! update: august 1, 2018
 !
-      use libmpfft2_h
+      use libvmpfft2_h
       implicit none
 !
 ! ntpose = (0,1) = (no,yes) input, output data are transposed
@@ -76,7 +76,7 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call WPPFFT2RM(f,g,bs,br,isign,ntpose,mixup,sct,ttp,indx,indy,    &
+      call WPPFFT2RVM(f,g,bs,br,isign,ntpose,mixup,sct,ttp,indx,indy,   &
      &kstrt,nvp,nxvh,nyv,kxp,kyp,kypd,nxhyd,nxyhd)
 ! record time
       call dtimer(dtime,itime,1)
@@ -116,11 +116,11 @@
 ! call low level procedure
       select case(ndim)
       case (2)
-         call WPPFFT2RM2(f,g,bs,br,isign,ntpose,mixup,sct,ttp,indx,indy,&
-     &kstrt,nvp,nxvh,nyv,kxp,kyp,kypd,nxhyd,nxyhd)
+         call WPPFFT2RVM2(f,g,bs,br,isign,ntpose,mixup,sct,ttp,indx,indy&
+     &,kstrt,nvp,nxvh,nyv,kxp,kyp,kypd,nxhyd,nxyhd)
       case (3)
-         call WPPFFT2RM3(f,g,bs,br,isign,ntpose,mixup,sct,ttp,indx,indy,&
-     &kstrt,nvp,nxvh,nyv,kxp,kyp,kypd,nxhyd,nxyhd)
+         call WPPFFT2RVM3(f,g,bs,br,isign,ntpose,mixup,sct,ttp,indx,indy&
+     &,kstrt,nvp,nxvh,nyv,kxp,kyp,kypd,nxhyd,nxyhd)
       case default
 ! check if required size of buffer has increased
          if (szss < ndim*nxvh*kypd) then
@@ -129,7 +129,7 @@
             allocate(ss(ndim*nxvh,kypd))
             szss = ndim*nxvh*kypd
          endif
-         call WPPFFT2RMN(f,g,bs,br,ss,isign,ntpose,mixup,sct,ttp,indx,  &
+         call WPPFFT2RVMN(f,g,bs,br,ss,isign,ntpose,mixup,sct,ttp,indx, &
      &indy,kstrt,nvp,nxvh,nyv,kxp,kyp,kypd,ndim,nxhyd,nxyhd)
       end select
 ! record time

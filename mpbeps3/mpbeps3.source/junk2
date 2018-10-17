@@ -1,0 +1,130 @@
+modmpbpush3.f90:      subroutine mpbpush3(ppart,fxyz,bxyz,kpic,noff,nyzp,qbm,dt,dtc,ek, &
+modmpbpush3.f90:      subroutine mpbpushf3(ppart,fxyz,bxyz,kpic,ncl,ihole,noff,nyzp,qbm,&
+modmpbpush3.f90:      subroutine mprbpush3(ppart,fxyz,bxyz,kpic,noff,nyzp,qbm,dt,dtc,ci,&
+modmpbpush3.f90:      subroutine mprbpushf3(ppart,fxyz,bxyz,kpic,ncl,ihole,noff,nyzp,qbm&
+modmpbpush3.f90:      subroutine wmpbpush3(ppart,fxyz,bxyz,kpic,ncl,ihole,noff,nyzp,qbm,&
+modmpcurd3.f90:      subroutine mpdjpost3(ppart,cu,kpic,noff,qm,dt,tdjpost,nx,ny,nz,mx,&
+modmpcurd3.f90:      subroutine mpdjpostf3(ppart,cu,kpic,ncl,ihole,noff,nyzp,qm,dt,    &
+modmpcurd3.f90:      subroutine mprdjpost3(ppart,cu,kpic,noff,qm,dt,ci,tdjpost,nx,ny,nz&
+modmpcurd3.f90:      subroutine mprdjpostf3(ppart,cu,kpic,ncl,ihole,noff,nyzp,qm,dt,ci,&
+modmpcurd3.f90:      subroutine mpgmjpost3(ppart,amu,kpic,noff,qm,tdcjpost,mx,my,mz,mx1&
+modmpcurd3.f90:      subroutine mpgrmjpost3(ppart,amu,kpic,noff,qm,ci,tdcjpost,mx,my,mz&
+modmpcurd3.f90:      subroutine wmpdjpost3(ppart,cu,kpic,ncl,ihole,noff,nyzp,qm,dt,ci, &
+modmpcurd3.f90:      subroutine wmpgmjpost3(ppart,amu,kpic,noff,qm,ci,tdcjpost,mx,my,mz&
+modmpdiag3.f90:      subroutine dafopen3(f,nx,kyp,kzp,iunit,nrec,fname)
+modmpdiag3.f90:      subroutine dafopenv3(f,nx,kyp,kzp,iunit,nrec,fname)
+modmpdiag3.f90:      subroutine dafopenc3(fc,iunit,nrec,fname)
+modmpdiag3.f90:      subroutine dafopenvc3(fc,iunit,nrec,fname)
+modmpdiag3.f90:      subroutine dafopenfv3(fvm,fv,fe,wk,iunit,nrec,fname)
+modmpdiag3.f90:      subroutine dafopentr3(partt,iunit,nrec,fname)
+modmpdiag3.f90:      subroutine fnopens3(iunit,fname)
+modmpdiag3.f90:      subroutine mpvpdist3(ppart,kpic,fv,sfv,fvm,tdiag,nvp,nmv)
+modmpdiag3.f90:      subroutine mperpdist3(ppart,kpic,fv,sfv,ci,wk,tdiag,nmv)
+modmpdiag3.f90:      subroutine mpvbpdist3(ppart,kpic,fv,sfv,fvm,omx,omy,omz,tdiag,nmv)
+modmpdiag3.f90:      subroutine mpvspdist3(ppart,kpic,fvs,noff,tdiag,nmv,mvx,mvy,mvz,  &
+modmpdiag3.f90:      subroutine mpvdist3(part,fv,fvm,tdiag,npp,nvp,nmv)
+modmpdiag3.f90:      subroutine mvbdist3(part,fv,fvm,omx,omy,omz,tdiag,npp,nmv)
+modmpdiag3.f90:      subroutine mpprofx3(ppart,fms,kpic,noff,tdiag,npro,mx,my,mz,mx1,  &
+modmpdiag3.f90:      subroutine mprprofx3(ppart,fms,kpic,noff,ci,tdiag,npro,mx,my,mz,  &
+modmpdiag3.f90:      subroutine mpgprofx3(ppart,fxyz,fms,kpic,noff,nyzp,qbm,dt,tdiag,  &
+modmpdiag3.f90:      subroutine mpgrprofx3(ppart,fxyz,fms,kpic,noff,nyzp,qbm,dt,ci,    &
+modmpdiag3.f90:      subroutine mpgbprofx3(ppart,fxyz,bxyz,fms,kpic,noff,nyzp,qbm,dt,  &
+modmpdiag3.f90:      subroutine mpgrbprofx3(ppart,fxyz,bxyz,fms,kpic,noff,nyzp,qbm,dt, &
+modmpdiag3.f90:      subroutine mpfluidqs3(fms,tdiag,npro,nx,ny,nz,kstrt,nvpy,kyp,kzp)
+modmpdiag3.f90:      subroutine wmprofx3(ppart,fms,kpic,noff,ci,tdiag,npro,mx,my,mz,mx1&
+modmpdiag3.f90:      subroutine wmgprofx3(ppart,fxyz,fms,kpic,noff,nyzp,qbm,dt,ci,tdiag&
+modmpdiag3.f90:      subroutine wmgbprofx3(ppart,fxyz,bxyz,fms,kpic,noff,nyzp,qbm,dt,ci&
+modmpdiag3.f90:      subroutine psetptraj3(ppart,tedges,kpic,iprobt,kstrt,nst,nvpy,nvpz&
+modmpdiag3.f90:      subroutine mptraj3(ppart,kpic,partt,tdiag,numtp,irc)
+modmpdiag3.f90:      subroutine mpordtraj3(partt,spartt,tedges,tdiag,numtp,irc)
+modmpdiag3.f90:      subroutine mpcpytraj3(partt,part,tdiag,numtp)
+modmpdiag3.f90:      subroutine dafwritefv3(fvm,fv,fe,wk,tdiag,iunit,nrec)
+modmpdiag3.f90:      subroutine dafwritetr3(partt,tdiag,iunit,nrec)
+modmpdpush3.f90:      subroutine mpfwpminx3(qe,nyzp,qbme,wpmax,wpmin,nx)
+modmpdpush3.f90:      subroutine mpfwptminx3(qe,qi,nyzp,qbme,qbmi,wpmax,wpmin,nx)
+modmpdpush3.f90:      subroutine mpgdjpost3(ppart,fxyz,bxyz,kpic,noff,nyzp,dcu,amu,qm,  &
+modmpdpush3.f90:      subroutine mpgdcjpost3(ppart,fxyz,bxyz,kpic,noff,nyzp,cu,dcu,amu, &
+modmpdpush3.f90:      subroutine mpgrdjpost3(ppart,fxyz,bxyz,kpic,noff,nyzp,dcu,amu,qm, &
+modmpdpush3.f90:      subroutine mpgrdcjpost3(ppart,fxyz,bxyz,kpic,noff,nyzp,cu,dcu,amu,&
+modmpdpush3.f90:      subroutine mpascfguard3(dcu,cus,nyzp,q2m0,tdcjpost,nx)
+modmpdpush3.f90:      subroutine wmpgdjpost3(ppart,fxyz,bxyz,kpic,noff,nyzp,dcu,amu,qm, &
+modmpdpush3.f90:      subroutine wmpgdcjpost3(ppart,fxyz,bxyz,kpic,noff,nyzp,cu,dcu,amu,&
+modmpfft3.f90:      subroutine mpfft3_init(mixup,sct,indx,indy,indz)
+modmpfft3.f90:      subroutine mpfft3r(f,h,isign,mixup,sct,tfft,indx,indy,indz,kstrt, &
+modmpfft3.f90:      subroutine mpfft3rn(f,h,isign,mixup,sct,tfft,indx,indy,indz,kstrt,&
+modmpfield3.f90:      subroutine mppois3_init(ffc,ax,ay,az,affp,nx,ny,nz,kstrt,nvpy,nvpz&
+modmpfield3.f90:      subroutine mppois3(q,fxyz,ffc,we,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mpaddqei3(qe,qi,nyzp,tfield,nx)
+modmpfield3.f90:      subroutine mpcuperp3(cu,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mpibpois3(cu,bxyz,ffc,ci,wm,tfield,nx,ny,nz,kstrt,nvpy,&
+modmpfield3.f90:      subroutine mpmaxwel3(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,tfield,nx, &
+modmpfield3.f90:      subroutine mpemfield3(fxyz,exyz,ffc,isign,tfield,nx,ny,nz,kstrt,  &
+modmpfield3.f90:      subroutine mpaddcuei3(cue,cui,nyzp,tfield,nx)
+modmpfield3.f90:      subroutine mpaddamui3(amu,amui,nyzp,tfield,nx)
+modmpfield3.f90:      subroutine mpbaddext3(bxyz,nyzp,tfield,omx,omy,omz,nx)
+modmpfield3.f90:      subroutine mpaddvrfield3(a,b,c,tfield)
+modmpfield3.f90:      subroutine mpbbpois3(cu,bxyz,ffc,ci,wm,tfield,nx,ny,nz,kstrt,nvpy,&
+modmpfield3.f90:      subroutine mpdcuperp3(dcu,amu,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mpadcuperp3(dcu,amu,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mpepois3_init(ffe,ax,ay,az,affp,wp0,ci,nx,ny,nz,kstrt, &
+modmpfield3.f90:      subroutine mpepois3(dcu,exyz,ffe,affp,ci,wf,tfield,nx,ny,nz,kstrt,&
+modmpfield3.f90:      subroutine mppot3(q,pot,ffc,we,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mpelfield3(q,fxyz,ffc,we,tfield,nx,ny,nz,kstrt,nvpy,   &
+modmpfield3.f90:      subroutine mpdivf3(f,df,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mpgradf3(df,f,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mpcurlf3(f,g,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mpavpot3(bxyz,axyz,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mcuave3(cuave,cunew,cuold,tfield,nz)
+modmpfield3.f90:      subroutine mpavrpot3(axyz,bxyz,ffc,affp,ci,tfield,nx,ny,nz,kstrt, &
+modmpfield3.f90:      subroutine mpapot3(cu,axyz,ffc,ci,wm,tfield,nx,ny,nz,kstrt,nvpy,  &
+modmpfield3.f90:      subroutine mpetfield3(dcu,exyz,ffe,affp,ci,wf,tfield,nx,ny,nz,    &
+modmpfield3.f90:      subroutine mpsmooth3(q,qs,ffc,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mpsmooth33(cu,cus,ffc,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpfield3.f90:      subroutine mprdmodes3(pot,pott,tfield,nx,ny,nz,modesx,modesy,     &
+modmpfield3.f90:      subroutine mpwrmodes3(pot,pott,tfield,nx,ny,nz,modesx,modesy,     &
+modmpfield3.f90:      subroutine mprdvmodes3(vpot,vpott,tfield,nx,ny,nz,modesx,modesy,  &
+modmpfield3.f90:      subroutine mpwrvmodes3(vpot,vpott,tfield,nx,ny,nz,modesx,modesy,  &
+modmpfield3.f90:      subroutine mpset_pcvzero3(exyz,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+modmpgard3.f90:      subroutine mpdguard3x(q,nyzp,tguard,nx)
+modmpgard3.f90:      subroutine mpcguard3x(fxyz,nyzp,tguard,nx)
+modmpgard3.f90:      subroutine mpaguard3x(q,nyzp,tguard,nx)
+modmpgard3.f90:      subroutine mpacguard3x(cu,nyzp,tguard,nx)
+modmpinit3.f90:      subroutine mnextran3(nextrand,ndim,np)
+modmpinit3.f90:      subroutine mpdcomp3(edges,nyzp,noff,nypmx,nzpmx,nypmn,nzpmn,ny,nz,&
+modmpinit3.f90:      subroutine mpfcomp3(nvp,nx,ny,nz,nvpy,nvpz,ierr)
+modmpinit3.f90:      subroutine mpdistr3(part,edges,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy&
+modmpinit3.f90:      subroutine mprdistr3(part,edges,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx&
+modmpinit3.f90:      subroutine mpudistr3(part,edges,npp,npx,npy,npz,nx,ny,nz,kstrt,   &
+modmpinit3.f90:      subroutine mpfdistr3(part,npp,ampx,scalex,shiftx,ampy,scaley,     &
+modmpinit3.f90:      subroutine mpvdistr3(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,npx,npy,&
+modmpinit3.f90:      subroutine mpvrdistr3(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,&
+modmpinit3.f90:      subroutine mpvbdistr3(part,nps,npp,vtr,vtz,vdr,vdz,omx,omy,omz,npx&
+modmpinit3.f90:      subroutine mpdblkp3(part,kpic,npp,noff,nppmx,mx,my,mz,mx1,myp1,irc&
+modmpinit3.f90:      subroutine mpfedges3(edges,nyzp,noff,ampy,scaley,shifty,ampz,     &
+modmpinit3.f90:      subroutine mpfholes3(part,edges,npp,iholep,nc)
+modmpinit3.f90:      subroutine wmpdistr3(part,edges,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx&
+modmpinit3.f90:      subroutine wmpvdistr3(part,nps,npp,vtx,vty,vtz,vdx,vdy,vdz,ci,npx,&
+modmppush3.f90:      subroutine mpmovin3(part,ppart,kpic,npp,noff,mx,my,mz,mx1,myp1,irc&
+modmppush3.f90:      subroutine mpmovin3p(part,ppart,kpic,npp,noff,mx,my,mz,mx1,myp1,  &
+modmppush3.f90:      subroutine mpcopyout3(part,ppart,kpic,npp,irc)
+modmppush3.f90:      subroutine mpcopyin3(part,ppart,kpic,irc)
+modmppush3.f90:      subroutine mpcheck3(ppart,kpic,noff,nyzp,nx,mx,my,mz,mx1,myp1,irc)
+modmppush3.f90:      subroutine mppush3(ppart,fxyz,kpic,noff,nyzp,qbm,dt,ek,tpush,nx,ny&
+modmppush3.f90:      subroutine mppushf3(ppart,fxyz,kpic,ncl,ihole,noff,nyzp,qbm,dt,ek,&
+modmppush3.f90:      subroutine mprpush3(ppart,fxyz,kpic,noff,nyzp,qbm,dt,ci,ek,tpush, &
+modmppush3.f90:      subroutine mprpushf3(ppart,fxyz,kpic,ncl,ihole,noff,nyzp,qbm,dt,ci&
+modmppush3.f90:      subroutine mppush3zf(ppart,kpic,dt,ek,tpush,nx,ny,nz,ipbc,popt)
+modmppush3.f90:      subroutine mppushf3zf(ppart,kpic,ncl,ihole,noff,nyzp,dt,ek,tpush, &
+modmppush3.f90:      subroutine mprpush3zf(ppart,kpic,dt,ci,ek,tpush,nx,ny,nz,ipbc,popt&
+modmppush3.f90:      subroutine mprpushf3zf(ppart,kpic,ncl,ihole,noff,nyzp,dt,ci,ek,   &
+modmppush3.f90:      subroutine mppost3(ppart,q,kpic,noff,qm,tdpost,mx,my,mz,mx1,myp1, &
+modmppush3.f90:      subroutine wmppush3(ppart,fxyz,kpic,ncl,ihole,noff,nyzp,qbm,dt,ci,&
+modmppush3.f90:      subroutine wmppush3zf(ppart,kpic,ncl,ihole,noff,nyzp,dt,ci,ek,    &
+modmppush3.f90:      subroutine mpset_pszero3(q,tdpost,mx,my,mz,mx1,myp1,mzp1)
+modmppush3.f90:      subroutine mpset_pvzero3(cu,tdjpost,mx,my,mz,mx1,myp1,mzp1)
+modmpsort3.f90:      subroutine mporder3a(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,ncll,&
+modmpsort3.f90:      subroutine mporderf3a(ppart,ppbuff,sbufl,sbufr,ncl,ihole,ncll,nclr&
+modmpsort3.f90:      subroutine mporder3b(ppart,ppbuff,rbufl,rbufr,kpic,ncl,ihole,mcll,&
+modmpsort3.f90:      subroutine mprsncl3(ncl,tsort)
+modmpsort3.f90:      subroutine mporderf3af(ppbuff,sbufl,sbufr,ncl,ncll,nclr,tsort,    &
+modmpsort3.f90:      subroutine mprstor3(ppart,ppbuff,ncl,ihole,tsort)

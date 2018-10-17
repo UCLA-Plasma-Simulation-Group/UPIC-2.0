@@ -19,11 +19,11 @@
 !              calls mpacguard3x, mpnacguard3
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 30, 2017
+! update: may 16, 2018
 !
-      use modmpsort3
-      use modmpfft3
-      use modmpgard3
+      use msort3
+      use mfft3
+      use mgard3
       use mppmod3, only: mpmove3, mpfmove3, mpfnmove3, mpcguard3,       &
      &mpncguard3, mpnaguard3, mpnacguard3, mpimax
       implicit none
@@ -55,12 +55,12 @@
 !-----------------------------------------------------------------------
       subroutine ompmove3(ppart,kpic,ncl,ihole,noff,nyzp,xtras,tsort,   &
      &tmov,kstrt,nvpy,nvpz,nx,ny,nz,mx,my,mz,npbmx,nbmax,mx1,myp1,mzp1, &
-     &mxzyp1,plist,irc2)
+     &mxzyp1,popt,plist,irc2)
 ! reorder particles by tile with OpenMP and MPI
 ! list = (true,false) = list of particles leaving tiles found in push
       implicit none
       integer, intent(in) :: kstrt, nvpy, nvpz, nx, ny, nz, mx, my, mz
-      integer, intent(in) :: mx1, myp1, mzp1, mxzyp1
+      integer, intent(in) :: mx1, myp1, mzp1, mxzyp1, popt
       integer, intent(inout) :: npbmx, nbmax
       real, intent(inout) :: tsort, tmov
       real, intent(in) :: xtras
@@ -115,7 +115,7 @@
       if (irc2(1)==4) then
          irc2 = 0
          call mporder3b(ppart,ppbuff,rbufl,rbufr,kpic,ncl,ihole,mcll,   &
-     &mclr,mcls,tsort,kstrt,nx,ny,nz,myp1,irc2)
+     &mclr,mcls,tsort,kstrt,nx,ny,nz,myp1,popt,irc2)
          return
 ! first part of particle reorder on x, y, and z cell
 ! with mx, my, mz tiles:
@@ -123,12 +123,12 @@
       else if (plist) then
 ! updates: ppart, ppbuff, sbufl, sbufr, ncl, ncll, nclr, irc
          call mporderf3a(ppart,ppbuff,sbufl,sbufr,ncl,ihole,ncll,nclr,  &
-     &tsort,kstrt,mx1,myp1,irc2)
+     &tsort,kstrt,mx1,myp1,popt,irc2)
 ! calculate list of particles leaving tile
       else
 ! updates ppart, ppbuff, sbufl, sbufr, ncl, ihole, ncll, nclr, irc
           call mporder3a(ppart,ppbuff,sbufl,sbufr,kpic,ncl,ihole,ncll,  &
-     &nclr,noff,nyzp,tsort,kstrt,nx,ny,nz,mx,my,mz,mx1,myp1,irc2)
+     &nclr,noff,nyzp,tsort,kstrt,nx,ny,nz,mx,my,mz,mx1,myp1,popt,irc2)
       endif
 !
       iter = 0
@@ -153,7 +153,7 @@
             call mprsncl3(ncl,tsort)
             irc2 = 0
             call mporderf3a(ppart,ppbuff,sbufl,sbufr,ncl,ihole,ncll,nclr&
-     &,tsort,kstrt,mx1,myp1,irc2)
+     &,tsort,kstrt,mx1,myp1,popt,irc2)
 ! sbufr/sbufl overflow
          else if (irc2(1)==3) then
             nbmax = (1.0 + xtras)*irc2(2)
@@ -197,7 +197,7 @@
 ! second part of particle reorder on x, y, and z cell
 ! with mx, my, mz tiles: updates ppart, kpic
       call mporder3b(ppart,ppbuff,rbufl,rbufr,kpic,ncl,ihole,mcll,mclr, &
-     &mcls,tsort,kstrt,nx,ny,nz,myp1,irc2)
+     &mcls,tsort,kstrt,nx,ny,nz,myp1,popt,irc2)
 !
       end subroutine
 !

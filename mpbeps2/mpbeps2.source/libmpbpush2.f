@@ -19,7 +19,7 @@
 !                leaving each tile
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: fbruary 26, 2018
+! update: july 10, 2018
 !-----------------------------------------------------------------------
       subroutine PPGBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ek,&
      &idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
@@ -582,7 +582,7 @@
       subroutine PPGRBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ci&
      &,ek,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
 ! for 2-1/2d code, this subroutine updates particle co-ordinates and
-! velocities using leap-frog scheme in time and first-order linear
+! momenta using leap-frog scheme in time and first-order linear
 ! interpolation in space, for relativistic particles with magnetic field
 ! Using the Boris Mover.
 ! OpenMP version using guard cells, for distributed data
@@ -853,7 +853,7 @@
      &qbm,dt,dtc,ci,ek,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax&
      &,irc)
 ! for 2-1/2d code, this subroutine updates particle co-ordinates and
-! velocities using leap-frog scheme in time and first-order linear
+! momenta using leap-frog scheme in time and first-order linear
 ! interpolation in space, for relativistic particles with magnetic field
 ! Using the Boris Mover.
 ! with periodic boundary conditions.

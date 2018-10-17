@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !
-      module mpdiag2
+      module mdiag2
 !
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpdiag2.f
 ! get_funit returns an unconnected fortran unit number
@@ -11,6 +11,7 @@
 ! dafopenvc2 opens new binary file for complex 2d vector data.
 ! dafopenfv2 opens new binary file for real velocity-space data.
 ! dafopentr2 opens new binary file for real trajectory data.
+! fnopens2: opens a new fortran unformatted stream file
 ! mpvpdist2 calculates 2 or 3 component velocity distribution, velocity
 !           moments, and entropy with segmented particle array
 !           calls PPVDIST2 or PPVDIST23
@@ -88,7 +89,7 @@
 ! dafwritetr2  writes trajectory record in direct access binary file
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: march 9, 2018
+! update: august 15, 2018
 !
       use mppmod2, only: mpsum2
       use libmpdiag2_h
@@ -274,6 +275,19 @@
       open(unit=iunit,file=fname,form='unformatted',access='direct',    &
      &recl=lrec,status='replace')
       nrec = 1
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine fnopens2(iunit,fname)
+! this subroutine opens a new fortran unformatted stream file
+! this is a Fortran2003 feature
+! iunit = fortran unit number to be used 
+! fname = file name
+      implicit none
+      integer, intent(in) :: iunit
+      character(len=*), intent(in) :: fname
+      open(unit=iunit,file=fname,access='stream',form='unformatted',    &
+     &status='replace')
       end subroutine
 !
 !-----------------------------------------------------------------------

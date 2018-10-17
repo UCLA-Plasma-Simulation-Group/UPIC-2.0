@@ -3,46 +3,25 @@
 !
 ! subroutines defined:
 !
-! fnopens2: opens a new fortran unformatted stream file
 ! open_restart3: open restart files
 ! bwrite_restart3: write out basic restart file for electrostatic code
 ! bread_restart3a: read in basic restart file for electrostatic code
 ! bread_restart3b: read in basic restart file for electrostatic code
 ! bread_restart3c: read in basic restart file for electrostatic code
-! dwrite_restart3: write out restart diagnostic file for electrostatic
-!                  code
-! dread_restart3: read in restart diagnostic file for electrostatic code
 ! close_restart3: close restart files
 !
 ! written by Viktor K. Decyk, UCLA
-! copyright 1999-2017, regents of the university of california
-! update: november 27, 2017
-      module mpsimul3
+! copyright 1999-2018, regents of the university of california
+! update: august 15, 2018
+      module f3
       use in3
-      use modmpinit3
-      use modmppush3
-!     use msort1
-!     use mgard1
-!     use mfft1
-!     use mfield1
-      use mpdiag3
+      use minit3
+      use mpush3
+      use mdiag3
       use mppmod3
       implicit none
 !
       contains
-!
-!-----------------------------------------------------------------------
-      subroutine fnopens3(iunit,fname)
-! this subroutine opens a new fortran unformatted stream file
-! iunit = fortran unit number to be used 
-! fname = file name
-      implicit none
-      integer, intent(in) :: iunit
-      character(len=*), intent(in) :: fname
-! local data
-      open(unit=iunit,file=fname,access='stream',form='unformatted',    &
-     &status='replace')
-      end subroutine
 !
 !-----------------------------------------------------------------------
       subroutine open_restart3(iur,iur0,cdrun)
@@ -257,7 +236,7 @@
       irc = 0
 !
 ! copy ordered electron data for OpenMP: updates ppart and kpic
-      call mpmovin3(part,ppart,kpic,npp,noff,mx,my,mz,mx1,myp1,irc)
+      call mpmovin3p(part,ppart,kpic,npp,noff,mx,my,mz,mx1,myp1,irc)
 ! sanity check for electrons
       call mpcheck3(ppart,kpic,noff,nyzp,nx,mx,my,mz,mx1,myp1,irc)
 ! read in movion to determine if ions are moving
@@ -338,8 +317,8 @@
 ! ions are moving
       if (movion==1) then
 ! copy ordered ion data for OpenMP: updates pparti and kipic
-         call mpmovin3(part,pparti,kipic,nppi,noff,mx,my,mz,mx1,myp1,irc&
-     &)
+         call mpmovin3p(part,pparti,kipic,nppi,noff,mx,my,mz,mx1,myp1,  &
+     &irc)
 ! sanity check for ions
          call mpcheck3(pparti,kipic,noff,nyzp,nx,mx,my,mz,mx1,myp1,irc)
 ! ions are not moving, read in ion density qi

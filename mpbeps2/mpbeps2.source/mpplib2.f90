@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 ! Basic parallel PIC library for MPI communications with OpenMP
-! pplib2.f90 contains basic communications procedures for 1d partitions:
+! mpplib2.f90 contains basic communications procedures for 1d partitions
 ! PPINIT2 initializes parallel processing for Fortran90, returns
 !         number of processors and processor id.
 ! PPEXIT terminates parallel processing.
@@ -79,7 +79,7 @@
 !             writes to a fortran unformatted file
 ! written by viktor k. decyk, ucla
 ! copyright 1995, regents of the university of california
-! update: march 18, 2018
+! update: august 13, 2018
       module mpplib2
       use mpi
       implicit none
@@ -1127,7 +1127,8 @@
       integer, intent(inout) :: npp
       real, dimension(idimp,npmax), intent(inout) :: part
       real, dimension(idps), intent(in) :: edges
-      real, dimension(idimp,nbmax), intent(inout) :: sbufl, sbufr, rbufl, rbufr
+      real, dimension(idimp,nbmax), intent(inout) :: sbufl, sbufr
+      real, dimension(idimp,nbmax), intent(inout) :: rbufl, rbufr
       integer, dimension(ntmax+1), intent(in) :: ihole
       integer, dimension(5), intent(inout) :: info
 ! lgrp = current communicator
@@ -1700,7 +1701,8 @@
 ! mint = default datatype for integers
 ! mreal = default datatype for reals
 ! local data
-      integer :: nvp, idproc, igo, nnyp, kypp, id, i, j, k, n, nnxv, ierr
+      integer :: nvp, idproc, igo, nnyp, kypp, id, i, j, k, n, nnxv
+      integer :: ierr
       integer :: msid
       integer, dimension(lstat) :: istatus
       nnxv = ndim*nxv

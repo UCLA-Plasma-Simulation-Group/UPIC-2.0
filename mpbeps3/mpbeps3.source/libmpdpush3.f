@@ -1680,7 +1680,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data read/written in tiles
-! particles stored in segmented arra
+! particles stored in segmented array
 ! 384 flops/particle, 2 divides, 1 sqrt, 126 loads, 72 stores
 ! input: all, output: dcu, amu
 ! acceleration density is approximated by values at the nearest grid
@@ -2416,7 +2416,7 @@
 ! for distributed data, with 2D spatial decomposition
 ! OpenMP version using guard cells
 ! data read/written in tiles
-! particles stored in segmented arra
+! particles stored in segmented array
 ! 432 flops/particle, 2 divides, 1 sqrt, 150 loads, 96 stores
 ! input: all, output: cu, dcu, amu
 ! current density is approximated by values at the nearest grid points

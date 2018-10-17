@@ -1,19 +1,19 @@
 !-----------------------------------------------------------------------
 !
-      module modmpfft3
+      module mfft3
 !
-! Fortran90 wrappers to 3d MPI/OpenMP PIC library libmpfft3.f
+! Fortran90 wrappers to 3d MPI/OpenMP/Vector PIC library libvmpfft3.f
 ! mpfft3_init calculates tables needed by 3d FFTs
 !             calls WPFFT32RINIT
 ! mpfft3r wrapper function for scalar 3d real/complex FFT
-!         calls WPPFFT32RM
+!         calls WPPFFT32RVVM
 ! mpfft3rn wrapper function for vector 3d real/complex FFT
-!          calls WPPFFT32RM3 or WPPFFT32RMN
+!          calls WPPFFT32RVM3 or WPPFFT32RVMN
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: february 23, 2016
+! update: may 16, 2018
 !
-      use libmpfft3_h
+      use libvmpfft3_h
       implicit none
 !
 ! ntpose = (0,1) = (no,yes) input, output data are transposed
@@ -89,8 +89,8 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call WPPFFT32RM(f,gs,h,bs,br,isign,ntpose,mixup,sct,ttp,indx,indy,&
-     &indz,kstrt,nvpy,nvpz,nxvh,nyv,nzv,kxyp,kyp,kyzp,kzp,kxypd,kypd,   &
+      call WPPFFT32RVM(f,gs,h,bs,br,isign,ntpose,mixup,sct,ttp,indx,indy&
+     &,indz,kstrt,nvpy,nvpz,nxvh,nyv,nzv,kxyp,kyp,kyzp,kzp,kxypd,kypd,  &
      &kyzpd,kzpd,kzyp,nxhyzd,nxyzhd)
 ! record time
       call dtimer(dtime,itime,1)
@@ -141,7 +141,7 @@
 ! call low level procedure
       select case(ndim)
       case (3)
-         call WPPFFT32RM3(f,gs,h,bs,br,isign,ntpose,mixup,sct,ttp,indx, &
+         call WPPFFT32RVM3(f,gs,h,bs,br,isign,ntpose,mixup,sct,ttp,indx,&
      &indy,indz,kstrt,nvpy,nvpz,nxvh,nyv,nzv,kxyp,kyp,kyzp,kzp,kxypd,   &
      &kypd,kyzpd,kzpd,kzyp,nxhyzd,nxyzhd)
       case default
@@ -152,7 +152,7 @@
             allocate(ss(ndim*nxvh,kzpd))
             szss = ndim*nxvh*kzpd
          endif
-         call WPPFFT32RMN(f,gs,h,bs,br,ss,isign,ntpose,mixup,sct,ttp,   &
+         call WPPFFT32RVMN(f,gs,h,bs,br,ss,isign,ntpose,mixup,sct,ttp,  &
      &indx,indy,indz,kstrt,nvpy,nvpz,nxvh,nyv,nzv,kxyp,kyp,kyzp,kzp,    &
      &kxypd,kypd,kyzpd,kzpd,kzyp,ndim,nxhyzd,nxyzhd)
       end select

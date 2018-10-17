@@ -15,7 +15,10 @@
       integer, parameter :: MPI_DOUBLE_COMPLEX=23
       integer, parameter :: MPI_MAX=0
       integer, parameter :: MPI_SUM=2
-      double precision, external :: MPI_WTIME
+      interface 
+         double precision function MPI_WTIME()
+         end function
+      end interface
       save
 !
       end module

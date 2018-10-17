@@ -1,6 +1,6 @@
 !-----------------------------------------------------------------------
 !
-      module modmpgard2
+      module mgard2
 !
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpgard2.f
 ! mpdguard2x replicates local periodic scalar field
@@ -13,7 +13,7 @@
 !             calls PPACGUARD2XL
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 30, 2016
+! update: august 1, 2018
 !
       use libmpgard2_h
       implicit none

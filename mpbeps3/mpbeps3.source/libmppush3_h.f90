@@ -18,6 +18,21 @@
       end interface
 !
       interface
+         subroutine PPPMOVIN3LP(part,ppart,kpic,kp,npp,noff,nppmx,idimp,&
+     &npmax,mx,my,mz,mx1,myp1,mxyzp1,idds,irc)
+         implicit none
+         integer, intent(in) :: npp, nppmx, idimp, npmax, mx, my, mz
+         integer, intent(in) :: mx1, myp1, mxyzp1, idds
+         integer, intent(inout) :: irc
+         real, dimension(idimp,npmax), intent(in) :: part
+         real, dimension(idimp,nppmx,mxyzp1), intent(inout) :: ppart
+         integer, dimension(mxyzp1), intent(inout) :: kpic
+         integer, dimension(nppmx,mxyzp1), intent(inout) :: kp
+         integer, dimension(idds), intent(in) :: noff
+         end subroutine
+      end interface
+!
+      interface
          subroutine PPPCOPYOUT3(part,ppart,kpic,npp,npmax,nppmx,idimp,  &
      &mxyzp1,irc)
          implicit none
@@ -197,6 +212,26 @@
          real, dimension(nxv,nypmx,nzpmx), intent(inout) :: q
          integer, dimension(mxyzp1), intent(in) :: kpic
          integer, dimension(idds), intent(in) :: noff
+         end subroutine
+      end interface
+!
+      interface
+         subroutine SET_PSZERO3(q,mx,my,mz,nxv,nypmx,nzpmx,mx1,myp1,mzp1&
+     &)
+         implicit none
+         integer, intent(in) :: mx, my, mz, nxv, nypmx, nzpmx
+         integer, intent(in) :: mx1, myp1, mzp1
+         real, dimension(nxv,nypmx,nzpmx), intent(inout) :: q
+         end subroutine
+      end interface
+!
+      interface
+         subroutine SET_PVZERO3(cu,mx,my,mz,ndim,nxv,nypmx,nzpmx,mx1,   &
+     &myp1,mzp1)
+         implicit none
+         integer, intent(in) :: mx, my, mz, ndim, nxv, nypmx, nzpmx
+         integer, intent(in) :: mx1, myp1, mzp1
+         real, dimension(ndim,nxv,nypmx,nzpmx), intent(inout) :: cu
          end subroutine
       end interface
 !

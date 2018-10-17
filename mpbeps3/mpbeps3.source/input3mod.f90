@@ -8,9 +8,13 @@
 ! writnml3 writes final diagnostic metafile to unit iudm
 ! written by viktor k. decyk, ucla
 ! copyright 2011, regents of the university of california
-! update: April 2, 2018
+! update: June 28, 2018
 !
       implicit none
+!
+      integer, parameter :: LINEAR = 1
+      integer, parameter :: STANDARD = 1, VECTOR = 2
+      integer, parameter :: PERIODIC_3D = 1
 !
 ! Basic Input Namelist
       save
@@ -23,8 +27,8 @@
 ! indx/indy/indz = exponent which determines grid points in x/y/z
 ! direction: nx = 2**indx, ny = 2**indy, nz = 2**indz.
       integer :: indx =   7, indy =   7, indz =   7
-! psolve = type of poisson solver = (1,2,3)
-!     integer :: psolve = PERIODIC_2D
+! psolve = type of poisson solver = (1) = (PERIODIC_3D)
+      integer :: psolve = PERIODIC_3D
 ! relativity = (no,yes) = (0,1) = relativity is used
       integer :: relativity = 0
 ! ci = reciprocal of velocity of light
@@ -65,12 +69,9 @@
       real :: tend = 10.000, dt = 0.1
 !
 ! Numerical Parameters:
-! inorder = interpolation order
-! popt = particle optimization scheme
-! dopt = charge deposit optimization scheme
-! djopt = current deposit optimization scheme
-!     integer :: inorder = LINEAR, popt = STANDARD, dopt = LOOKAHEAD
-!     integer :: djopt = STANDARD
+! inorder = interpolation order = (1) = (LINEAR)
+! popt = performance optimization scheme = (1,2) = (STANDARD,VECTOR)
+      integer :: inorder = LINEAR, popt = STANDARD
 ! ax/ay/az = smoothed particle size in x/y/z direction
 !     real :: ax = .816497, ay = .816497, az = .816497
 !     real :: ax = .866025, ay = .866025, az = .866025
@@ -245,66 +246,68 @@
 !
 ! define namelist
       namelist /input3/ idrun, idcode, indx, indy, indz, mx, my, mz,    &
-     &npx, npy, npz, npxb, npyb, npzb, qme, vtx, vty, vtz, vx0, vy0,    &
-     &vz0, vdx, vdy, vdz, vtdx, vtdy, vtdz, relativity, ci, xtras, ndim,&
-     &nvdist, treverse, tend, dt, ax, ay, az, nextrand, mzf, ndprof,    &
-     &ampdx, scaledx, shiftdx, ampdy, scaledy, shiftdy, ampdz, scaledz, &
-     &shiftdz, amodex, freq, trmp, toff, el0, er0, ntw, ndw, ntde,      &
-     &modesxde, modesyde, modeszde, nderec, ntp, ndp, modesxp, modesyp, &
-     &modeszp, nprec, ntel, modesxel, modesyel, modeszel, nelrec, wmin, &
-     &wmax, dw, ntfm, ndfm, npro, nferec, nfirec, ntv, ndv, nmv, nvft,  &
-     &nverec, nvirec, ntt, ndt, nst, nprobt, vtsx, dvtx, ntrec, nts,    &
-     &nds, mvx, mvy, mvz, nserec, nsirec, movion, emf, nustrt, ntr,     &
-     &idrun0, nvpp, imbalance, monitor
+     &psolve, inorder, popt, npx, npy, npz, npxb, npyb, npzb, qme, vtx, &
+     &vty, vtz, vx0, vy0, vz0, vdx, vdy, vdz, vtdx, vtdy, vtdz,         &
+     &relativity, ci, xtras, ndim, nvdist, treverse, tend, dt, ax, ay,  &
+     &az, nextrand, mzf, ndprof, ampdx, scaledx, shiftdx, ampdy,        &
+     &scaledy, shiftdy, ampdz, scaledz, shiftdz, amodex, freq, trmp,    &
+     &toff, el0, er0, ntw, ndw, ntde, modesxde, modesyde, modeszde,     &
+     &nderec, ntp, ndp, modesxp, modesyp, modeszp, nprec, ntel,         &
+     &modesxel, modesyel, modeszel, nelrec, wmin, wmax, dw, ntfm, ndfm, &
+     &npro, nferec, nfirec, ntv, ndv, nmv, nvft, nverec, nvirec, ntt,   &
+     &ndt, nst, nprobt, vtsx, dvtx, ntrec, nts, nds, mvx, mvy, mvz,     &
+     &nserec, nsirec, movion, emf, nustrt, ntr, idrun0, nvpp, imbalance,&
+     &monitor
 !
 ! equivalence data to simplify MPI broadcast
-      integer, parameter :: lnin3 = 110
+      integer, parameter :: lnin3 = 113
       double precision, dimension(lnin3) :: ddin3
       private :: lnin3, ddin3
       equivalence (ddin3(1),idrun), (ddin3(2),idcode), (ddin3(3),indx)
       equivalence (ddin3(4),indy), (ddin3(5),indz), (ddin3(6),mx)
-      equivalence (ddin3(7),my), (ddin3(8),mz), (ddin3(9),npx)
-      equivalence (ddin3(10),npy), (ddin3(11),npz), (ddin3(12),npxb)
-      equivalence (ddin3(13),npyb), (ddin3(14),npzb), (ddin3(15),qme)
-      equivalence (ddin3(16),vtx), (ddin3(17),vty), (ddin3(18),vtz)
-      equivalence (ddin3(19),vx0), (ddin3(20),vy0), (ddin3(21),vz0)
-      equivalence (ddin3(22),vdx), (ddin3(23),vdy), (ddin3(24),vdz)
-      equivalence (ddin3(25),vtdx), (ddin3(26),vtdy), (ddin3(27),vtdz)
-      equivalence (ddin3(28),relativity), (ddin3(29),ci)
-      equivalence (ddin3(30),xtras), (ddin3(31),ndim)
-      equivalence (ddin3(32),nvdist), (ddin3(33),treverse)
-      equivalence (ddin3(34),tend), (ddin3(35),dt), (ddin3(36),ax)
-      equivalence (ddin3(37),ay), (ddin3(38),az), (ddin3(39),nextrand)
-      equivalence (ddin3(40),mzf), (ddin3(41),ndprof), (ddin3(42),ampdx)
-      equivalence (ddin3(43),scaledx), (ddin3(44),shiftdx)
-      equivalence (ddin3(45),ampdy), (ddin3(46),scaledy)
-      equivalence (ddin3(47),shiftdy), (ddin3(48),ampdz)
-      equivalence (ddin3(49),scaledz), (ddin3(50),shiftdz)
-      equivalence (ddin3(51),amodex), (ddin3(52),freq), (ddin3(53),trmp)
-      equivalence (ddin3(54),toff), (ddin3(55),el0), (ddin3(56),er0)
-      equivalence (ddin3(57),ntw), (ddin3(58),ndw), (ddin3(59),ntde)
-      equivalence (ddin3(60),modesxde), (ddin3(61),modesyde)
-      equivalence (ddin3(62),modeszde), (ddin3(63),nderec)
-      equivalence (ddin3(64),ntp), (ddin3(65),ndp), (ddin3(66),modesxp)
-      equivalence (ddin3(67),modesyp), (ddin3(68),modeszp)
-      equivalence (ddin3(69),nprec), (ddin3(70),ntel)
-      equivalence (ddin3(71),modesxel), (ddin3(72),modesyel)
-      equivalence (ddin3(73),modeszel), (ddin3(74),nelrec)
-      equivalence (ddin3(75),wmin), (ddin3(76),wmax), (ddin3(77),dw)
-      equivalence (ddin3(78),ntfm), (ddin3(79),ndfm), (ddin3(80),npro)
-      equivalence (ddin3(81),nferec), (ddin3(82),nfirec)
-      equivalence (ddin3(83),ntv), (ddin3(84),ndv), (ddin3(85),nmv)
-      equivalence (ddin3(86),nvft), (ddin3(87),nverec)
-      equivalence (ddin3(88),nvirec), (ddin3(89),ntt), (ddin3(90),ndt)
-      equivalence (ddin3(91),nst), (ddin3(92),nprobt), (ddin3(93),vtsx)
-      equivalence (ddin3(94),dvtx), (ddin3(95),ntrec), (ddin3(96),nts)
-      equivalence (ddin3(97),nds), (ddin3(98),mvx), (ddin3(99),mvy)
-      equivalence (ddin3(100),mvz), (ddin3(101),nserec)
-      equivalence (ddin3(102),nsirec), (ddin3(103),movion)
-      equivalence (ddin3(104),emf), (ddin3(105),nustrt)
-      equivalence (ddin3(106),ntr), (ddin3(107),idrun0)
-      equivalence (ddin3(108),nvpp), (ddin3(109),imbalance)
-      equivalence (ddin3(110),monitor)
+      equivalence (ddin3(7),my), (ddin3(8),mz), (ddin3(9),psolve)
+      equivalence (ddin3(10),inorder), (ddin3(11),popt), (ddin3(12),npx)
+      equivalence (ddin3(13),npy), (ddin3(14),npz), (ddin3(15),npxb)
+      equivalence (ddin3(16),npyb), (ddin3(17),npzb), (ddin3(18),qme)
+      equivalence (ddin3(19),vtx), (ddin3(20),vty), (ddin3(21),vtz)
+      equivalence (ddin3(22),vx0), (ddin3(23),vy0), (ddin3(24),vz0)
+      equivalence (ddin3(25),vdx), (ddin3(26),vdy), (ddin3(27),vdz)
+      equivalence (ddin3(28),vtdx), (ddin3(29),vtdy), (ddin3(30),vtdz)
+      equivalence (ddin3(31),relativity), (ddin3(32),ci)
+      equivalence (ddin3(33),xtras), (ddin3(34),ndim)
+      equivalence (ddin3(35),nvdist), (ddin3(36),treverse)
+      equivalence (ddin3(37),tend), (ddin3(38),dt), (ddin3(39),ax)
+      equivalence (ddin3(40),ay), (ddin3(41),az), (ddin3(42),nextrand)
+      equivalence (ddin3(43),mzf), (ddin3(44),ndprof), (ddin3(45),ampdx)
+      equivalence (ddin3(46),scaledx), (ddin3(47),shiftdx)
+      equivalence (ddin3(48),ampdy), (ddin3(49),scaledy)
+      equivalence (ddin3(50),shiftdy), (ddin3(51),ampdz)
+      equivalence (ddin3(52),scaledz), (ddin3(53),shiftdz)
+      equivalence (ddin3(54),amodex), (ddin3(55),freq), (ddin3(56),trmp)
+      equivalence (ddin3(57),toff), (ddin3(58),el0), (ddin3(59),er0)
+      equivalence (ddin3(60),ntw), (ddin3(61),ndw), (ddin3(62),ntde)
+      equivalence (ddin3(63),modesxde), (ddin3(64),modesyde)
+      equivalence (ddin3(65),modeszde), (ddin3(66),nderec)
+      equivalence (ddin3(67),ntp), (ddin3(68),ndp), (ddin3(69),modesxp)
+      equivalence (ddin3(70),modesyp), (ddin3(71),modeszp)
+      equivalence (ddin3(72),nprec), (ddin3(73),ntel)
+      equivalence (ddin3(74),modesxel), (ddin3(75),modesyel)
+      equivalence (ddin3(76),modeszel), (ddin3(77),nelrec)
+      equivalence (ddin3(78),wmin), (ddin3(79),wmax), (ddin3(80),dw)
+      equivalence (ddin3(81),ntfm), (ddin3(82),ndfm), (ddin3(83),npro)
+      equivalence (ddin3(84),nferec), (ddin3(85),nfirec)
+      equivalence (ddin3(86),ntv), (ddin3(87),ndv), (ddin3(88),nmv)
+      equivalence (ddin3(89),nvft), (ddin3(90),nverec)
+      equivalence (ddin3(91),nvirec), (ddin3(92),ntt), (ddin3(93),ndt)
+      equivalence (ddin3(94),nst), (ddin3(95),nprobt), (ddin3(96),vtsx)
+      equivalence (ddin3(97),dvtx), (ddin3(98),ntrec), (ddin3(99),nts)
+      equivalence (ddin3(100),nds), (ddin3(101),mvx), (ddin3(102),mvy)
+      equivalence (ddin3(103),mvz), (ddin3(104),nserec)
+      equivalence (ddin3(105),nsirec), (ddin3(106),movion)
+      equivalence (ddin3(107),emf), (ddin3(108),nustrt)
+      equivalence (ddin3(109),ntr), (ddin3(110),idrun0)
+      equivalence (ddin3(111),nvpp), (ddin3(112),imbalance)
+      equivalence (ddin3(113),monitor)
 !
 ! Electromagnetic Namelist
 ! External Magnetic Field Parameters:

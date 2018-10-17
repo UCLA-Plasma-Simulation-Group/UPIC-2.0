@@ -1,35 +1,36 @@
 !-----------------------------------------------------------------------
 !
-      module modmpbpush2
+      module mbpush2
 !
 ! Fortran90 wrappers to 2d MPI/OpenMP PIC library libmpbpush2.f
 ! mpbpush2 push magnetized particles
-!          calls PPGBPPUSH23L
+!          calls PPGBPPUSH23L or VPPGBPPUSH23L
 ! mpbpushf2 push magnetized particles and determine which particles are
 !           leaving tile
-!           calls PPGBPPUSHF23L
+!           calls PPGBPPUSHF23L or VPPGBPPUSHF23L
 ! mprbpush2 push relativistic, magnetized particles
-!           calls PPGRBPPUSH23L
+!           calls PPGRBPPUSH23L or VPPGRBPPUSH23L
 ! mprbpushf2 push relativistic, magnetized particles and determine which
 !            particles are leaving tile
-!            calls PPGRBPPUSHF23L
+!            calls PPGRBPPUSHF23L or VPPGRBPPUSHF23L
 ! wmpbpush2 generic procedure to push magnetized particles
 !           calls mprbpushf2, mpbpushf2, mprbpush2, or mpbpush2
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 25, 2017
+! update: august 1, 2018
 !
       use libmpbpush2_h
+      use libvmpbpush2_h
       implicit none
 !
       contains  
 !
 !-----------------------------------------------------------------------
       subroutine mpbpush2(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ek,    &
-     &tpush,nx,ny,mx,my,mx1,ipbc)
+     &tpush,nx,ny,mx,my,mx1,ipbc,popt)
 ! push magnetized particles with 2d electromagnetic fields
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc
+      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc, popt
       integer, intent(in) :: noff, nyp
       real, intent(in) :: qbm, dt, dtc
       real, intent(inout) :: ek, tpush
@@ -47,8 +48,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ek,idimp,&
-     &nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
+      select case(popt)
+! vector push
+      case (2)
+         call VPPGBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ek,  &
+     &idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
+! standard push
+      case default
+         call PPGBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ek,   &
+     &idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tpush = tpush + real(dtime)
@@ -56,11 +65,11 @@
 !
 !-----------------------------------------------------------------------
       subroutine mpbpushf2(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm,dt,&
-     &dtc,ek,tpush,nx,ny,mx,my,mx1,irc)
+     &dtc,ek,tpush,nx,ny,mx,my,mx1,popt,irc)
 ! push magnetized particles with 2d electromagnetic fields
 ! determine which particles are leaving tile
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1
+      integer, intent(in) :: nx, ny, mx, my, mx1, popt
       integer, intent(in) :: noff, nyp
       integer, intent(inout) :: irc
       real, intent(in) :: qbm, dt, dtc
@@ -81,8 +90,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGBPPUSHF23L(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm,dt,  &
-     &dtc,ek,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc)
+      select case(popt)
+! vector push
+      case (2)
+         call VPPGBPPUSHF23L(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm, &
+     &dt,dtc,ek,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc)
+! standard push
+      case default
+         call PPGBPPUSHF23L(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm,dt&
+     &,dtc,ek,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tpush = tpush + real(dtime)
@@ -90,10 +107,10 @@
 !
 !-----------------------------------------------------------------------
       subroutine mprbpush2(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ci,ek,&
-     &tpush,nx,ny,mx,my,mx1,ipbc)
+     &tpush,nx,ny,mx,my,mx1,ipbc,popt)
 ! push relativistic, magnetized particles with 2d electromagnetic fields
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc
+      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc, popt
       integer, intent(in) :: noff, nyp
       real, intent(in) :: qbm, dt, dtc, ci
       real, intent(inout) :: ek, tpush
@@ -111,8 +128,16 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGRBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ci,ek,  &
-     &idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
+      select case(popt)
+! vector push
+      case (2)
+         call VPPGRBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ci, &
+     &ek,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
+! standard push
+      case default
+         call PPGRBPPUSH23L(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ci,ek&
+     &,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ipbc)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tpush = tpush + real(dtime)
@@ -120,11 +145,11 @@
 !
 !-----------------------------------------------------------------------
       subroutine mprbpushf2(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm,dt&
-     &,dtc,ci,ek,tpush,nx,ny,mx,my,mx1,irc)
+     &,dtc,ci,ek,tpush,nx,ny,mx,my,mx1,popt,irc)
 ! push relativistic, magnetized particles with 2d electromagnetic fields
 ! determine which particles are leaving tile
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1
+      integer, intent(in) :: nx, ny, mx, my, mx1, popt
       integer, intent(in) :: noff, nyp
       integer, intent(inout) :: irc
       real, intent(in) :: qbm, dt, dtc, ci
@@ -145,8 +170,18 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call PPGRBPPUSHF23L(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm,dt, &
-     &dtc,ci,ek,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc)
+      select case(popt)
+! vector push
+      case (2)
+         call VPPGRBPPUSHF23L(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm,&
+     &dt,dtc,ci,ek,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc&
+     &)
+! standard push
+      case default
+         call PPGRBPPUSHF23L(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm, &
+     &dt,dtc,ci,ek,idimp,nppmx,nx,ny,mx,my,nxv,nypmx,mx1,mxyp1,ntmax,irc&
+     &)
+      end select
 ! record time
       call dtimer(dtime,itime,1)
       tpush = tpush + real(dtime)
@@ -154,11 +189,11 @@
 !
 !-----------------------------------------------------------------------
       subroutine wmpbpush2(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm,dt,&
-     &dtc,ci,ek,tpush,nx,ny,mx,my,mx1,ipbc,relativity,plist,irc)
+     &dtc,ci,ek,tpush,nx,ny,mx,my,mx1,ipbc,popt,relativity,plist,irc)
 ! generic procedure to push magnetized particles
 ! plist = (true,false) = list of particles leaving tiles found in push
       implicit none
-      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc, relativity
+      integer, intent(in) :: nx, ny, mx, my, mx1, ipbc, popt, relativity
       integer, intent(in) :: noff, nyp
       integer, intent(inout) :: irc
       logical, intent(in) :: plist
@@ -174,10 +209,10 @@
 ! updates ppart, wke, ncl, ihole, irc
          if (relativity==1) then
             call mprbpushf2(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm,dt&
-     &,dtc,ci,ek,tpush,nx,ny,mx,my,mx1,irc)
+     &,dtc,ci,ek,tpush,nx,ny,mx,my,mx1,popt,irc)
          else
             call mpbpushf2(ppart,fxy,bxy,kpic,ncl,ihole,noff,nyp,qbm,dt,&
-     &dtc,ek,tpush,nx,ny,mx,my,mx1,irc)
+     &dtc,ek,tpush,nx,ny,mx,my,mx1,popt,irc)
          endif
          if (irc /= 0) then
             write (*,*) 'info:wmpbpush2 overflow: irc=', irc
@@ -187,10 +222,10 @@
 ! updates ppart and wke
          if (relativity==1) then
             call mprbpush2(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ci,ek,&
-     &tpush,nx,ny,mx,my,mx1,ipbc)
+     &tpush,nx,ny,mx,my,mx1,ipbc,popt)
          else
             call mpbpush2(ppart,fxy,bxy,kpic,noff,nyp,qbm,dt,dtc,ek,    &
-     &tpush,nx,ny,mx,my,mx1,ipbc)
+     &tpush,nx,ny,mx,my,mx1,ipbc,popt)
          endif
       endif
       end subroutine

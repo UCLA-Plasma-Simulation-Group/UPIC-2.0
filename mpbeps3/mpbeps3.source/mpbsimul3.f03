@@ -5,18 +5,12 @@
 !
 ! bwrite_restart3: write out basic restart file for electromagnetic code
 ! bread_restart3:  read in basic restart file for electromagnetic code
-! dwrite_restart3: write out restart diagnostic file for
-!                  electromagnetic code
-! dread_restart3: read in restart diagnostic file for electromagnetic
-!                 code
 !
 ! written by Viktor K. Decyk, UCLA
 ! copyright 1999-2017, regents of the university of california
-! update: october 28, 2017
-      module mpbsimul3
-      use mpsimul3
-!     use mbpush1
-!     use mcurd1
+! update: june 13, 2018
+      module fb3
+      use f3
       implicit none
 !
       contains

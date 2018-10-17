@@ -1,21 +1,21 @@
 !-----------------------------------------------------------------------
 !
-      module modmpfield3
+      module mfield3
 !
 ! Fortran90 wrappers to 3d MPI/OpenMP PIC library libmpfield3.f
 ! mppois3_init calculates table needed by 3d poisson solver
-!              calls MPPOIS332
+!              calls VMPPOIS332
 ! mppois3 solves 3d poisson's equation for smoothed electric field
-!         calls MPPOIS332
+!         calls VMPPOIS332
 ! mpaddqei3 adds electron and ion densities
 !           calls MPADDQEI32
 ! mpcuperp3 calculates the transverse current in fourier space
 !           calls MPPCUPERP32
 ! mpibpois3 solves 3d poisson's equation for unsmoothed magnetic field
-!           calls MIPPBPOISP332
+!           calls VMIPPBPOISP332
 ! mpmaxwel3 solves 3d maxwell's equation for unsmoothed transvers
 !           electric and magnetic fields
-!           calls MPPMAXWEL32
+!           calls VMPPMAXWEL32
 ! mpemfield3 adds and smooths or copies and smooths complex vector
 !            fields in fourier space
 !            calls MPPEMFIELD32
@@ -29,7 +29,7 @@
 !               calls MPPADDVRFIELD32
 ! mpbbpois3 solves 3d poisson's equation in fourier space for smoothed
 !           magnetic field
-!           calls MPPBBPOISP332
+!           calls VMPPBBPOISP332
 ! mpdcuperp3 calculates transverse part of the derivative of the current
 !            density from the momentum flux
 !            calls MPPDCUPERP32
@@ -39,7 +39,7 @@
 !             calls MPPADCUPERP32
 ! mpepois3_init calculates table needed by 3d poisson solver for
 !               transverse electric field
-!               calls MPPEPOISP332
+!               calls VMPPEPOISP332
 ! mpepois3 solves 3d poisson's equation for smoothed transverse electric
 !          field
 !          calls MPPEPOISP332
@@ -65,7 +65,7 @@
 !         calls MPPAPOTP32
 ! mpetfield3 solves 3d poisson's equation for unsmoothed transverse
 !            electric field
-!            calls MPPETFIELD332
+!            calls VMPPETFIELD332
 ! mpsmooth3 provides a 3d scalar smoothing function
 !           calls MPPSMOOTH32
 ! mpsmooth33 provides a 3d vector smoothing function
@@ -82,9 +82,11 @@
 ! mpwrvmodes3 reads and copies lowest order vector modes to packed array
 !             writing zeroes to high order modes
 !             calls PPWRVMODES32
+! mpset_pcvzero3 zeros out transverse field array.
+!                calls SET_PCVZERO3
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: april 26, 2017
+! update: may 16, 2018
 !
       use libmpfield3_h
       implicit none
@@ -107,7 +109,7 @@
       complex, dimension(3,1,1,1) :: fxyz
       nzv = size(q,1)
       nzhd = size(ffc,1); kxyp = size(ffc,2); kyzp = size(ffc,3)
-      call MPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz,kstrt,  &
+      call VMPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz,kstrt, &
      &nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
       end subroutine
 !
@@ -132,7 +134,7 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz,kstrt,  &
+      call VMPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz,kstrt, &
      &nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
 ! record time
       call dtimer(dtime,itime,1)
@@ -207,8 +209,8 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MIPPBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,nvpz,nzv,&
-     &kxyp,kyzp,nzhd)
+      call VMIPPBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,nvpz,nzv&
+     &,kxyp,kyzp,nzhd)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)
@@ -236,8 +238,8 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MPPMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx,ny,nz,kstrt,&
-     &nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+      call VMPPMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx,ny,nz,kstrt&
+     &,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)
@@ -391,8 +393,8 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MPPBBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,nvpz,nzv,&
-     &kxyp,kyzp,nzhd)
+      call VMPPBBPOISP332(cu,bxyz,ffc,ci,wm,nx,ny,nz,kstrt,nvpy,nvpz,nzv&
+     &,kxyp,kyzp,nzhd)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)
@@ -463,8 +465,8 @@
       complex, dimension(3,1,1) :: exyz
       nzv = size(dcu,2)
       nzhd = size(ffe,1); kxyp = size(ffe,2); kyzp = size(ffe,3)
-      call MPPEPOISP332(dcu,exyz,isign,ffe,ax,ay,az,affp,wp0,ci,wf,nx,ny&
-     &,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+      call VMPPEPOISP332(dcu,exyz,isign,ffe,ax,ay,az,affp,wp0,ci,wf,nx, &
+     &ny,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
       end subroutine
 !
 !-----------------------------------------------------------------------
@@ -490,8 +492,8 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MPPEPOISP332(dcu,exyz,isign,ffe,ax,ay,az,affp,wp0,ci,wf,nx,ny&
-     &,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+      call VMPPEPOISP332(dcu,exyz,isign,ffe,ax,ay,az,affp,wp0,ci,wf,nx, &
+     &ny,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)
@@ -744,7 +746,7 @@
 ! initialize timer
       call dtimer(dtime,itime,-1)
 ! call low level procedure
-      call MPPETFIELD332(dcu,exyz,ffe,affp,ci,wf,nx,ny,nz,kstrt,nvpy,   &
+      call VMPPETFIELD332(dcu,exyz,ffe,affp,ci,wf,nx,ny,nz,kstrt,nvpy,  &
      &nvpz,nzv,kxyp,kyzp,nzhd)
 ! record time
       call dtimer(dtime,itime,1)
@@ -913,6 +915,30 @@
 ! call low level procedure
       call PPWRVMODES32(vpot,vpott,nx,ny,nz,modesx,modesy,modesz,ndim,  &
      &kstrt,nvpy,nvpz,nzv,kxyp,kyzp,modesxpd,modesypd,modeszd)
+! record time
+      call dtimer(dtime,itime,1)
+      tfield = tfield + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpset_pcvzero3(exyz,tfield,nx,ny,nz,kstrt,nvpy,nvpz)
+! zeros out transverse field array.
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kstrt, nvpy, nvpz
+      real, intent(inout) :: tfield
+      complex, dimension(:,:,:,:), intent(inout) :: exyz
+! local data
+      integer :: ndim, nzv, kxyp, kyzp
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      ndim = size(exyz,1); nzv = size(exyz,2)
+      kxyp = size(exyz,3); kyzp = size(exyz,4)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call SET_PCVZERO3(exyz,nx,ny,nz,kstrt,nvpy,nvpz,ndim,nzv,kxyp,kyzp&
+     &)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)

@@ -12,10 +12,10 @@
 ! PPGRDCJPPOST2L calculates relativistic particle momentum flux,
 !                acceleration density and current density using linear
 !                interpolation.
-! PPASCFGUARD2L add scaled vector field to extended periodic field
+! MPPASCFGUARD2L add scaled vector field to extended periodic field
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: february 26, 2018
+! update: july 13, 2018
 !-----------------------------------------------------------------------
       subroutine PPFWPMINMX2(qe,nyp,qbme,wpmax,wpmin,nx,nxe,nypmx)
 ! calculates maximum and minimum plasma frequency.  assumes guard cells
@@ -370,7 +370,8 @@
       sdcu(2,nn+1,mm+1) = sdcu(2,nn+1,mm+1) + vy*dy
       sdcu(3,nn+1,mm+1) = sdcu(3,nn+1,mm+1) + vz*dy
    70 continue
-! deposit current to interior points in global array
+! deposit momentum flux and acceleration density to interior points in
+! global array
       nn = min(mx,nxv-noffp)
       mm = min(my,nypmx-moffp)
       do 90 j = 2, mm
@@ -384,7 +385,8 @@
       dcu(3,i+noffp,j+moffp) = dcu(3,i+noffp,j+moffp) + sdcu(3,i,j)
    80 continue
    90 continue
-! deposit current to edge points in global array
+! deposit momentum flux and acceleration density to edge points in
+! global array
       mm = min(my+1,nypmx-moffp)
       do 100 i = 2, nn
 !$OMP ATOMIC
@@ -1212,7 +1214,8 @@
       sdcu(2,nn+1,mm+1) = sdcu(2,nn+1,mm+1) + vy*dy
       sdcu(3,nn+1,mm+1) = sdcu(3,nn+1,mm+1) + vz*dy
    70 continue
-! deposit currents to interior points in global array
+! deposit momentum flux and acceleration density to interior points in
+! global array
       nn = min(mx,nxv-noffp)
       mm = min(my,nypmx-moffp)
       do 90 j = 2, mm
@@ -1226,7 +1229,8 @@
       dcu(3,i+noffp,j+moffp) = dcu(3,i+noffp,j+moffp) + sdcu(3,i,j)
    80 continue
    90 continue
-! deposit currents to edge points in global array
+! deposit momentum flux and acceleration density to edge points in
+! global array
       mm = min(my+1,nypmx-moffp)
       do 100 i = 2, nn
 !$OMP ATOMIC
@@ -1768,7 +1772,7 @@
       return
       end
 !-----------------------------------------------------------------------
-      subroutine PPASCFGUARD2L(dcu,cus,nyp,q2m0,nx,nxe,nypmx)
+      subroutine MPPASCFGUARD2L(dcu,cus,nyp,q2m0,nx,nxe,nypmx)
 ! add scaled vector field to extended periodic field
 ! linear interpolation, for distributed data
 ! nyp = number of primary (complete) gridpoints in particle partition

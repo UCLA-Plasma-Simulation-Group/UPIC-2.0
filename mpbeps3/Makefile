@@ -51,6 +51,9 @@ fmbbeps3 :
 fmdbeps3 :
 	make mdbeps3 -C mpbeps3.source
 
+python :
+	make python -C mpbeps3.source
+
 clean :
 	make clean -C mpbeps3.source
 
