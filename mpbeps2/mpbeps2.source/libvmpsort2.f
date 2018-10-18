@@ -853,7 +853,7 @@
             ppart(i,j2,k) = ppart(i,j1,k)
   130       continue
             ih = ih + 1
-            j2 = ihole(1,ih,k)
+            if (j.lt.ip) j2 = ihole(1,ih,k)
          endif
   140    continue
          kpic(k) = nppp - ip
