@@ -581,7 +581,7 @@ nplibgks2.o : gks2/plibgks2.f90 nmpplib2.o
 nmodpgraf2.o : gks2/modpgraf2.f90 nplibgks2.o
 	$(FC90) $(OPTS90) -o nmodpgraf2.o -c gks2/modpgraf2.f90
 
-nmodpgraf1.o : gks2/modpgraf1.f90 nplibgks1.o
+nmodpgraf1.o : gks2/modpgraf1.f90 nplibgks2.o
 	$(FC90) $(OPTS90) -o nmodpgraf1.o -c gks2/modpgraf1.f90
 
 # Python Graphics

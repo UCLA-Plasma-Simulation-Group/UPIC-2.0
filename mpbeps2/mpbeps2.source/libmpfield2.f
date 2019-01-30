@@ -52,7 +52,7 @@
 ! SET_PCVZERO2 zeros out transverse field array.
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: july 25, 2018
+! update: january 11, 2019
 !-----------------------------------------------------------------------
       subroutine VMPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv&
      &,kxp,nyhd)
@@ -688,8 +688,8 @@
       if (kstrt.gt.nxh) go to 40
 ! calculate the electromagnetic fields
 ! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
-!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,afdt,zt1,zt2,zt3,zt4,zt5,zt6,  &
-!$OMP& zt7,zt8,zt9,ws,wp) REDUCTION(+:sum1,sum2)
+!$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,dky,afdt,at1,zt1,zt2,zt3,zt4,zt5,  &
+!$OMP& zt6,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum1,sum2)
       do 20 j = 1, kxps
       dkx = dnx*real(j + joff)
       ws = 0.0d0
