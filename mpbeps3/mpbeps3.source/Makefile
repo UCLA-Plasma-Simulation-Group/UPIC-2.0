@@ -189,36 +189,36 @@ ifeq ($(osname),Darwin)
 		MPICC = mpiicc -qopenmp
 		FC90 = ifort -qopenmp
 		CC = icc
-		# OPTS90 = -O3
-		OPTS90 = -O3 -axAVX -qopt-report=5 -qopt-report-phase=vec
+		OPTS90 = -O3
+		# OPTS90 = -O3 -axAVX -qopt-report=5 -qopt-report-phase=vec
 		# OPTS90 = -O3 -axAVX2 -qopt-report=5 -qopt-report-phase=vec
 		# OPTS90 = -O3 -axMIC-AVX512 -qopt-report=5 -qopt-report-phase=vec
 		# OPTS90 = -O3 -r8
 		# OPTS90 = -O3 -CB -r8 -warn all -std90
 		CCOPTS = -O3 -std=c99
 		#CCOPTS = -O3 -no-vec -Wall -std=c99
-		#FF03 = -Tf
+		FF03 = -Tf
 		#LEGACY = -nofor_main
 	endif
 else
 	ifeq ($(cori),cori)
-        	sys = CORI
+       	sys = CORI
 	endif
 	ifeq ($(hoffman),login)
 		MPIFC = mpiifort -qopenmp
 		MPICC = mpiicc -qopenmp
 		FC90 = ifort -qopenmp
 		CC = icc
-		# OPTS90 = -O3
-		OPTS90 = -O3 -axAVX -qopt-report=5 -qopt-report-phase=vec
+		OPTS90 = -O3
+		# OPTS90 = -O3 -axAVX -qopt-report=5 -qopt-report-phase=vec
 		# OPTS90 = -O3 -axAVX2 -qopt-report=5 -qopt-report-phase=vec
 		# OPTS90 = -O3 -axMIC-AVX512 -qopt-report=5 -qopt-report-phase=vec
 		# OPTS90 = -O3 -r8
 		# OPTS90 = -O3 -CB -r8 -warn all -std90
 		CCOPTS = -O3 -std=c99
 		#CCOPTS = -O3 -no-vec -Wall -std=c99
-		#FF03 = -Tf
-		#LEGACY = -nofor_main
+		FF03 = -Tf
+		LEGACY = -nofor_main
 	endif
 endif
 ####################################################
@@ -278,38 +278,38 @@ python : mbeps3.py mbbeps3.py mdbeps3.py
 
 mpbeps3 : mpbeps3.o $(ESOBJS) dtimer.o
 	$(MPIFC) $(OPTS90) $(LOPTS) -o mpbeps3 \
-    mpbeps3.o $(ESOBJS) $(ESMODS) modmpdiag3.o mpplib3.o mppmod3.o omplib.o \
-    ompplib3.o $(ESHOBJS) mpsimul3.o dtimer.o
+   mpbeps3.o $(ESOBJS) $(ESMODS) modmpdiag3.o mpplib3.o mppmod3.o omplib.o \
+   ompplib3.o $(ESHOBJS) mpsimul3.o dtimer.o
 
 mpbbeps3 : mpbbeps3.o $(ESOBJS) $(EMOBJS) dtimer.o
 	$(MPIFC) $(OPTS90) $(LOPTS) -o mpbbeps3 \
-    mpbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) modmpdiag3.o mpplib3.o \
-    mppmod3.o omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) mpsimul3.o mpbsimul3.o \
-    dtimer.o
+   mpbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) modmpdiag3.o mpplib3.o \
+   mppmod3.o omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) mpsimul3.o mpbsimul3.o \
+   dtimer.o
 
 mpdbeps3 : mpdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) dtimer.o
 	$(MPIFC) $(OPTS90) $(LOPTS) -o mpdbeps3 \
-    mpdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
-    modmpdiag3.o mpplib3.o mppmod3.o omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) \
-    $(EDHOBJS) mpsimul3.o mpbsimul3.o mpdsimul3.o dtimer.o
+   mpdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
+   modmpdiag3.o mpplib3.o mppmod3.o omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) \
+   $(EDHOBJS) mpsimul3.o mpbsimul3.o mpdsimul3.o dtimer.o
 
 #noMPI
 mbeps3 : mbeps3.o $(ESOBJS) noMPI.o dtimer.o
 	$(FC90) $(OPTS90) $(LOPTS) -o mbeps3 \
-    mbeps3.o $(ESOBJS) $(ESMODS) nmodmpdiag3.o nmpplib3.o nmppmod3.o omplib.o \
-    nompplib3.o $(ESHOBJS) noMPI.o msimul3.o dtimer.o
+   mbeps3.o $(ESOBJS) $(ESMODS) nmodmpdiag3.o nmpplib3.o nmppmod3.o omplib.o \
+   nompplib3.o $(ESHOBJS) noMPI.o msimul3.o dtimer.o
 
 mbbeps3 : mbbeps3.o $(ESOBJS) $(EMOBJS) noMPI.o dtimer.o
 	$(FC90) $(OPTS90) $(LOPTS) -o mbbeps3 \
-    mbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) nmodmpdiag3.o nmpplib3.o \
-    nmppmod3.o omplib.o nompplib3.o $(ESHOBJS) $(EMHOBJS) noMPI.o msimul3.o \
-    mbsimul3.o dtimer.o
+   mbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) nmodmpdiag3.o nmpplib3.o \
+   nmppmod3.o omplib.o nompplib3.o $(ESHOBJS) $(EMHOBJS) noMPI.o msimul3.o \
+   mbsimul3.o dtimer.o
 
 mdbeps3 : mdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) noMPI.o dtimer.o
 	$(FC90) $(OPTS90) $(LOPTS) -o mdbeps3 \
-    mdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
-    nmodmpdiag3.o nmpplib3.o nmppmod3.o omplib.o nompplib3.o $(ESHOBJS) \
-    $(EMHOBJS) $(EDHOBJS) noMPI.o msimul3.o mbsimul3.o mdsimul3.o dtimer.o
+   mdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
+   nmodmpdiag3.o nmpplib3.o nmppmod3.o omplib.o nompplib3.o $(ESHOBJS) \
+   $(EMHOBJS) $(EDHOBJS) noMPI.o msimul3.o mbsimul3.o mdsimul3.o dtimer.o
 
 # Python
 
@@ -579,18 +579,18 @@ dtimer_h.pyf : dtimer_hpy.f90
 	f2py --overwrite-signature -m dtimer -h dtimer_h.pyf dtimer_hpy.f90
 
 libmpush3.so : $(ESHOBJS) $(ESMODSRC) $(ESPYOBJS) $(MPMODSRC) pynoMPI.o \
-                pydtimer.o
+               pydtimer.o
 	$(PFC) --f90flags="$(OPTS90)" $(LOPTS) -m libmpush3 \
-        -c $(ESHOBJS) $(ESMODSRC) $(ESPYOBJS) $(MPMODSRC) pynoMPI.o \
-           pydtimer.o
+       -c $(ESHOBJS) $(ESMODSRC) $(ESPYOBJS) $(MPMODSRC) pynoMPI.o \
+          pydtimer.o
 
 libmbpush3.so : $(EMHOBJS) $(EMMODSRC) $(EMPYOBJS) pydtimer.o
 	$(PFC) --f90flags="$(OPTS90)" $(LOPTS) -m libmbpush3 \
-        -c $(EMHOBJS) $(EMMODSRC) $(EMPYOBJS) pydtimer.o
+       -c $(EMHOBJS) $(EMMODSRC) $(EMPYOBJS) pydtimer.o
 
 libmdpush3.so : $(EDHOBJS) $(EDMODSRC) $(EDPYOBJS) pydtimer.o
 	$(PFC) --f90flags="$(OPTS90)" $(LOPTS) -m libmdpush3 \
-        -c $(EDHOBJS) $(EDMODSRC) $(EDPYOBJS) pydtimer.o
+       -c $(EDHOBJS) $(EDMODSRC) $(EDPYOBJS) pydtimer.o
 
 cpexecs : cpmpbeps3 cpmpbbeps3 cpmpdbeps3
 
