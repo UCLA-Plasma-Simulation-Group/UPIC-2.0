@@ -67,30 +67,30 @@
 # Makefile gfortran compiler with Linux
 
 # OpenMPI
-MPIFC = mpif90 -fopenmp
-MPICC = mpicc -fopenmp
+# MPIFC = mpif90 -fopenmp
+# MPICC = mpicc -fopenmp
 
-FC90 = gfortran -fopenmp
-CC = gcc
+# FC90 = gfortran -fopenmp
+# CC = gcc
 
-PFC = f2py --fcompiler=gnu95
-PCC = f2py --compiler=unix
+# PFC = f2py --fcompiler=gnu95
+# PCC = f2py --compiler=unix
 
-OPTS90 = -O3
+# OPTS90 = -O3
 #OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8
 #OPTS90 = -O3 -fbounds-check -fdefault-real-8 -fdefault-double-8 -Wall -std=f95
 
-CCOPTS = -O3 -std=c99
+# CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
 
 #Python
-PYOPTS90 = $(OPTS90) -fPIC
-PYCCOPTS = $(CCOPTS) -fPIC
+# PYOPTS90 = $(OPTS90) -fPIC
+# PYCCOPTS = $(CCOPTS) -fPIC
 
 #export CFLAGS = -O3 -fopenmp
 #export CFLAGS = -O3 -fopenmp -Wall
 
-LOPTS = -lgomp
+# LOPTS = -lgomp
 #LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
 #LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11
 LEGACY =
@@ -131,6 +131,95 @@ LEGACY =
 #LEGACY =
 
 #
+
+####################################################
+### System Branching Starts
+### Makefile starts
+####################################################
+
+# legal values of compilers are either GNU or INTEL
+#
+compiler = GNU
+#
+#
+
+hostname := $(shell uname -n)
+osname := $(shell uname -s)
+
+cori = $(shell uname -n | cut -c 1-4)
+hoffman = $(shell uname -n | cut -c 1-5)
+
+# DEBUG
+# $(info $(hostname))
+# $(info $(osname))
+# $(info $(cori))
+# $(info $(hoffman))
+# DEBUG
+
+# This is where the machine dependencies are resolved
+
+# Case 1: OS X (Darwin)
+ifeq ($(osname),Darwin)
+	ifeq ($(compiler),GNU)
+		MPIFC = mpif90 -fopenmp
+		MPICC = mpicc -fopenmp
+		FC90 = gfortran -fopenmp
+		CC = gcc
+		PFC = f2py --fcompiler=gnu95
+		PCC = f2py --compiler=unix
+		OPTS90 = -O3
+		#OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8
+		#OPTS90 = -O3 -fbounds-check -fdefault-real-8 -fdefault-double-8 -Wall -std=f95
+		CCOPTS = -O3 -std=c99
+		#CCOPTS = -O3 -Wall -std=c99
+		#Python
+		PYOPTS90 = $(OPTS90) -fPIC
+		PYCCOPTS = $(CCOPTS) -fPIC
+		#export CFLAGS = -O3 -fopenmp
+		#export CFLAGS = -O3 -fopenmp -Wall
+		LOPTS = -lgomp
+		LEGACY =
+	else
+		MPIFC = mpiifort -qopenmp
+		MPICC = mpiicc -qopenmp
+		FC90 = ifort -qopenmp
+		CC = icc
+		OPTS90 = -O3
+		# OPTS90 = -O3 -axAVX -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -axAVX2 -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -axMIC-AVX512 -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -r8
+		# OPTS90 = -O3 -CB -r8 -warn all -std90
+		CCOPTS = -O3 -std=c99
+		#CCOPTS = -O3 -no-vec -Wall -std=c99
+		FF03 = -Tf
+		#LEGACY = -nofor_main
+	endif
+else
+	ifeq ($(cori),cori)
+       	sys = CORI
+	endif
+	ifeq ($(hoffman),login)
+		MPIFC = mpiifort -qopenmp
+		MPICC = mpiicc -qopenmp
+		FC90 = ifort -qopenmp
+		CC = icc
+		OPTS90 = -O3
+		# OPTS90 = -O3 -axAVX -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -axAVX2 -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -axMIC-AVX512 -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -r8
+		# OPTS90 = -O3 -CB -r8 -warn all -std90
+		CCOPTS = -O3 -std=c99
+		#CCOPTS = -O3 -no-vec -Wall -std=c99
+		FF03 = -Tf
+		LEGACY = -nofor_main
+	endif
+endif
+####################################################
+####################################################
+####################################################
+####################################################
 
 ESOBJS = libmpinit2.o libmppush2.o libvmppush2.o libvmpsort2.o libmpsort2.o \
 libmpgard2.o libvmpfft2.o libmpfield2.o libmpdiag2.o
