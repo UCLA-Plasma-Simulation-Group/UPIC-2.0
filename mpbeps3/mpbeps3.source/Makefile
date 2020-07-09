@@ -1,5 +1,9 @@
+
 #Makefile for 3D MPI/OpenMP PIC codes
 
+
+
+# Option 1
 # Makefile gfortran compiler with MacOS X
 
 #OpenMPI
@@ -19,6 +23,7 @@
 #LOPTS = -lgomp
 #LEGACY =
 
+# Option 2
 # Makefile Intel compiler with Mac OS X
 
 # OpenMPI
@@ -39,6 +44,8 @@
 
 #LEGACY = -nofor_main
 
+
+# Option 3
 # Makefile Intel compiler with Linux
 
 # MPI
@@ -62,35 +69,37 @@
 
 #LEGACY = -nofor_main
 
+# Option 4
 # Makefile gfortran compiler with Linux
 
 # OpenMPI
-MPIFC = mpif90 -fopenmp
-MPICC = mpicc -fopenmp
+# MPIFC = mpif90 -fopenmp
+# MPICC = mpicc -fopenmp
 
-FC90 = gfortran -fopenmp
-CC = gcc
+# FC90 = gfortran -fopenmp
+# CC = gcc
 
-PFC = f2py --fcompiler=gnu95
-PCC = f2py --compiler=unix
+# PFC = f2py --fcompiler=gnu95
+# PCC = f2py --compiler=unix
 
-OPTS90 = -O3
+# OPTS90 = -O3
 #OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8
 #OPTS90 = -O3 -fbounds-check -fdefault-real-8 -fdefault-double-8 -Wall -std=f95
 
-CCOPTS = -O3 -std=c99
+# CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
 
 #Python
-PYOPTS90 = $(OPTS90) -fPIC
-PYCCOPTS = $(CCOPTS) -fPIC
+# PYOPTS90 = $(OPTS90) -fPIC
+# PYCCOPTS = $(CCOPTS) -fPIC
 
 #export CFLAGS = -O3 -fopenmp
 #export CFLAGS = -O3 -fopenmp -Wall
 
-LOPTS = -lgomp
-LEGACY =
+# LOPTS = -lgomp
+# LEGACY =
 
+# Option 5
 # Makefile PGI compiler with Linux
 
 # OpenMPI
@@ -127,6 +136,97 @@ LEGACY =
 #LEGACY =
 
 #
+
+####################################################
+### System Branching Starts
+### Makefile starts
+####################################################
+
+# legal values of compilers are either GNU or INTEL
+#
+compiler = GNU
+#
+#
+
+hostname := $(shell uname -n)
+osname := $(shell uname -s)
+
+cori = $(shell uname -n | cut -c 1-4)
+hoffman = $(shell uname -n | cut -c 1-5)
+
+# DEBUG
+# $(info $(hostname))
+# $(info $(osname))
+# $(info $(cori))
+# $(info $(hoffman))
+# DEBUG
+
+# This is where the machine dependencies are resolved
+
+# Case 1: OS X (Darwin)
+ifeq ($(osname),Darwin)
+	ifeq ($(compiler),GNU)
+		MPIFC = mpif90 -fopenmp
+		MPICC = mpicc -fopenmp
+		FC90 = gfortran -fopenmp
+		CC = gcc
+		PFC = f2py --fcompiler=gnu95
+		PCC = f2py --compiler=unix
+		OPTS90 = -O3
+		#OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8
+		#OPTS90 = -O3 -fbounds-check -fdefault-real-8 -fdefault-double-8 -Wall -std=f95
+		CCOPTS = -O3 -std=c99
+		#CCOPTS = -O3 -Wall -std=c99
+		#Python
+		PYOPTS90 = $(OPTS90) -fPIC
+		PYCCOPTS = $(CCOPTS) -fPIC
+		#export CFLAGS = -O3 -fopenmp
+		#export CFLAGS = -O3 -fopenmp -Wall
+		LOPTS = -lgomp
+		LEGACY =
+	else
+		MPIFC = mpiifort -qopenmp
+		MPICC = mpiicc -qopenmp
+		FC90 = ifort -qopenmp
+		CC = icc
+		OPTS90 = -O3
+		# OPTS90 = -O3 -axAVX -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -axAVX2 -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -axMIC-AVX512 -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -r8
+		# OPTS90 = -O3 -CB -r8 -warn all -std90
+		CCOPTS = -O3 -std=c99
+		#CCOPTS = -O3 -no-vec -Wall -std=c99
+		FF03 = -Tf
+		#LEGACY = -nofor_main
+	endif
+else
+	ifeq ($(cori),cori)
+       	sys = CORI
+	endif
+	ifeq ($(hoffman),login)
+		MPIFC = mpiifort -qopenmp
+		MPICC = mpiicc -qopenmp
+		FC90 = ifort -qopenmp
+		CC = icc
+		OPTS90 = -O3
+		# OPTS90 = -O3 -axAVX -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -axAVX2 -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -axMIC-AVX512 -qopt-report=5 -qopt-report-phase=vec
+		# OPTS90 = -O3 -r8
+		# OPTS90 = -O3 -CB -r8 -warn all -std90
+		CCOPTS = -O3 -std=c99
+		#CCOPTS = -O3 -no-vec -Wall -std=c99
+		FF03 = -Tf
+		LEGACY = -nofor_main
+	endif
+endif
+####################################################
+####################################################
+####################################################
+####################################################
+
+
 
 ESOBJS = libmpinit3.o libmppush3.o libvmppush3.o libmpsort3.o \
 libvmpsort3.o libmpgard3.o libvmpfft3.o libmpfield3.o libmpdiag3.o
@@ -178,38 +278,38 @@ python : mbeps3.py mbbeps3.py mdbeps3.py
 
 mpbeps3 : mpbeps3.o $(ESOBJS) dtimer.o
 	$(MPIFC) $(OPTS90) $(LOPTS) -o mpbeps3 \
-    mpbeps3.o $(ESOBJS) $(ESMODS) modmpdiag3.o mpplib3.o mppmod3.o omplib.o \
-    ompplib3.o $(ESHOBJS) mpsimul3.o dtimer.o
+   mpbeps3.o $(ESOBJS) $(ESMODS) modmpdiag3.o mpplib3.o mppmod3.o omplib.o \
+   ompplib3.o $(ESHOBJS) mpsimul3.o dtimer.o
 
 mpbbeps3 : mpbbeps3.o $(ESOBJS) $(EMOBJS) dtimer.o
 	$(MPIFC) $(OPTS90) $(LOPTS) -o mpbbeps3 \
-    mpbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) modmpdiag3.o mpplib3.o \
-    mppmod3.o omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) mpsimul3.o mpbsimul3.o \
-    dtimer.o
+   mpbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) modmpdiag3.o mpplib3.o \
+   mppmod3.o omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) mpsimul3.o mpbsimul3.o \
+   dtimer.o
 
 mpdbeps3 : mpdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) dtimer.o
 	$(MPIFC) $(OPTS90) $(LOPTS) -o mpdbeps3 \
-    mpdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
-    modmpdiag3.o mpplib3.o mppmod3.o omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) \
-    $(EDHOBJS) mpsimul3.o mpbsimul3.o mpdsimul3.o dtimer.o
+   mpdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
+   modmpdiag3.o mpplib3.o mppmod3.o omplib.o ompplib3.o $(ESHOBJS) $(EMHOBJS) \
+   $(EDHOBJS) mpsimul3.o mpbsimul3.o mpdsimul3.o dtimer.o
 
 #noMPI
 mbeps3 : mbeps3.o $(ESOBJS) noMPI.o dtimer.o
 	$(FC90) $(OPTS90) $(LOPTS) -o mbeps3 \
-    mbeps3.o $(ESOBJS) $(ESMODS) nmodmpdiag3.o nmpplib3.o nmppmod3.o omplib.o \
-    nompplib3.o $(ESHOBJS) noMPI.o msimul3.o dtimer.o
+   mbeps3.o $(ESOBJS) $(ESMODS) nmodmpdiag3.o nmpplib3.o nmppmod3.o omplib.o \
+   nompplib3.o $(ESHOBJS) noMPI.o msimul3.o dtimer.o
 
 mbbeps3 : mbbeps3.o $(ESOBJS) $(EMOBJS) noMPI.o dtimer.o
 	$(FC90) $(OPTS90) $(LOPTS) -o mbbeps3 \
-    mbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) nmodmpdiag3.o nmpplib3.o \
-    nmppmod3.o omplib.o nompplib3.o $(ESHOBJS) $(EMHOBJS) noMPI.o msimul3.o \
-    mbsimul3.o dtimer.o
+   mbbeps3.o $(ESOBJS) $(EMOBJS) $(ESMODS) $(EMMODS) nmodmpdiag3.o nmpplib3.o \
+   nmppmod3.o omplib.o nompplib3.o $(ESHOBJS) $(EMHOBJS) noMPI.o msimul3.o \
+   mbsimul3.o dtimer.o
 
 mdbeps3 : mdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) noMPI.o dtimer.o
 	$(FC90) $(OPTS90) $(LOPTS) -o mdbeps3 \
-    mdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
-    nmodmpdiag3.o nmpplib3.o nmppmod3.o omplib.o nompplib3.o $(ESHOBJS) \
-    $(EMHOBJS) $(EDHOBJS) noMPI.o msimul3.o mbsimul3.o mdsimul3.o dtimer.o
+   mdbeps3.o $(ESOBJS) $(EMOBJS) $(EDOBJS) $(ESMODS) $(EMMODS) $(EDMODS) \
+   nmodmpdiag3.o nmpplib3.o nmppmod3.o omplib.o nompplib3.o $(ESHOBJS) \
+   $(EMHOBJS) $(EDHOBJS) noMPI.o msimul3.o mbsimul3.o mdsimul3.o dtimer.o
 
 # Python
 
@@ -479,18 +579,18 @@ dtimer_h.pyf : dtimer_hpy.f90
 	f2py --overwrite-signature -m dtimer -h dtimer_h.pyf dtimer_hpy.f90
 
 libmpush3.so : $(ESHOBJS) $(ESMODSRC) $(ESPYOBJS) $(MPMODSRC) pynoMPI.o \
-                pydtimer.o
+               pydtimer.o
 	$(PFC) --f90flags="$(OPTS90)" $(LOPTS) -m libmpush3 \
-        -c $(ESHOBJS) $(ESMODSRC) $(ESPYOBJS) $(MPMODSRC) pynoMPI.o \
-           pydtimer.o
+       -c $(ESHOBJS) $(ESMODSRC) $(ESPYOBJS) $(MPMODSRC) pynoMPI.o \
+          pydtimer.o
 
 libmbpush3.so : $(EMHOBJS) $(EMMODSRC) $(EMPYOBJS) pydtimer.o
 	$(PFC) --f90flags="$(OPTS90)" $(LOPTS) -m libmbpush3 \
-        -c $(EMHOBJS) $(EMMODSRC) $(EMPYOBJS) pydtimer.o
+       -c $(EMHOBJS) $(EMMODSRC) $(EMPYOBJS) pydtimer.o
 
 libmdpush3.so : $(EDHOBJS) $(EDMODSRC) $(EDPYOBJS) pydtimer.o
 	$(PFC) --f90flags="$(OPTS90)" $(LOPTS) -m libmdpush3 \
-        -c $(EDHOBJS) $(EDMODSRC) $(EDPYOBJS) pydtimer.o
+       -c $(EDHOBJS) $(EDMODSRC) $(EDPYOBJS) pydtimer.o
 
 cpexecs : cpmpbeps3 cpmpbbeps3 cpmpdbeps3
 
