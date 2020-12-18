@@ -1,0 +1,26 @@
+!-----------------------------------------------------------------------
+Added field diagnostics
+Added simple parallel IO for uniformly spaced real arrays
+Added namelist
+Added energy diagnostic
+Added non-uniform density profiles
+Added simple restart
+Added electron current diagnostic
+Added electron fluid moments diagnostic
+Added 1d particle distributions for each velocity direction
+Added test particle diagnostics
+Added phase space diagnostic
+compiler vectorization
+Added analytic maxwell solver
+
+Todo:
+parallel random numbers
+non-periodic boundary conditions
+additional particle boundary conditions
+2d particle velocity distributions
+higher order interpolation
+high level libraries
+dynamic load balancing
+waterbag distribution
+intrinsic vectorization
+real or k space diagnostic writes

@@ -807,7 +807,7 @@
             endif
 ! ion trajectories
          else if (ndt==2) then
-! set ione tags: updates nprobt, tedges, pparti and possibly iprobt
+! set ion tags: updates nprobt, tedges, pparti and possibly iprobt
             call psetptraj2(pparti,tedges,kipic,iprobt,kstrt,nst,vtxi,  &
      &vtsx,dvtx,npi,nprobt,irc)
 ! estimate maximum ion velocity or momentum
@@ -882,6 +882,7 @@
                ws = max(ws,4.0*vtdy+abs(vdy))
             endif
             allocate(fvs(nmv21+1,ndim,nsxb,nyb+1))
+            fvs = 0.0
             fvs(nmv21+1,:,1,1) = 1.25*ws
 ! open file for electron phase space data:
 ! updates nserec and possibly iuse
@@ -909,6 +910,7 @@
                   ws = max(ws,4.0*vtdyi+abs(vdyi))
                endif
                allocate(fvsi(nmv21+1,ndim,nsxb,nyb+1))
+               fvsi = 0.0
                fvsi(nmv21+1,:,1,1) = 1.25*ws
 ! open file for ion phase space data:
 ! updates nsirec and possibly iusi

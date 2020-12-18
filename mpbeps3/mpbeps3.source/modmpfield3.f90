@@ -13,9 +13,13 @@
 !           calls MPPCUPERP32
 ! mpibpois3 solves 3d poisson's equation for unsmoothed magnetic field
 !           calls VMIPPBPOISP332
-! mpmaxwel3 solves 3d maxwell's equation for unsmoothed transvers
-!           electric and magnetic fields
+! mpmaxwel3 solves 3d maxwell's equation for unsmoothed transverse
+!           electric and magnetic fields verlet algorithm
 !           calls VMPPMAXWEL32
+! mpamaxwel3 solves 3d maxwell's equation for unsmoothed transverse
+!            electric and magnetic fields using analytic algorithm due
+!            to irving haber
+!            calls VMPPAMAXWEL32
 ! mpemfield3 adds and smooths or copies and smooths complex vector
 !            fields in fourier space
 !            calls MPPEMFIELD32
@@ -86,7 +90,7 @@
 !                calls SET_PCVZERO3
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: may 16, 2018
+! update: december 8, 2020
 !
       use libmpfield3_h
       implicit none
@@ -240,6 +244,35 @@
 ! call low level procedure
       call VMPPMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx,ny,nz,kstrt&
      &,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+! record time
+      call dtimer(dtime,itime,1)
+      tfield = tfield + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpamaxwel3(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,tfield,nx,&
+     &ny,nz,kstrt,nvpy,nvpz)
+! solves 3d maxwell's equation for unsmoothed transverse electric and
+! magnetic fields using analytic algorithm due to irving haber
+      implicit none
+      integer, intent(in) :: nx, ny, nz, kstrt, nvpy, nvpz
+      real, intent(in) :: affp, ci, dt
+      real, intent(inout) :: wf, wm, tfield
+      complex, dimension(:,:,:,:), intent(inout) :: exyz, bxyz
+      complex, dimension(:,:,:,:), intent(in) :: cu
+      complex, dimension(:,:,:), intent(in) :: ffc
+! local data
+      integer :: nzv, kxyp, kyzp, nzhd
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      nzv = size(cu,2); kxyp = size(cu,3); kyzp = size(cu,4)
+      nzhd = size(ffc,1)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call VMPPAMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx,ny,nz,    &
+     &kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
 ! record time
       call dtimer(dtime,itime,1)
       tfield = tfield + real(dtime)

@@ -67,6 +67,21 @@
       end interface
 !
       interface
+         subroutine VMPPAMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx, &
+     &ny,nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+         implicit none
+         integer, intent(in) :: nx, ny, nz, kstrt, nvpy, nvpz
+         integer, intent(in) :: nzv, kxyp, kyzp, nzhd
+         real, intent(in) :: affp, ci, dt
+         real, intent(inout) :: wf, wm
+         complex, dimension(3,nzv,kxyp,kyzp), intent(inout) :: exyz
+         complex, dimension(3,nzv,kxyp,kyzp), intent(inout) :: bxyz
+         complex, dimension(3,nzv,kxyp,kyzp), intent(in) :: cu
+         complex, dimension(nzhd,kxyp,kyzp), intent(in) :: ffc
+         end subroutine
+      end interface
+!
+      interface
          subroutine MPPEMFIELD32(fxyz,exyz,ffc,isign,nx,ny,nz,kstrt,nvpy&
      &,nvpz,nzv,kxyp,kyzp,nzhd)
          implicit none

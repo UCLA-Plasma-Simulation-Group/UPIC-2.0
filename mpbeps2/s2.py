@@ -1,4 +1,5 @@
 #-----------------------------------------------------------------------
+from __future__ import print_function
 """
 High Level library for 2D Electrostatic OpenMP PIC code
 
@@ -13,9 +14,10 @@ close_restart2: close reset and restart files
 
 written by Viktor K. Decyk, UCLA
 copyright 2016-2018, regents of the university of california
-update: august 15, 2018
+update: November 1, 2020
 """
 
+import sys
 import numpy
 
 # sys.path.append('./mbeps2.source')
@@ -59,7 +61,7 @@ def open_restart2(cdrun):
          fname = "rstrt2." + cdrun0
          iur0 = open(fname,"rb+")
       else:
-         print "restart warning: old, new idruns identical"
+         print ("restart warning: old, new idruns identical")
 # allocate scratch numpy arrays
    i1 = numpy.zeros((1),int_type)
    i2 = numpy.zeros((2),int_type)
@@ -141,17 +143,17 @@ def bread_restart2a(part,kpic,iur,ntime,ntime0,npp,nppmx,noff,mx1,irc):
    iur.seek(0,0)
    i2[:] = numpy.fromfile(iur,int_type,2)
    ntime[0] = i2[0]; ntime0[0] = i2[1]
-   print "restarting from ntime, idrun0=", ntime[0], in2.idrun0
+   print ("restarting from ntime, idrun0=", ntime[0], in2.idrun0)
 # read in number of processors
    i1[:] = numpy.fromfile(iur,int_type,1)
    it = i1[0]
    if (it != in2.nvp):
-      print "restart error, nvp=", it, in2.nvp
+      print ("restart error, nvp=", it, in2.nvp)
 # read in size of electron array
    i2[:] = numpy.fromfile(iur,int_type,2)
    ndimp = i2[0]; npp[0] = i2[1]
    if (ndimp != numpy.size(part,0)):
-      print "restart error, idimp=", ndimp, numpy.size(part,0)
+      print ("restart error, idimp=", ndimp, numpy.size(part,0))
 # read in electrons: updates part, npp, irc
    if (npp[0] > 0):
       it = npp[0]
@@ -190,14 +192,14 @@ def bread_restart2b(part,ppart,kpic,kipic,iur,npp,nppi,nppmx,noff,nyp,
 # read in movion to determine if ions are moving
    i1[:] = numpy.fromfile(iur,int_type,1); it = i1[0]
    if (it != in2.movion):
-      print "movion restart error, movion = ", it, in2.movion
+      print ("movion restart error, movion = ", it, in2.movion)
 # ions are moving
    if (in2.movion > 0):
 # read in size of ion array
       i2[:] = numpy.fromfile(iur,int_type,2)
       ndimp = i2[0]; nppi[0] = i2[1]
       if (ndimp != numpy.size(part,0)):
-         print "ion restart error,idimp=",ndimp,numpy.size(part,0)
+         print ("ion restart error,idimp=",ndimp,numpy.size(part,0))
 # read in ions: updates part, nppi, irc
       if (nppi[0] > 0):
          it = nppi[0]
@@ -241,16 +243,16 @@ def bread_restart2c(part,pparti,kipic,qi,iur,ntime,ntime0,nppi,noff,nyp,
       i2[:] = numpy.fromfile(iur,int_type,2)
       it = i2[0]; iu = i2[1]
       if (it != numpy.size(qi,0)):
-         print "qi restart error, size(qi,0)=",it,numpy.size(qi,0)
+         print ("qi restart error, size(qi,0)=",it,numpy.size(qi,0))
       elif (iu != numpy.size(qi,1)):
-         print "qi restart error, size(qi,1)=",iu,numpy.size(qi,1)
+         print ("qi restart error, size(qi,1)=",iu,numpy.size(qi,1))
       il = it*iu
       if (il > 0):
          qi[:,:] = numpy.fromfile(iur,float_type,il).reshape(it,iu)
 # read in electric field parameter
    i1[:] = numpy.fromfile(iur,int_type,1); it = i1[0]
    if (it != in2.emf):
-      print "warning: emf values differ, emf=",it,in2.emf
+      print ("warning: emf values differ, emf=",it,in2.emf)
    ntime0[0] = ntime0[0] + ntime[0]
 
 #-----------------------------------------------------------------------

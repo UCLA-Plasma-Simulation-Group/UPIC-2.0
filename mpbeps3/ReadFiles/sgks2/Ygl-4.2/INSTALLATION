@@ -1,0 +1,71 @@
+-*-Text-*-
+
+    Ygl: Run 2d-GL programs with standard X11 routines.
+    (C) Fred Hucht 1993-96
+    EMail: fred@thp.Uni-Duisburg.DE
+
+Ygl is written in ANSI C, so use gcc if you have problems during
+compilation. To compile Ygl, follow the following steps:
+
+If you have imake, enter:
+
+$ xmkmf
+$ make
+
+else edit the file Makefile and type
+
+$ make
+
+On RS/6000, ignore the warnings from the linker.
+
+If the compiler can't find the include file
+<X11/extensions/multibuf.h> or the linker can't find functions like
+"XmbufDisplayBuffers", undefine MultiBuffer in the Imakefile. You
+won't be able to do doublebuffering then.
+
+Note for AIX 4.1:
+You need the LPP X11.adt.ext to compile Ygl with doublebuffering
+enabled. 
+
+To make the examples, do a:
+
+$ cd examples
+$ xmkmf        # if you have it
+$ make
+
+If you have GL, enter "make gl" to compile the GL versions of the
+examples. 
+
+To make the FORTRAN examples, enter:
+
+$ make smile_f77 smile_f2c
+
+To install the library and the include files Ygl.h and Yfgl.h, type
+(as root) 
+
+$ make install
+
+If you want the GL-style include files, and Ygl.h and Yfgl.h were
+installed in /usr/include/X11, enter (as root):
+
+$ mkdir /usr/include/gl
+$ cd /usr/include/gl
+$ ln -s /usr/include/X11/Ygl.h gl.h
+$ ln -s /usr/include/X11/Ygl.h device.h
+$ ln -s /usr/include/X11/Yfgl.h fgl.h
+$ ln -s /usr/include/X11/Yfgl.h fdevice.h
+
+The program "lines.c" is included to test the library and to
+compare the performance with standard GL. 
+
+The program "coltest.c" is an example for the use of a private
+colormap.
+
+The program "rgbtest.c" opens both a colormap mode and a RGBcolor
+window (if your X-Server has a {True|Direct}Color visual...)
+
+The program "smile.c" is very simple...
+
+The program "smile_f77.f" does same like "smile.c" in FORTRAN.
+
+Have fun... Fred

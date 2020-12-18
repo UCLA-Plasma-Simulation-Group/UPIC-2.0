@@ -17,11 +17,14 @@ acknowledgement is requested.
 The makefile is setup to use gfortran with Linux.  It should also work
 with MacOS X.
 
-Six Fortran executables can be created, called preadf3, pvreadf3,
-pflreadf3, fvreadf3, ptreadf3, and psreadf3, to read scalar, vector,
-fluid, velocity, trajectory or phase space data.
+A Fortran program can be created called diag3 to read scalar, vector,
+fluid, velocity, trajectory or phase space data.  The program diag3
+calls lower level procedures called preadf3, pvreadf3, pflreadf3,
+pfvreadf3, ptreadf3 and psreadf3, each of which reads one of six types
+of data.  It is also possible to create executable versions of the these
+low procedures directly.
 
-To compile all the programs, execute:
+To compile all these programs, execute:
 
 make
 
@@ -29,8 +32,8 @@ To compile just one, execute:
 
 make program_name
 
-where program_name is either: preadf3, pvreadf3, pflreadf3, pfvreadf3,
-ptreadf3, or psreadf3
+where program_name is either: diag3, preadf3, pvreadf3, pflreadf3,
+pfvreadf3, ptreadf3, or psreadf3
 
 To execute, type the name of the executable:
 
@@ -49,3 +52,7 @@ To compile this libraries, execute:
 make python
 
 This currently only works in single precision.
+
+To delete all the libraries and executables, execute:
+
+make clobber

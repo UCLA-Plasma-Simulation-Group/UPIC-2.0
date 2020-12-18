@@ -5,7 +5,7 @@
 ! PPBICAST broadcasts integer data from node 0
 ! written by viktor k. decyk, ucla
 ! copyright 1995, regents of the university of california
-! update: august 13, 2018
+! update: november 10, 2020
       module mpplib2
       use mpi
       implicit none
@@ -22,9 +22,8 @@
 ! mdouble = default double precision type
 ! lworld = MPI_COMM_WORLD communicator
       integer :: lgrp, mreal, mint, mcplx, mdouble, lworld
-! msum = MPI_SUM
 ! mmax = MPI_MAX
-      integer :: msum, mmax
+      integer :: mmax
       save
 !
       private

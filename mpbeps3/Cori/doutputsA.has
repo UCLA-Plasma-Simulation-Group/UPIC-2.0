@@ -1,0 +1,476 @@
+program mpdbeps3 cori.nersc.gov ifort 18.0.1 -O3, nompi
+384x384x384 particles, 128x128x128 grid, 100 steps
+
+-no-vec, plist = .false., popt=1
+
+
+ wpm=  0.7500015    
+ Total Field, Kinetic and Total Energies:
+ 0.8867831E+03 0.8494452E+08 0.8494541E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.2041016E-09 0.7273413E+01 0.8867831E+03
+
+ Total Field, Kinetic and Total Energies:
+ 0.1610217E+05 0.8492946E+08 0.8494556E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527446E+05 0.7466555E+01 0.8277151E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            1           1
+ Energy Conservation =   1.7893846E-06
+ Average Field Energy <WE> =    7637.229    
+ Average Electron Kinetic Energy <WKE> =   8.4936992E+07
+ Ratio <WE>/<WKE>=   8.9916401E-05
+ Average Transverse EField Energy <WF> =    7.369984    
+ Ratio <WF>/<WKE>=   8.6770015E-08
+ Average Magnetic Field Energy <WB> =    857.2491    
+ Ratio <WB>/<WKE>=   1.0092765E-05
+ 
+ initialization time =    7.577750    
+ deposit time =    2.608525    
+ current deposit time =    3.929371    
+ current derivative deposit time =    45.64861    
+ total deposit time =    52.18650    
+ guard time =   6.7993879E-02
+ solver time =   0.9900213    
+ field move time =   2.0130107E-03
+ fft and transpose time =    7.924252      0.0000000E+00
+ push time =    7.598065    
+ particle move time =   6.6739949E-03
+ sort time =    4.062374    
+ total solver time =    8.984280    
+ total particle time =    63.85361    
+ total diagnostic time =   2.0000000E-06
+ total and additional time =    72.83789     -3.4477234E-02
+ 
+ Push Time (nsec) =    1.341867    
+ Deposit Time (nsec) =    9.216468    
+ Sort Time (nsec) =   0.7186196    
+ Total Particle Time (nsec) =    11.27695 
+
+
+-no-vec, plist = .true., popt=1
+
+
+ Total Field, Kinetic and Total Energies:
+ 0.8867831E+03 0.8494452E+08 0.8494541E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.2407053E-09 0.7273413E+01 0.8867831E+03
+
+ Total Field, Kinetic and Total Energies:
+ 0.1610217E+05 0.8492946E+08 0.8494556E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527446E+05 0.7466555E+01 0.8277151E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            1           1
+ Energy Conservation =   1.7893846E-06
+ Average Field Energy <WE> =    7637.229    
+ Average Electron Kinetic Energy <WKE> =   8.4936992E+07
+ Ratio <WE>/<WKE>=   8.9916401E-05
+ Average Transverse EField Energy <WF> =    7.369984    
+ Ratio <WF>/<WKE>=   8.6770015E-08
+ Average Magnetic Field Energy <WB> =    857.2491    
+ Ratio <WB>/<WKE>=   1.0092765E-05
+ 
+ initialization time =    7.580954    
+ deposit time =    2.600874    
+ current deposit time =    3.847755    
+ current derivative deposit time =    45.78376    
+ total deposit time =    52.23239    
+ guard time =   7.2726160E-02
+ solver time =    1.044071    
+ field move time =   2.1230110E-03
+ fft and transpose time =    8.051853      0.0000000E+00
+ push time =    8.147552    
+ particle move time =   7.4669924E-03
+ sort time =    1.532867    
+ total solver time =    9.170773    
+ total particle time =    61.92028    
+ total diagnostic time =   2.0000000E-06
+ total and additional time =    71.09105     -3.1028748E-02
+ 
+ Push Time (nsec) =    1.438910    
+ Deposit Time (nsec) =    9.224572    
+ Sort Time (nsec) =   0.2720328    
+ Total Particle Time (nsec) =    10.93551
+
+
+-axAVX2, plist = .false., popt=1
+ using          64  thread(s), srun -c 64
+
+
+ Total Field, Kinetic and Total Energies:
+ 0.8867827E+03 0.8494452E+08 0.8494541E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1161844E-09 0.7273408E+01 0.8867827E+03
+
+ Total Field, Kinetic and Total Energies:
+ 0.1610217E+05 0.8492946E+08 0.8494556E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527445E+05 0.7466552E+01 0.8277153E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            1           1
+ Energy Conservation =   1.7893846E-06
+ Average Field Energy <WE> =    7637.227    
+ Average Electron Kinetic Energy <WKE> =   8.4936992E+07
+ Ratio <WE>/<WKE>=   8.9916379E-05
+ Average Transverse EField Energy <WF> =    7.369980    
+ Ratio <WF>/<WKE>=   8.6769973E-08
+ Average Magnetic Field Energy <WB> =    857.2490    
+ Ratio <WB>/<WKE>=   1.0092765E-05
+ 
+ initialization time =    7.316895    
+ deposit time =    2.625264    
+ current deposit time =    3.440624    
+ current derivative deposit time =    39.51561    
+ total deposit time =    45.58150    
+ guard time =   8.8983074E-02
+ solver time =   0.9480225    
+ field move time =   1.9480102E-03
+ fft and transpose time =    6.180800      0.0000000E+00
+ push time =    6.042521    
+ particle move time =   5.6379931E-03
+ sort time =    3.975438    
+ total solver time =    7.219753    
+ total particle time =    55.60510    
+ total diagnostic time =   2.0000000E-06
+ total and additional time =    62.82486     -2.3197174E-02
+ 
+ Push Time (nsec) =    1.067147    
+ Deposit Time (nsec) =    8.049983    
+ Sort Time (nsec) =   0.7030833    
+ Total Particle Time (nsec) =    9.820214  
+
+
+-axAVX2, plist = .true., popt=1
+ using          64  thread(s), srun -c 64
+
+
+ Total Field, Kinetic and Total Energies:
+ 0.8867827E+03 0.8494452E+08 0.8494541E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1902396E-09 0.7273408E+01 0.8867827E+03
+
+ Total Field, Kinetic and Total Energies:
+ 0.1610217E+05 0.8492946E+08 0.8494556E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527445E+05 0.7466552E+01 0.8277153E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            1           1
+ Energy Conservation =   1.7893846E-06
+ Average Field Energy <WE> =    7637.227    
+ Average Electron Kinetic Energy <WKE> =   8.4936992E+07
+ Ratio <WE>/<WKE>=   8.9916379E-05
+ Average Transverse EField Energy <WF> =    7.369980    
+ Ratio <WF>/<WKE>=   8.6769973E-08
+ Average Magnetic Field Energy <WB> =    857.2490    
+ Ratio <WB>/<WKE>=   1.0092764E-05
+ 
+ initialization time =    7.351333    
+ deposit time =    2.626518    
+ current deposit time =    3.507365    
+ current derivative deposit time =    39.58651    
+ total deposit time =    45.72039    
+ guard time =   8.4759854E-02
+ solver time =   0.9898120    
+ field move time =   2.0350106E-03
+ fft and transpose time =    6.252168      0.0000000E+00
+ push time =    6.468255    
+ particle move time =   5.8929967E-03
+ sort time =    1.431891    
+ total solver time =    7.328774    
+ total particle time =    53.62643    
+ total diagnostic time =   2.0000000E-06
+ total and additional time =    60.95520     -2.3429871E-02
+ 
+ Push Time (nsec) =    1.142335    
+ Deposit Time (nsec) =    8.074512    
+ Sort Time (nsec) =   0.2539218    
+ Total Particle Time (nsec) =    9.470768 
+
+
+-axAVX2, plist = .false., popt=2
+ using          64  thread(s), srun -c 64
+
+
+ Total Field, Kinetic and Total Energies:
+ 0.8867827E+03 0.8494452E+08 0.8494541E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.2018404E-09 0.7273409E+01 0.8867827E+03
+
+ Total Field, Kinetic and Total Energies:
+ 0.1610210E+05 0.8492846E+08 0.8494456E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527440E+05 0.7466376E+01 0.8277050E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            1           1
+ Energy Conservation =   9.9828821E-06
+ Average Field Energy <WE> =    7637.198    
+ Average Electron Kinetic Energy <WKE> =   8.4936488E+07
+ Ratio <WE>/<WKE>=   8.9916568E-05
+ Average Transverse EField Energy <WF> =    7.369893    
+ Ratio <WF>/<WKE>=   8.6769454E-08
+ Average Magnetic Field Energy <WB> =    857.2438    
+ Ratio <WB>/<WKE>=   1.0092763E-05
+ 
+ initialization time =    7.290788    
+ deposit time =    2.584968    
+ current deposit time =    3.043648    
+ current derivative deposit time =    31.95069    
+ total deposit time =    37.57931    
+ guard time =   8.5008934E-02
+ solver time =   0.9595562    
+ field move time =   1.9100098E-03
+ fft and transpose time =    6.075114      0.0000000E+00
+ push time =    5.635125    
+ particle move time =   5.6539956E-03
+ sort time =    6.636537    
+ total solver time =    7.121590    
+ total particle time =    49.85662    
+ total diagnostic time =   1.0000000E-06
+ total and additional time =    56.97821     -2.1259308E-02
+ 
+ Push Time (nsec) =   0.9951988    
+ Deposit Time (nsec) =    6.636744    
+ Sort Time (nsec) =    1.173053    
+ Total Particle Time (nsec) =    8.804996   
+
+
+-axAVX2, plist = .true., popt=2
+ using          64  thread(s), srun -c 64
+
+
+ Total Field, Kinetic and Total Energies:
+ 0.8867827E+03 0.8494452E+08 0.8494541E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.2555310E-09 0.7273409E+01 0.8867827E+03
+
+ Total Field, Kinetic and Total Energies:
+ 0.1610210E+05 0.8492846E+08 0.8494456E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527440E+05 0.7466376E+01 0.8277050E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            1           1
+ Energy Conservation =   9.9828821E-06
+ Average Field Energy <WE> =    7637.198    
+ Average Electron Kinetic Energy <WKE> =   8.4936488E+07
+ Ratio <WE>/<WKE>=   8.9916568E-05
+ Average Transverse EField Energy <WF> =    7.369893    
+ Ratio <WF>/<WKE>=   8.6769454E-08
+ Average Magnetic Field Energy <WB> =    857.2438    
+ Ratio <WB>/<WKE>=   1.0092763E-05
+ 
+ initialization time =    7.301332    
+ deposit time =    2.592759    
+ current deposit time =    3.084030    
+ current derivative deposit time =    30.83436    
+ total deposit time =    36.51115    
+ guard time =   8.4901102E-02
+ solver time =   0.9526923    
+ field move time =   1.7770092E-03
+ fft and transpose time =    6.145209      0.0000000E+00
+ push time =    5.576984    
+ particle move time =   5.7719965E-03
+ sort time =    1.420065    
+ total solver time =    7.184580    
+ total particle time =    43.51397    
+ total diagnostic time =   2.0000000E-06
+ total and additional time =    50.69855     -2.2254944E-02
+ 
+ Push Time (nsec) =   0.9849308    
+ Deposit Time (nsec) =    6.448101    
+ Sort Time (nsec) =   0.2518119    
+ Total Particle Time (nsec) =    7.684844 
+
+
+-axAVX2, plist = .true., popt=2, export OMP_NUM_THREADS=32
+
+
+ Total Field, Kinetic and Total Energies:
+ 0.8867827E+03 0.8494452E+08 0.8494541E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.4125845E-09 0.7273409E+01 0.8867827E+03
+ 
+ Total Field, Kinetic and Total Energies:
+ 0.1610210E+05 0.8492846E+08 0.8494456E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527440E+05 0.7466376E+01 0.8277050E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            1           1
+ Energy Conservation =   9.9828821E-06
+ Average Field Energy <WE> =    7637.198    
+ Average Electron Kinetic Energy <WKE> =   8.4936488E+07
+ Ratio <WE>/<WKE>=   8.9916568E-05
+ Average Transverse EField Energy <WF> =    7.369893    
+ Ratio <WF>/<WKE>=   8.6769454E-08
+ Average Magnetic Field Energy <WB> =    857.2438    
+ Ratio <WB>/<WKE>=   1.0092763E-05
+ 
+ initialization time =    7.328315    
+ deposit time =    2.543628    
+ current deposit time =    3.568570    
+ current derivative deposit time =    33.82300    
+ total deposit time =    39.93520    
+ guard time =   7.9001248E-02
+ solver time =    1.051516    
+ field move time =   1.1790062E-03
+ fft and transpose time =    6.726679      0.0000000E+00
+ push time =    5.860015    
+ particle move time =   4.5110006E-03
+ sort time =    1.772168    
+ total solver time =    7.858376    
+ total particle time =    47.57189    
+ total diagnostic time =   0.0000000E+00
+ total and additional time =    55.43027     -1.9100189E-02
+ 
+ Push Time (nsec) =    1.034916    
+ Deposit Time (nsec) =    7.052809    
+ Sort Time (nsec) =   0.3137728    
+ Total Particle Time (nsec) =    8.401499
+
+
+ using          32  thread(s), srun -c 32
+
+
+ Total Field, Kinetic and Total Energies:
+ 0.8867827E+03 0.8494453E+08 0.8494542E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1320042E-09 0.7273409E+01 0.8867827E+03
+
+ Total Field, Kinetic and Total Energies:
+ 0.1610210E+05 0.8492845E+08 0.8494455E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527439E+05 0.7466376E+01 0.8277050E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            1           2
+ Energy Conservation =   1.0171238E-05
+ Average Field Energy <WE> =    7637.197    
+ Average Electron Kinetic Energy <WKE> =   8.4936488E+07
+ Ratio <WE>/<WKE>=   8.9916568E-05
+ Average Transverse EField Energy <WF> =    7.369893    
+ Ratio <WF>/<WKE>=   8.6769454E-08
+ Average Magnetic Field Energy <WB> =    857.2438    
+ Ratio <WB>/<WKE>=   1.0092763E-05
+ 
+ initialization time =    6.017824    
+ deposit time =    1.379016    
+ current deposit time =    2.888060    
+ current derivative deposit time =    30.20546    
+ total deposit time =    34.47254    
+ guard time =   0.3742007    
+ solver time =   0.8005953    
+ field move time =   3.3002000E-02
+ fft and transpose time =    8.414279       5.191220    
+ push time =    4.678938    
+ particle move time =   9.4891988E-02
+ sort time =   0.8367283    
+ total solver time =    9.622077    
+ total particle time =    40.08310    
+ total diagnostic time =   1.3500001E-04
+ total and additional time =    49.70531     -1.1672974E-03
+ 
+ Push Time (nsec) =   0.8263302    
+ Deposit Time (nsec) =    6.088070    
+ Sort Time (nsec) =   0.1645301    
+ Total Particle Time (nsec) =    7.078931  
+ 
+ 
+ using          16  thread(s), srun -c 16
+
+
+ Total Field, Kinetic and Total Energies:
+ 0.8867827E+03 0.8494452E+08 0.8494541E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.9785313E-10 0.7273409E+01 0.8867827E+03
+
+ Total Field, Kinetic and Total Energies:
+ 0.1610210E+05 0.8492846E+08 0.8494456E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527440E+05 0.7466376E+01 0.8277050E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            2           2
+ Energy Conservation =   9.9828821E-06
+ Average Field Energy <WE> =    7637.198    
+ Average Electron Kinetic Energy <WKE> =   8.4936488E+07
+ Ratio <WE>/<WKE>=   8.9916568E-05
+ Average Transverse EField Energy <WF> =    7.369893    
+ Ratio <WF>/<WKE>=   8.6769454E-08
+ Average Magnetic Field Energy <WB> =    857.2438    
+ Ratio <WB>/<WKE>=   1.0092763E-05
+ 
+ initialization time =    5.530760    
+ deposit time =    1.378053    
+ current deposit time =    2.881917    
+ current derivative deposit time =    30.17341    
+ total deposit time =    34.43338    
+ guard time =   0.4331100    
+ solver time =   0.8024772    
+ field move time =   3.5133060E-02
+ fft and transpose time =    8.520218       5.273609    
+ push time =    4.666886    
+ particle move time =   0.1094180    
+ sort time =   0.8141498    
+ total solver time =    9.790938    
+ total particle time =    40.02383    
+ total diagnostic time =   6.5000000E-05
+ total and additional time =    49.81483     -2.7542114E-03
+ 
+ Push Time (nsec) =   0.8242017    
+ Deposit Time (nsec) =    6.081153    
+ Sort Time (nsec) =   0.1631079    
+ Total Particle Time (nsec) =    7.068463    
+ 
+ 
+ using          8  thread(s), srun -c 8
+
+
+ Total Field, Kinetic and Total Energies:
+ 0.8867827E+03 0.8494452E+08 0.8494541E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1088563E-09 0.7273409E+01 0.8867827E+03
+
+ Total Field, Kinetic and Total Energies:
+ 0.1610210E+05 0.8492845E+08 0.8494455E+08
+ Electrostatic, Transverse Electric and Magnetic Field Energies:
+ 0.1527440E+05 0.7466376E+01 0.8277050E+03
+ 
+ ntime, relativity, ndc =          100           0           1
+ MPI nodes nvpy, nvpz =            2           4
+ Energy Conservation =   1.0077060E-05
+ Average Field Energy <WE> =    7637.198    
+ Average Electron Kinetic Energy <WKE> =   8.4936480E+07
+ Ratio <WE>/<WKE>=   8.9916575E-05
+ Average Transverse EField Energy <WF> =    7.369893    
+ Ratio <WF>/<WKE>=   8.6769454E-08
+ Average Magnetic Field Energy <WB> =    857.2438    
+ Ratio <WB>/<WKE>=   1.0092764E-05
+ 
+ initialization time =    5.700516    
+ deposit time =    1.375369    
+ current deposit time =    2.886842    
+ current derivative deposit time =    30.20637    
+ total deposit time =    34.46858    
+ guard time =   0.3524682    
+ solver time =   0.7940338    
+ field move time =   3.2221965E-02
+ fft and transpose time =    6.941990       3.732852    
+ push time =    4.684459    
+ particle move time =   0.1085870    
+ sort time =   0.8053758    
+ total solver time =    8.120714    
+ total particle time =    40.06701    
+ total diagnostic time =   1.0200001E-04
+ total and additional time =    48.18782     -4.2266846E-03
+ 
+ Push Time (nsec) =   0.8273052    
+ Deposit Time (nsec) =    6.087371    
+ Sort Time (nsec) =   0.1614116    
+ Total Particle Time (nsec) =    7.076088   

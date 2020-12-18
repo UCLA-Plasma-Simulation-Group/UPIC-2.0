@@ -16,7 +16,7 @@
 !            calls DISPR
 ! written by viktor k. decyk, ucla
 ! copyright 2000, regents of the university of california
-! update: february 24, 2018
+! update: november 23, 2020
 !
 !     use libgraf1_h
       implicit none
@@ -97,8 +97,8 @@
             vmax = max(fv(nmv21+1,1),fv(nmv21+1,2),fv(nmv21+1,3))
             vmin = -vmax
          endif
-         call DISPR(fv,lbl,vmin,vmax,isc,ist,mks,nmv21,nmvf,idimv,chr,  &
-     &chrs,irc)
+         call DISPR(fv(1,1),lbl,vmin,vmax,isc,ist,mks,nmv21,nmvf,idimv, &
+     &chr,chrs,irc)
          if (irc > 127) then
             npl = irc - 128
             if (npl==0) call CLRSCRN
@@ -145,8 +145,8 @@
       write (chr,92) wk
       emax = 2.0*fe(nmv21+1,1)
       emin = 0.0
-      call DISPR(fe,lbl,emin,emax,isc,ist,mks,nmv21,nmvf,1,chr,chrs(1), &
-     &irc)
+      call DISPR(fe(1,1),lbl,emin,emax,isc,ist,mks,nmv21,nmvf,1,chr,    &
+     &chrs(1),irc)
       if (irc > 127) then
          npl = irc - 128
          if (npl==0) call CLRSCRN
@@ -217,8 +217,8 @@
          write (chr,93) fvm(1,2), fvm(2,2)
          vmax = max(fv(nmv21+1,1),fv(nmv21+1,2))
          vmin = -vmax
-         call DISPR(fv,lbl,vmin,vmax,isc,ist,mks,nmv21,nmvf,idimv,chr,  &
-     &chrs,irc)
+         call DISPR(fv(1,1),lbl,vmin,vmax,isc,ist,mks,nmv21,nmvf,idimv, &
+     &chr,chrs,irc)
          if (irc > 127) then
             npl = irc - 128
             if (npl==0) call CLRSCRN

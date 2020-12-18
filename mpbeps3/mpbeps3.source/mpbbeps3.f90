@@ -27,9 +27,7 @@
       real :: wke = 0.0, wki = 0.0, we = 0.0, wf = 0.0, wb = 0.0
       real :: zero = 0.0
 ! plist = (true,false) = list of particles leaving tiles found in push
-!     logical :: plist = .true.
-!
-      logical :: plist = .false.
+      logical :: plist = .true.
 !
 ! declare scalars for standard code
       integer :: n
@@ -1150,9 +1148,9 @@
 ! start timing loop
       call dtimer(dtime,ltime,-1)
 !
-      if (dt > 0.37*ci) then
+      if (dt > 0.36*ci) then
          if (kstrt==1) then
-            write (*,*) 'Warning: Courant condition may be exceeded!'
+            write (*,*) 'Info: Courant condition may be exceeded!'
          endif
       endif
 !
@@ -1547,8 +1545,12 @@
          dth = 0.5*dt
 ! update electromagnetic fields
       else
-         call mpmaxwel3(exyz,bxyz,cut,ffc,affp,ci,dt,wf,wb,tfield,nx,ny,&
-     &nz,kstrt,nvpy,nvpz)
+! finite-difference solver
+!        call mpmaxwel3(exyz,bxyz,cut,ffc,affp,ci,dt,wf,wb,tfield,nx,ny,&
+!    &nz,kstrt,nvpy,nvpz)
+! analytic solver
+         call mpamaxwel3(exyz,bxyz,cut,ffc,affp,ci,dt,wf,wb,tfield,nx,ny&
+     &,nz,kstrt,nvpy,nvpz)
       endif
 !
 ! calculate longitudinal force/charge in fourier space with OpenMP:

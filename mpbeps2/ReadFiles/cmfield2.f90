@@ -22,7 +22,7 @@
 ! fread2 read real scalar field
 ! freadv2 read real vector field
 ! freadfv2 read real velocity record
-! freadtr3 read real trajectory record
+! freadtr2 read real trajectory record
 ! freadps2 read real phase space record
 ! rewindff2 rewind Fortran file
 ! closeff2 close Fortran file

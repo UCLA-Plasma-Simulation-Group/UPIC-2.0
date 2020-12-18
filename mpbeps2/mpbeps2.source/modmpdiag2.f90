@@ -86,7 +86,7 @@
 ! mpcpytraj2 copies tagged particles in partt to array part
 !            calls PCPYTRAJ2
 ! dafwritefv2 writes velocity-space record in direct access binary file
-! dafwritetr2  writes trajectory record in direct access binary file
+! dafwritetr2 writes trajectory record in direct access binary file
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
 ! update: august 15, 2018

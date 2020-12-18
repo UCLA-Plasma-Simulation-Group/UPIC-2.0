@@ -1,6 +1,7 @@
 #-----------------------------------------------------------------------
 # 3D Electromagnetic MPI/OpenMP PIC code
 # written by Viktor K. Decyk, UCLA
+from __future__ import print_function
 import sys
 import math
 import numpy
@@ -18,7 +19,7 @@ complex_type = numpy.complex64
 #else:
 #  float_type = numpy.float64
 #  complex_type = numpy.complex128
-#  print "using double precision"
+#  print ("using double precision")
 
 # idimp = number of particle coordinates = 6
 # ipbc = particle boundary condition: 1 = periodic
@@ -136,13 +137,13 @@ if (in3.movion > 0):
    npxyzi = float(in3.npxi)*float(in3.npyi)*float(in3.npzi)
    npxyzbi = float(in3.npxbi)*float(in3.npybi)*float(in3.npzbi)
    npi = npxyzi + npxyzbi
-# nx/ny/nz = number of grid points in x/y/2 direction
+# nx/ny/nz = number of grid points in x/y/z direction
 nx = int(math.pow(2,in3.indx)); ny = int(math.pow(2,in3.indy))
 nz = int(math.pow(2,in3.indz))
 nxh = int(nx/2); nyh = max(1,int(ny/2)); nzh = max(1,int(nz/2))
 nxe = nx + 2; nye = ny + 2; nze = nz + 2
-nxeh = nxe/2
-nxyzh = max(nx,ny,nz)/2; nxhyz = max(nxh,ny,nz)
+nxeh = int(nxe/2)
+nxyzh = int(max(nx,ny,nz)/2); nxhyz = max(nxh,ny,nz)
 # mx1 = number of tiles in x direction
 mx1 = int((nx - 1)/in3.mx + 1)
 # nloop = number of time steps in simulation
@@ -165,17 +166,17 @@ dth = 0.0
 minit3.mpfcomp3(nvp,nx,ny,nz,in3.nvpy,in3.nvpz,ierr)
 if (ierr[0] != 0):
    if (kstrt==1):
-      print "mpfcomp3 error: nvp,nvpy,nvpz=",nvp[0],in3.nvpy,in3.nvpz
+      print ("mpfcomp3 error: nvp,nvpy,nvpz=",nvp[0],in3.nvpy,in3.nvpz)
    mpplib3.ppexit(); exit(1)
 
 # initialize data for MPI code
 edges = numpy.empty((idps),float_type,'F')
 nyzp = numpy.empty((idds),int_type,'F')
 noff = numpy.empty((idds),int_type,'F')
-nypmx = numpy.empty((idds),int_type,'F')
-nzpmx = numpy.empty((idds),int_type,'F')
-nypmn = numpy.empty((idds),int_type,'F')
-nzpmn = numpy.empty((idds),int_type,'F')
+nypmx = numpy.empty((1),int_type,'F')
+nzpmx = numpy.empty((1),int_type,'F')
+nypmn = numpy.empty((1),int_type,'F')
+nzpmn = numpy.empty((1),int_type,'F')
 # calculate partition variables:
 # edges, nyzp, noff, nypmx, nzpmx, nypmn, nzpmn
 # edges[0:1] = lower:upper boundary of particle partition in y
@@ -199,9 +200,9 @@ if (ierr[0] != 0):
 
 # check for unimplemented features
 if ((plist) and (ipbc != 1)):
-   print "ipbc != 1 and list = True not yet supported"
+   print ("ipbc != 1 and list = True not yet supported")
    plist = False
-   print "plist reset to False"
+   print ("plist reset to False")
 
 # initialize additional scalars for MPI code
 # kyp = number of complex grids in each field partition in y direction
@@ -335,12 +336,12 @@ if (in3.nustrt==1):
       ntmax = -iholep[0,0]
       ntmax = int(1.5*ntmax)
       if (kstrt==1):
-         print "reallocating electron iholep: ntmax=", ntmax
+         print ("reallocating electron iholep: ntmax=", ntmax)
       iholep = numpy.empty((ntmax+1,2),int_type,'F') 
       minit3.mpfholes3(part,edges,npp,iholep,1)
       if (iholep[0,0] < 0):
          if (kstrt==1):
-            print "iholep overflow: ntmax=", ntmax
+            print ("iholep overflow: ntmax=", ntmax)
          mpplib3.ppexit(); exit(1)
 # move electrons to correct node
       mppmod3.ipmove3(part,edges,npp,iholep,ny,nz,tinit,kstrt,in3.nvpy,
@@ -428,12 +429,12 @@ if (in3.nustrt==1):
          ntmax = -iholep[0,0]
          ntmax = int(1.5*ntmax)
          if (kstrt==1):
-            print "reallocating ion iholep: ntmax=", ntmax
+            print ("reallocating ion iholep: ntmax=", ntmax)
          iholep = numpy.empty((ntmax+1,2),int_type,'F') 
          minit3.mpfholes3(part,edges,nppi,iholep,1)
          if (iholep[0,0] < 0):
             if (kstrt==1):
-               print "iholep overflow: ntmax=", ntmax
+               print ("iholep overflow: ntmax=", ntmax)
             mpplib3.ppexit(); exit(1)
 # move ions to correct node
          mppmod3.ipmove3(part,edges,nppi,iholep,ny,nz,tinit,kstrt,
@@ -470,7 +471,7 @@ if (in3.nustrt==1):
 
 # restart to continue a run which was interrupted
 elif (in3.nustrt==2):
-   print "nustrt = 2 not yet supported"
+   print ("nustrt = 2 not yet supported")
    mpplib3.ppexit(); exit(1)
 #  if ((ntime+ntime0[0])> 0):
 #     dth = 0.5*in3.dt
@@ -572,7 +573,12 @@ if (in3.ntde > 0):
 # open file for real data: updates nderec and possibly iude
    if (kstrt==1):
       fdename = "dener3." + cdrun
-      in3.fdename[:] = fdename
+# write filename to diagnostic metafile
+      if (sys.version_info.major==3):
+         in3.fdename = fdename.ljust(in3.fdename.dtype.itemsize)
+      else:
+         in3.fdename[:] = fdename
+# open file
       if (in3.nderec==0):
          mdiag3.dafopen3(sfield,nx,kyp,kzp,iude,in3.nderec,fdename)
 
@@ -591,7 +597,12 @@ if (in3.movion==1):
 # open file for real data: updates ndirec and possibly iudi
       if (kstrt==1):
          fdiname = "denir3." + cdrun
-         in3.fdiname[:] = fdiname
+# write filename to diagnostic metafile
+         if (sys.version_info.major==3):
+            in3.fdiname = fdiname.ljust(in3.fdiname.dtype.itemsize)
+         else:
+            in3.fdiname[:] = fdiname
+# open file
          if (in3.ndirec==0):
             mdiag3.dafopen3(sfield,nx,kyp,kzp,iudi,in3.ndirec,fdiname)
 
@@ -609,7 +620,12 @@ if (in3.ntp > 0):
 # open file for real data: updates nprec and possibly iup
    if (kstrt==1):
       fpname = "potr3." + cdrun
-      in3.fpname[:] = fpname
+# write filename to diagnostic metafile
+      if (sys.version_info.major==3):
+         in3.fpname = fpname.ljust(in3.fpname.dtype.itemsize)
+      else:
+         in3.fpname[:] = fpname
+# open file
       if (in3.nprec==0):
          mdiag3.dafopen3(sfield,nx,kyp,kzp,iup,in3.nprec,fpname)
 
@@ -628,7 +644,12 @@ if (in3.ntel > 0):
 # open file for real data: updates nelrec and possibly iuel
    if (kstrt==1):
       felname = "elr3." + cdrun
-      in3.felname[:] = felname
+# write filename to diagnostic metafile
+      if (sys.version_info.major==3):
+         in3.felname = felname.ljust(in3.felname.dtype.itemsize)
+      else:
+         in3.felname[:] = felname
+# open file
       if (in3.nelrec==0):
          mdiag3.dafopenv3(vfield,nx,kyp,kzp,iuel,in3.nelrec,felname)
 
@@ -647,7 +668,12 @@ if (in3.ntje > 0):
 # open file for real data: updates njerec and possibly iuje
    if (kstrt==1):
       fjename = "curer3." + cdrun
-      in3.fjename[:] = fjename
+# write filename to diagnostic metafile
+      if (sys.version_info.major==3):
+         in3.fjename = fjename.ljust(in3.fjename.dtype.itemsize)
+      else:
+         in3.fjename[:] = fjename
+# open file
       if (in3.njerec==0):
          mdiag3.dafopenv3(vfield,nx,kyp,kzp,iuje,in3.njerec,fjename)
 
@@ -667,7 +693,12 @@ if (in3.movion==1):
 # open file for real data: updates njirec and possibly iuji
       if (kstrt==1):
          fjiname = "curir3." + cdrun
-         in3.fjiname[:] = fjiname
+# write filename to diagnostic metafile
+         if (sys.version_info.major==3):
+            in3.fjiname = fjiname.ljust(in3.fjiname.dtype.itemsize)
+         else:
+            in3.fjiname[:] = fjiname
+# open file
          if (in3.njirec==0):
             mdiag3.dafopenv3(vfield,nx,kyp,kzp,iuji,in3.njirec,fjiname)
 
@@ -688,7 +719,12 @@ if (in3.ntar > 0):
 # open file for real data: updates narrec and possibly iuar
    if (kstrt==1):
       farname = "vpotrr3." + cdrun
-      in3.farname[:] = farname
+# write filename to diagnostic metafile
+      if (sys.version_info.major==3):
+         in3.farname = farname.ljust(in3.farname.dtype.itemsize)
+      else:
+         in3.farname[:] = farname
+# open file
       if (in3.narrec==0):
          mdiag3.dafopenv3(vfield,nx,kyp,kzp,iuar,in3.narrec,farname)
 
@@ -707,7 +743,12 @@ if (in3.nta > 0):
 # open file for real data: updates narec and possibly iua
    if (kstrt==1):
       faname = "vpotr3."+ cdrun
-      in3.faname[:] = faname
+# write filename to diagnostic metafile
+      if (sys.version_info.major==3):
+         in3.faname = faname.ljust(in3.faname.dtype.itemsize)
+      else:
+         in3.faname[:] = faname
+# open file
       if (in3.narec==0):
          mdiag3.dafopenv3(vfield,nx,kyp,kzp,iua,in3.narec,faname)
 
@@ -726,7 +767,12 @@ if (in3.ntet > 0):
 # open file for real data: updates naetrec and possibly iuet
    if (kstrt==1):
       fetname = "etr3." + cdrun
-      in3.fetname[:] = fetname
+# write filename to diagnostic metafile
+      if (sys.version_info.major==3):
+         in3.fetname = fetname.ljust(in3.fetname.dtype.itemsize)
+      else:
+         in3.fetname[:] = fetname
+# open file
       if (in3.netrec==0):
          mdiag3.dafopenv3(vfield,nx,kyp,kzp,iuet,in3.netrec,fetname)
 
@@ -744,7 +790,12 @@ if (in3.ntb > 0):
 # open file for real data: updates nbrec and possibly iub
    if (kstrt==1):
       fbname = "br3." + cdrun
-      in3.fbname[:] = fbname
+# write filename to diagnostic metafile
+      if (sys.version_info.major==3):
+         in3.fbname = fbname.ljust(in3.fbname.dtype.itemsize)
+      else:
+         in3.fbname[:] = fbname
+# open file
       if (in3.nbrec==0):
          mdiag3.dafopenv3(vfield,nx,kyp,kzp,iub,in3.nbrec,fbname)
 
@@ -767,7 +818,12 @@ if (in3.ntfm > 0):
 # open file for real data: updates nferec and possibly iufe
       if (kstrt==1):
          ffename = "fmer3." + cdrun
-         in3.ffename[:] = ffename
+# write filename to diagnostic metafile
+         if (sys.version_info.major==3):
+            in3.ffename = ffename.ljust(in3.ffename.dtype.itemsize)
+         else:
+            in3.ffename[:] = ffename
+# open file
          if (in3.nferec==0):
             mdiag3.dafopenv3(fmse,nx,kyp,kzp,iufe,in3.nferec,ffename)
 # ion moments
@@ -779,7 +835,12 @@ if (in3.ntfm > 0):
 # open file for real data: updates nfirec and possibly iufi
          if (kstrt==1):
             ffiname = "fmir3." + cdrun
-            in3.ffiname[:] = ffiname
+# write filename to diagnostic metafile
+            if (sys.version_info.major==3):
+               in3.ffiname = ffiname.ljust(in3.ffiname.dtype.itemsize)
+            else:
+               in3.ffiname[:] = ffiname
+# open file
             if (in3.nfirec==0):
                mdiag3.dafopenv3(fmsi,nx,kyp,kzp,iufi,in3.nfirec,ffiname)
 
@@ -821,7 +882,12 @@ if (in3.ntv > 0):
 # open file for electron velocity data: updates nverec and possibly iuve
       if (kstrt==1):
          fvename = "fve3." + cdrun
-         in3.fvename[:] = fvename
+# write filename to diagnostic metafile
+         if (sys.version_info.major==3):
+            in3.fvename = fvename.ljust(in3.fvename.dtype.itemsize)
+         else:
+            in3.fvename[:] = fvename
+# open file
          if (in3.nverec==0):
             mdiag3.dafopenfv3(fvm,fv,fe,wk,iuve,in3.nverec,fvename)
 # cartesian distribution
@@ -861,7 +927,12 @@ if (in3.ntv > 0):
 # open file for ion velocity data: updates nvirec and possibly iuvi
          if (kstrt==1):
             fviname = "fvi3." + cdrun
-            in3.fviname[:] = fviname
+# write filename to diagnostic metafile
+            if (sys.version_info.major==3):
+               in3.fviname = fviname.ljust(in3.fviname.dtype.itemsize)
+            else:
+               in3.fviname[:] = fviname
+# open file
             if (in3.nvirec==0):
                mdiag3.dafopenfv3(fvmi,fvi,fei,wk,iuvi,in3.nvirec,
                                  fviname)
@@ -929,13 +1000,18 @@ if (in3.ntt > 0):
 # electron or ion trajectories
    if ((in3.ndt==1) or (in3.ndt==2)):
       if (in3.nprobt > 16777215):
-         print "nprobt overflow = ", in3.nprobt
+         print ("nprobt overflow = ", in3.nprobt)
          mpplib3.ppexit(); exit(1)
       in3.ndimp = idimp
 # partt = particle trajectories tracked
       partt = numpy.empty((idimp,in3.nprobt),float_type,'F')
       ftname = "tr3." + cdrun
-      in3.ftname[:] = ftname
+# write filename to diagnostic metafile
+      if (sys.version_info.major==3):
+         in3.ftname = ftname.ljust(in3.ftname.dtype.itemsize)
+      else:
+         in3.ftname[:] = ftname
+# open file
       if ((in3.nst==1) or (in3.nst==2)):
          it = int((nloop - 1)/in3.ntt + 1); itt = 0
 # partd = trajectory time history array
@@ -989,7 +1065,7 @@ if (in3.nts > 0):
          ws[0] = max(ws[0],4.0*in3.vtdy+abs(in3.vdy))
          ws[0] = max(ws[0],4.0*in3.vtdz+abs(in3.vdz))
 # fvs = global electron phase space distribution functions
-      fvs = numpy.empty((nmv21+1,in3.ndim,in3.nsxb,nybmx+1,nzb+1),
+      fvs = numpy.zeros((nmv21+1,in3.ndim,in3.nsxb,nybmx+1,nzb+1),
                         float_type,'F')
       fvs[nmv21,:,0,0,0] = 1.25*ws[0]
 # open file for electron phase space data:
@@ -998,7 +1074,12 @@ if (in3.nts > 0):
       if (in3.nserec==0):
          if (kstrt==1):
             fsename = "pse3." + cdrun
-            in3.fsename[:] = fsename
+# write filename to diagnostic metafile
+            if (sys.version_info.major==3):
+               in3.fsename = fsename.ljust(in3.fsename.dtype.itemsize)
+            else:
+               in3.fsename[:] = fsename
+# open file
             iuse =  mdiag3.get_funit(iuse)
             mdiag3.fnopens3(iuse,fsename)
 # writes distributed non-uniform partition information
@@ -1018,7 +1099,7 @@ if (in3.nts > 0):
             ws[0] = max(ws[0],4.0*vtdyi+abs(in3.vdyi))
             ws[0] = max(ws[0],4.0*vtdzi+abs(in3.vdzi))
 # fvsi = global ion phase space distribution functions
-         fvsi = numpy.empty((nmv21+1,in3.ndim,in3.nsxb,nybmx+1,nzb+1),
+         fvsi = numpy.zeros((nmv21+1,in3.ndim,in3.nsxb,nybmx+1,nzb+1),
                             float_type,'F')
          fvsi[nmv21,:,0,0,0] = 1.25*ws[0]
 # open file for ion phase space data:
@@ -1027,7 +1108,12 @@ if (in3.nts > 0):
          if (in3.nsirec==0):
             if (kstrt==1):
                fsiname = "psi3." + cdrun
-               in3.fsiname[:] = fsiname
+# write filename to diagnostic metafile
+               if (sys.version_info.major==3):
+                  in3.fsiname = fsiname.ljust(in3.fsiname.dtype.itemsize)
+               else:
+                  in3.fsiname[:] = fsiname
+# open file
                iusi =  mdiag3.get_funit(iusi)
                mdiag3.fnopens3(iusi,fsiname)
 # writes distributed non-uniform partition information
@@ -1043,21 +1129,21 @@ dtimer(dtime,ltime,-1)
 
 if (in3.dt > 0.37*in3.ci):
    if (kstrt==1):
-      print "Warning: Courant condition may be exceeded!"
+      print ("Info: Courant condition may be exceeded!")
 
 if (kstrt==1):
-   print >> iuot, "program mpbbeps3"
+   print ("program mpbbeps3",file=iuot)
 
 # * * * start main iteration loop * * *
 
-for ntime in xrange(0,nloop):
+for ntime in range(0,nloop):
 
 # print time step
    if (kstrt==1):
       if (in3.ntw > 0):
          it = int(ntime/in3.ntw)
          if (ntime==in3.ntw*it):
-            print >> iuot, "ntime = ", ntime
+            print ("ntime = ", ntime,file=iuot)
  
 # save previous current in fourier space for radiative vector potential
    if (in3.ntar > 0):
@@ -1441,8 +1527,12 @@ in3.narrec)
       dth = 0.5*in3.dt
 # update electromagnetic fields
    else:
-      mfield3.mpmaxwel3(exyz,bxyz,cut,ffc,affp,in3.ci,in3.dt,wf,wb,
-                        tfield,nx,ny,nz,kstrt,in3.nvpy,in3.nvpz)
+# finite-difference solver
+#     mfield3.mpmaxwel3(exyz,bxyz,cut,ffc,affp,in3.ci,in3.dt,wf,wb,
+#                       tfield,nx,ny,nz,kstrt,in3.nvpy,in3.nvpz)
+# analytic solver
+      mfield3.mpamaxwel3(exyz,bxyz,cut,ffc,affp,in3.ci,in3.dt,wf,wb,
+                         tfield,nx,ny,nz,kstrt,in3.nvpy,in3.nvpz)
 
 # calculate longitudinal force/charge in fourier space with OpenMP:
 # updates fxyzt, we
@@ -1673,12 +1763,12 @@ in3.narrec)
                   ntmax = -iholep[0,0]
                   ntmax = int(1.5*ntmax)
                   if (kstrt==1):
-                     print "info:reallocating iholep:ntmax=", ntmax
+                     print ("info:reallocating iholep:ntmax=", ntmax)
                   iholep = numpy.empty((ntmax+1,2),int_type,'F')
                   minit3.mpfholes3(partt,tedges,numtp,iholep,2)
                   if (iholep[0,0] < 0):
                      if (kstrt==1):
-                         print "iholep overflow: ntmax=", ntmax
+                         print ("iholep overflow: ntmax=", ntmax)
                      mpplib3.ppexit(); exit(1)
 # copies tagged particles: updates part
                mdiag3.mpcpytraj3(partt,part,tdiag,numtp)
@@ -1845,7 +1935,7 @@ in3.narrec)
 # start running simulation backwards:
 # need to advance maxwell field solver one step ahead
    if (in3.treverse==1):
-      if (((ntime+1)==(nloop/2)) or ((ntime+1)==nloop)):
+      if (((ntime+1)==int(nloop/2)) or ((ntime+1)==nloop)):
 # deposit electron current: updates cue
          mpush3.mpset_pvzero3(cue,tdjpost,in3.mx,in3.my,in3.mz,mx1,myp1,
                               mzp1)
@@ -1901,14 +1991,14 @@ in3.narrec)
          if (ntime==0):
             s[5] = ws[0]
          if (kstrt==1):
-            print >> iuot, "Total Field, Kinetic and Total Energies:"
+            print ("Total Field, Kinetic and Total Energies:",file=iuot)
             if (in3.movion==0):
                iuot.write("%14.7e %14.7e %14.7e\n" % (wef[0],wke[0],
                           ws[0])) 
             else:
                iuot.write("%14.7e %14.7e %14.7e %14.7e\n" % (wef[0],
                           wke[0],wki[0],ws[0]))
-            print >> iuot, "Electric(l,t) and Magnetic Energies:"
+            print ("Electric(l,t) and Magnetic Energies:",file=iuot)
             iuot.write("%14.7e %14.7e %14.7e\n" % (we[0],wf[0],wb[0]))
 # store energies in time history array
          wt[itw,:] = [wef[0],wke[0],wki[0],ws[0],we[0],wf[0],wb[0]]
@@ -1944,59 +2034,59 @@ tloop += float(dtime)
 # * * * end main iteration loop * * *
 
 if (kstrt==1):
-   print >> iuot
-   print >> iuot, "ntime, relativity = ", ntime, ",", in3.relativity
+   print (file=iuot)
+   print ("ntime, relativity = ", ntime, ",", in3.relativity,file=iuot)
    if (in3.treverse==1):
-      print >> iuot, "treverse = ", in3.treverse
-   print >> iuot, "MPI nodes nvpy, nvpz = ", in3.nvpy, in3.nvpz
+      print ("treverse = ", in3.treverse,file=iuot)
+   print ("MPI nodes nvpy, nvpz = ", in3.nvpy, in3.nvpz,file=iuot)
 
 # energy diagnostic
    if (in3.ntw > 0):
       s[5] = (s[6] - s[5])/wt[0,3]
-      print >> iuot, "Energy Conservation = ", float(s[5])
+      print ("Energy Conservation = ", float(s[5]),file=iuot)
       swe = s[0]; swke = s[1]; swf = s[2]; swb = s[3]
       swe = swe/float(itw)
-      print >> iuot, "Average Field Energy <WE> = ", float(swe)
+      print ("Average Field Energy <WE> = ", float(swe),file=iuot)
       swke = swke/float(itw)
-      print >> iuot, "Average Electron Kinetic Energy <WKE> = ",float(swke)
-      print >> iuot, "Ratio <WE>/<WKE>= ", float(swe/swke)
+      print ("Average Electron Kinetic Energy <WKE> = ",float(swke),file=iuot)
+      print ("Ratio <WE>/<WKE>= ", float(swe/swke),file=iuot)
       swf = swf/float(itw)
-      print >> iuot, "Average Transverse EField Energy <WF> = ", float(swf)
-      print >> iuot, "Ratio <WF>/<WKE>= ", float(swf/swke)
+      print ("Average Transverse EField Energy <WF> = ", float(swf),file=iuot)
+      print ("Ratio <WF>/<WKE>= ", float(swf/swke),file=iuot)
       swb = swb/float(itw)
-      print >> iuot, "Average Magnetic Field Energy <WB> = ", float(swb)
-      print >> iuot, "Ratio <WB>/<WKE>= ", float(swb/swke)
+      print ("Average Magnetic Field Energy <WB> = ", float(swb),file=iuot)
+      print ("Ratio <WB>/<WKE>= ", float(swb/swke),file=iuot)
 
-   print >> iuot
-   print >> iuot, "initialization time = ", tinit
-   print >> iuot, "deposit time = ", tdpost[0]
-   print >> iuot, "current deposit time = ", tdjpost[0]
+   print (file=iuot)
+   print ("initialization time = ", tinit,file=iuot)
+   print ("deposit time = ", tdpost[0],file=iuot)
+   print ("current deposit time = ", tdjpost[0],file=iuot)
    tdpost[0] = tdpost[0] + tdjpost[0]
-   print >> iuot, "total deposit time = ", tdpost[0]
-   print >> iuot, "guard time = ", tguard[0]
-   print >> iuot, "solver time = ", tfield[0]
-   print >> iuot, "field move time = ", tfmov[0]
-   print >> iuot, "fft and transpose time = ", tfft[0], tfft[1]
-   print >> iuot, "push time = ", tpush[0]
-   print >> iuot, "particle move time = ", tmov[0]
-   print >> iuot, "sort time = ", tsort[0]
+   print ("total deposit time = ", tdpost[0],file=iuot)
+   print ("guard time = ", tguard[0],file=iuot)
+   print ("solver time = ", tfield[0],file=iuot)
+   print ("field move time = ", tfmov[0],file=iuot)
+   print ("fft and transpose time = ", tfft[0], tfft[1],file=iuot)
+   print ("push time = ", tpush[0],file=iuot)
+   print ("particle move time = ", tmov[0],file=iuot)
+   print ("sort time = ", tsort[0],file=iuot)
    tfield[0] = tfield[0] + tguard[0] + tfft[0] + tfmov[0]
-   print >> iuot, "total solver time = ", tfield[0]
+   print ("total solver time = ", tfield[0],file=iuot)
    tsort[0] = tsort[0] + tmov[0]
    time = tdpost[0] + tpush[0] + tsort[0]
-   print >> iuot, "total particle time = ", time
-   print >> iuot, "total diagnostic time = ", tdiag[0]
+   print ("total particle time = ", time,file=iuot)
+   print ("total diagnostic time = ", tdiag[0],file=iuot)
    ws[0] = time + tfield[0] + tdiag[0]
    tloop = tloop - ws[0]
-   print >> iuot, "total and additional time = ", ws[0], ",", tloop
-   print >> iuot
+   print ("total and additional time = ", ws[0], ",", tloop,file=iuot)
+   print (file=iuot)
 
    ws[0] = 1.0e+09/(float(nloop)*float(np+npi))
-   print >> iuot, "Push Time (nsec) = ", tpush[0]*ws[0]
-   print >> iuot, "Deposit Time (nsec) = ", tdpost[0]*ws[0]
-   print >> iuot, "Sort Time (nsec) = ", tsort[0]*ws[0]
-   print >> iuot, "Total Particle Time (nsec) = ", time*ws[0]
-   print >> iuot
+   print ("Push Time (nsec) = ", tpush[0]*ws[0],file=iuot)
+   print ("Deposit Time (nsec) = ", tdpost[0]*ws[0],file=iuot)
+   print ("Sort Time (nsec) = ", tsort[0]*ws[0],file=iuot)
+   print ("Total Particle Time (nsec) = ", time*ws[0],file=iuot)
+   print (file=iuot)
 
 # reset parameters for final diagnostic metafile
 # electron density diagnostic
@@ -2062,7 +2152,7 @@ in3.writnml3(iudm)
 # close restart files
 s3.close_restart3(iur,iur0)
 # close output file
-print >> iuot, " * * * q.e.d. * * *"
+print (" * * * q.e.d. * * *",file=iuot)
 iuot.close()
 
 mpplib3.ppexit()

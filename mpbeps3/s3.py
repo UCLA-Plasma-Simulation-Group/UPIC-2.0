@@ -1,4 +1,5 @@
 #-----------------------------------------------------------------------
+from __future__ import print_function
 """
 High Level library for 3D Electrostatic OpenMP PIC code
 
@@ -13,9 +14,10 @@ close_restart3: close reset and restart files
 
 written by Viktor K. Decyk, UCLA
 copyright 2016-2018, regents of the university of california
-update: august 15, 2018
+update: November 3, 2020
 """
 
+import sys
 import numpy
 
 # sys.path.append('./mbeps3.source')
@@ -59,7 +61,7 @@ def open_restart3(cdrun):
          fname = "rstrt3." + cdrun0
          iur0 = open(fname,"rb+")
       else:
-         print "restart warning: old, new idruns identical"
+         print ("restart warning: old, new idruns identical")
 # allocate scratch numpy arrays
    i1 = numpy.zeros((1),int_type)
    i2 = numpy.zeros((2),int_type)
@@ -146,19 +148,19 @@ def bread_restart3a(part,kpic,noff,iur,ntime,ntime0,npp,nppmx,mx1,myp1,
    iur.seek(0,0)
    i2[:] = numpy.fromfile(iur,int_type,2)
    ntime[0] = i2[0]; ntime0[0] = i2[1]
-   print "restarting from ntime, idrun0=", ntime[0], in3.idrun0
+   print ("restarting from ntime, idrun0=", ntime[0], in3.idrun0)
 # read in number of processors
    i2[:] = numpy.fromfile(iur,int_type,2)
    it = i2[0]; iu = i2[1]
    if (it != in3.nvpy):
-      print "restart error, nvpy, nvpz=", it, in3.nvpy
+      print ("restart error, nvpy, nvpz=", it, in3.nvpy)
    elif (iu != in3.nvpz):
-      print "restart error, nvpy, nvpz=", iu, in3.nvpz
+      print ("restart error, nvpy, nvpz=", iu, in3.nvpz)
 # read in size of electron array
    i2[:] = numpy.fromfile(iur,int_type,2)
    ndimp = i2[0]; npp[0] = i2[1]
    if (ndimp != numpy.size(part,0)):
-      print "restart error, idimp=", ndimp, numpy.size(part,0)
+      print ("restart error, idimp=", ndimp, numpy.size(part,0))
 # read in electrons: updates part, npp, irc
    if (npp[0] > 0):
       it = npp[0]
@@ -202,14 +204,14 @@ def bread_restart3b(part,ppart,kpic,kipic,noff,nyzp,iur,npp,nppi,nppmx,
 # read in movion to determine if ions are moving
    i1[:] = numpy.fromfile(iur,int_type,1); it = i1[0]
    if (it != in3.movion):
-      print "movion restart error, movion = ", it, in3.movion
+      print ("movion restart error, movion = ", it, in3.movion)
 # ions are moving
    if (in3.movion==1):
 # read in size of ion array
       i2[:] = numpy.fromfile(iur,int_type,2)
       ndimp = i2[0]; nppi[0] = i2[1]
       if (ndimp != numpy.size(part,0)):
-         print "ion restart error,idimp=",ndimp,numpy.size(part,0)
+         print ("ion restart error,idimp=",ndimp,numpy.size(part,0))
 # read in ions: updates part, nppi, irc
       if (nppi[0] > 0):
          it = nppi[0]
@@ -257,18 +259,18 @@ def bread_restart3c(part,pparti,kipic,noff,nyzp,qi,iur,ntime,ntime0,
       i3[:] = numpy.fromfile(iur,int_type,3)
       it = i3[0]; iu = i3[1]; iv = i3[2]
       if (it != numpy.size(qi,0)):
-         print "qi restart error, size(qi,0)=",it,numpy.size(qi,0)
+         print ("qi restart error, size(qi,0)=",it,numpy.size(qi,0))
       elif (iu != numpy.size(qi,1)):
-         print "qi restart error, size(qi,1)=",iu,numpy.size(qi,1)
+         print ("qi restart error, size(qi,1)=",iu,numpy.size(qi,1))
       elif (iv != numpy.size(qi,2)):
-         print "qi restart error, size(qi,2)=",iv,numpy.size(qi,2)
+         print ("qi restart error, size(qi,2)=",iv,numpy.size(qi,2))
       il = it*iu*iv
       if (il > 0):
          qi[:,:,:] = numpy.fromfile(iur,float_type,il).reshape(it,iu,iv)
 # read in electric field parameter
    i1[:] = numpy.fromfile(iur,int_type,1); it = i1[0]
    if (it != in3.emf):
-      print "warning: emf values differ, emf=",it,in3.emf
+      print ("warning: emf values differ, emf=",it,in3.emf)
    ntime0[0] = ntime0[0] + ntime[0]
 
 #-----------------------------------------------------------------------

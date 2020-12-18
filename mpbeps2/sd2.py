@@ -9,7 +9,7 @@ bread_drestart33: read in basic restart file for darwin code
 
 written by Viktor K. Decyk and Joshua Kelly, UCLA
 copyright 2016-2018, regents of the university of california
-update: august 15, 2018
+update: November 1, 2020
 """
 
 import numpy
@@ -61,11 +61,11 @@ def bread_drestart23(cus,wpm,q2m0,iur):
    i3[:] = numpy.fromfile(iur,int_type,3)
    it = i3[0]; iu = i3[1]; iv = i3[2]
    if (it != ndim):
-      print "cus restart error, size(cus,0)=", it, ndim
+      print ("cus restart error, size(cus,0)=", it, ndim)
    elif (iu != nxv):
-      print "cus restart error, size(cus,1)=", iu, nxv
+      print ("cus restart error, size(cus,1)=", iu, nxv)
    elif (iv != nypmx):
-      print "cus restart error, size(cus,2)=", iv, nypmx
+      print ("cus restart error, size(cus,2)=", iv, nypmx)
 # read in field array
    il = it*iu*iv
    if (il > 0):

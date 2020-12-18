@@ -1,4 +1,5 @@
 #-----------------------------------------------------------------------
+from __future__ import print_function
 """
 High Level library for 2-1/2D Electromagnetic OpenMP PIC code
 
@@ -9,7 +10,7 @@ bread_restart23:  read in basic restart file for electromagnetic code
 
 written by Viktor K. Decyk, UCLA
 copyright 2016-2018, regents of the university of california
-update: august 15, 2018
+update: November 1, 2020
 """
 
 import numpy
@@ -51,11 +52,11 @@ def bread_restart23(exyz,bxyz,iur):
    i3[:] = numpy.fromfile(iur,int_type,3)
    it = i3[0]; iu = i3[1]; iv = i3[2]
    if (it != ndim):
-      print "exyz/bxyz restart error, size(exyz,0)=", it, ndim
+      print ("exyz/bxyz restart error, size(exyz,0)=", it, ndim)
    elif (iu != nyv):
-      print "exyz/bxyz restart error, size(exyz,1)=", iu, nyv
+      print ("exyz/bxyz restart error, size(exyz,1)=", iu, nyv)
    elif (iv != kxpd):
-      print "exyz/bxyz restart error, size(exyz,2)=", iv, kxpd
+      print ("exyz/bxyz restart error, size(exyz,2)=", iv, kxpd)
 # read in field arrays
    il = it*iu*iv
    if (il > 0):

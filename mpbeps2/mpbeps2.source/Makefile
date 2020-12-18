@@ -9,6 +9,9 @@
 #FC90 = gfortran -fopenmp
 #CC = gcc
 
+#PFC = f2py --fcompiler=gnu95
+#PCC = f2py --compiler=unix
+
 #OPTS90 = -O3
 #OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8
 #OPTS90 = -O3 -fcheck=bounds -fdefault-real-8 -fdefault-double-8 -Wall -std=f95
@@ -16,8 +19,16 @@
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
 
+#Python
+#PYOPTS90 = $(OPTS90) -fPIC
+#PYCCOPTS = $(CCOPTS) -fPIC
+#export CFLAGS = -O3 -fopenmp
+#export CFLAGS = -O3 -fopenmp -Wall
+
 #LOPTS = -lgomp
-#LEGACY =
+#LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
+#LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11
+#LEGACY = -std=legacy
 
 # Makefile Intel compiler with Mac OS X
 
@@ -37,7 +48,7 @@
 
 #FF03 = -Tf
 
-#LEGACY = -nofor_main
+#NOMAIN = -nofor_main
 
 # Makefile Intel compiler with Linux
 
@@ -62,7 +73,7 @@
 
 #LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
 #LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11
-#LEGACY = -nofor_main
+#NOMAIN = -nofor_main
 
 # Makefile gfortran compiler with Linux
 
@@ -86,14 +97,13 @@ CCOPTS = -O3 -std=c99
 #Python
 PYOPTS90 = $(OPTS90) -fPIC
 PYCCOPTS = $(CCOPTS) -fPIC
-
 #export CFLAGS = -O3 -fopenmp
 #export CFLAGS = -O3 -fopenmp -Wall
 
 LOPTS = -lgomp
 #LGOPTS = -lYgl -L/usr/X11R6/lib -lX11
 #LGOPTS = gks2/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11
-LEGACY =
+LEGACY = -std=legacy
 
 # Makefile PGI compiler with Linux
 
@@ -111,7 +121,7 @@ LEGACY =
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
 
-#LEGACY = -Mnomain
+#NOMAIN = -Mnomain
 
 # Makefile Cray compiler with Linux
 
@@ -127,8 +137,6 @@ LEGACY =
 #OPTS90 = -O 3 -R b -s real64 -en
 
 #CCOPTS = -O 3 -h c99 -h conform
-
-#LEGACY =
 
 #
 
@@ -269,7 +277,7 @@ noMPI.o : noMPI.f
 	$(FC90) $(OPTS90) -o noMPI.o -c noMPI.f
 
 nmpplib2.o : mpplib2.f90 noMPImod.o
-	$(FC90) $(OPTS90) -o nmpplib2.o -c mpplib2.f90
+	$(FC90) $(OPTS90) $(LEGACY) -o nmpplib2.o -c mpplib2.f90
 
 nmppmod2.o : mppmod2.f90 nmpplib2.o
 	$(FC90) $(OPTS90) -o nmppmod2.o -c mppmod2.f90
@@ -282,7 +290,7 @@ omplib.o : omplib.f90
 	$(FC90) $(OPTS90) -o omplib.o -c omplib.f90
 
 mpplib2.o : mpplib2.f90
-	$(MPIFC) $(OPTS90) -o mpplib2.o -c mpplib2.f90
+	$(MPIFC) $(OPTS90) $(LEGACY) -o mpplib2.o -c mpplib2.f90
 
 mppmod2.o : mppmod2.f90 mpplib2.o
 	$(FC90) $(OPTS90) -o mppmod2.o -c mppmod2.f90
@@ -324,7 +332,7 @@ libmpgard2.o : libmpgard2.f
 	$(FC90) $(OPTS90) -o libmpgard2.o -c libmpgard2.f
 
 libvmpfft2.o : libvmpfft2.f
-	$(FC90) $(OPTS90) -o libvmpfft2.o -c libvmpfft2.f
+	$(FC90) $(OPTS90) $(LEGACY) -o libvmpfft2.o -c libvmpfft2.f
 
 libmpfield2.o : libmpfield2.f
 	$(FC90) $(OPTS90) -o libmpfield2.o -c libmpfield2.f
@@ -502,7 +510,7 @@ pympgard2.o : libmpgard2.f
 	$(FC90) $(PYOPTS90) -o pympgard2.o -c libmpgard2.f
 
 pympfft2.o : libvmpfft2.f
-	$(FC90) $(PYOPTS90) -o pympfft2.o -c libvmpfft2.f
+	$(FC90) $(PYOPTS90) $(LEGACY) -o pympfft2.o -c libvmpfft2.f
 
 pympfield2.o : libmpfield2.f
 	$(FC90) $(PYOPTS90) -o pympfield2.o -c libmpfield2.f

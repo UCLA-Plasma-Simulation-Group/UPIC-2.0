@@ -8,7 +8,10 @@
 ! VMIPPBPOISP23 solves 2-1/2d poisson's equation for unsmoothed magnetic
 !               field
 ! VMPPMAXWEL2 solves 2-1/2d maxwell's equation for unsmoothed transverse
-!             electric and magnetic fields
+!             electric and magnetic fields using verlet algorithm
+! VMPPAMAXWEL2 solves 2-1/2d maxwell's equation for unsmoothed
+!              transverse electric and magnetic fields using analytic
+!              algorithm due to Irving Haber
 ! MPPEMFIELD2 adds and smooths or copies and smooths complex vector
 !             fields in fourier space
 ! MPPADDCUEI2 adds electron and ion current densities
@@ -52,7 +55,7 @@
 ! SET_PCVZERO2 zeros out transverse field array.
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: january 11, 2019
+! update: december 7, 2020
 !-----------------------------------------------------------------------
       subroutine VMPPOIS22(q,fxy,isign,ffc,ax,ay,affp,we,nx,ny,kstrt,nyv&
      &,kxp,nyhd)
@@ -282,7 +285,7 @@
 ! calculate force/charge and sum field energy
    30 sum1 = 0.0d0
       if (kstrt.gt.nxh) go to 70
-! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2-
+! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
 !$OMP PARALLEL DO PRIVATE(j,k,k1,dkx,at1,at2,at3,zt1,zt2,wp)            &
 !$OMP& REDUCTION(+:sum1)
       do 50 j = 1, kxps
@@ -484,10 +487,10 @@
 ! aimag(ffc(k,j)) = finite-size particle shape factor s
 ! real(ffc(k,j)) = potential green's function g
 ! for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
-! ci = reciprical of velocity of light
+! ci = reciprocal of velocity of light
 ! magnetic field energy is also calculated, using
-! wm = nx*ny*nz*sum((affp/(kx**2+ky**2+kz**2))*ci*ci
-!    |cu(kx,ky,kz)*s(kx,ky,kz)|**2), where
+! wm = nx*ny*sum((affp/(kx**2+ky**2))*ci*ci
+!    |cu(kx,kyz)*s(kx,ky)|**2), where
 ! affp = normalization constant = nx*ny/np, where np=number of particles
 ! this expression is valid only if the current is divergence-free
 ! nx/ny = system length in x/y direction
@@ -629,7 +632,7 @@
 ! the magnetic field is finally updated the remaining half step with
 ! the new electric field and the previous magnetic field equations.
 ! where kx = 2pi*j/nx, ky = 2pi*k/ny, c2 = 1./(ci*ci)
-! and s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)
+! and s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)/2)
 ! j,k = fourier mode numbers, except for
 ! ex(kx=pi) = ey(kx=pi) = ez(kx=pi) = 0,
 ! ex(ky=pi) = ey(ky=pi) = ez(ky=pi) = 0,
@@ -640,15 +643,15 @@
 ! bxy(i,k,j) = i-th component of complex magnetic field,
 ! for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
 ! aimag(ffc(k,j)) = finite-size particle shape factor s
-! s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)
+! s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)/2)
 ! for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
 ! affp = normalization constant = nx*ny/np, where np=number of particles
-! ci = reciprical of velocity of light
+! ci = reciprocal of velocity of light
 ! dt = time interval between successive calculations
 ! transverse electric field energy is also calculated, using
-! wf = nx*ny*nz**sum((1/affp)*|exyz(kx,ky,kz)|**2)
+! wf = nx*ny*sum((1/affp)*|exyz(kx,ky)|**2)
 ! magnetic field energy is also calculated, using
-! wm = nx*ny*nz**sum((c2/affp)*|bxyz(kx,ky,kz)|**2)
+! wm = nx*ny*sum((c2/affp)*|bxyz(kx,ky)|**2)
 ! nx/ny = system length in x/y direction
 ! kxp = number of data values per block
 ! kstrt = starting data block number
@@ -862,6 +865,310 @@
    40 continue
       wf = real(nx)*real(ny)*sum1
       wm = real(nx)*real(ny)*c2*sum2
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine VMPPAMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny,    &
+     &kstrt,nyv,kxp,nyhd)
+! this subroutine solves 2d maxwell's equation in fourier space for
+! transverse electric and magnetic fields with periodic boundary
+! conditions, using an analytic scheme due to Irving Haber
+! input: all, output: wf, wm, exy, bxy
+! approximate flop count is: 245*nxc*nyc + 84*(nxc + nyc)
+! as well as nxc*nyc + nxc + nyc divides, square roots, sines, cosines,
+! and tangents
+! where nxc = (nx/2-1)/nvp, nyc = ny/2 - 1, and nvp = number of procs
+! equations being solved are:
+! (c*Bn)/dt = -ick X En and
+! En/dt = ick X (c*Bn) - JTn+1/2
+! Note that the normalization of the E and B fields differ:
+! B is normalized to the dimensionless cyclotron frequency.
+! solutions are given by:
+! En+1 = C*En + iS*(k X (c*Bn)) - S*JTn+1/2/c
+! c*Bn+1 = C*(c*Bn) - iS*(k X En)/c + iS*T*(k X JTn+1/2)
+! where En = input exy, En+1 = output exy
+! Bn = input bxy, Bn+1 = output bxy, JTn+1/2 =  affp*cu*s(kx,ky)
+! C = cos(k*c*dt),  S = sin(k*c*dt)/k, T = tan(k*c*dt/2)/kc
+! kx = 2pi*j/nx, ky = 2pi*k/ny, k = sqrt(kx*kx + ky*ky),
+! c = 1.0/ci and s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)/2)
+! j,k = fourier mode numbers, except for
+! ex(kx=pi) = ey(kx=pi) = ez(kx=pi) = 0,
+! ex(ky=pi) = ey(ky=pi) = ez(ky=pi) = 0,
+! ex(kx=0,ky=0) = ey(kx=0,ky=0) = ez(kx=0,ky=0) = 0.
+! and similarly for bx, by, bz.
+! cu(i,k,j) = i-th component of complex current density and
+! exy(i,k,j) = i-th component of complex electric field,
+! bxy(i,k,j) = i-th component of complex magnetic field,
+! for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
+! aimag(ffc(k,j)) = finite-size particle shape factor s
+! s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)/2)
+! for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
+! affp = normalization constant = nx*ny/np, where np=number of particles
+! ci = reciprocal of velocity of light
+! dt = time interval between successive calculations
+! transverse electric field energy is also calculated, using
+! wf = nx*ny**sum((1/affp)*|exyz(kx,ky)|**2)
+! magnetic field energy is also calculated, using
+! wm = nx*ny*sum((c2/affp)*|bxyz(kx,ky)|**2)
+! nx/ny = system length in x/y direction
+! kxp = number of data values per block
+! kstrt = starting data block number
+! nyv = first dimension of field arrays, must be >= ny
+! nyhd = first dimension of form factor array, must be >= nyh
+      implicit none
+      integer nx, ny, kstrt, nyv, kxp, nyhd
+      real affp, ci, dt, wf, wm
+      complex exy, bxy, cu, ffc
+      dimension exy(3,nyv,kxp), bxy(3,nyv,kxp), cu(3,nyv,kxp)
+      dimension ffc(nyhd,kxp)
+! local data
+      integer nxh, nyh, ny2, ks, joff, kxps, j, k, k1
+      real dnx, dny, dth, cc, cdth, anorm, dkx, dky, dkx2, t2, t, c, s
+      real sc, afs, aft
+      complex zero, zt1, zt2, zt3, zt4, zt5, zt6, zt7, zt8, zt9
+      real at1
+      double precision wp, ws, sum1, sum2
+      if (ci.le.0.0) return
+      nxh = nx/2
+      nyh = max(1,ny/2)
+      ny2 = ny + 2
+      ks = kstrt - 1
+      joff = kxp*ks
+      kxps = min(kxp,max(0,nxh-joff))
+      joff = joff - 1
+      dnx = 6.28318530717959/real(nx)
+      dny = 6.28318530717959/real(ny)
+      dth = 0.5*dt
+      cc = 1.0/ci
+      cdth = cc*dth
+      zero = cmplx(0.0,0.0)
+      anorm = 1.0/affp
+! update electromagnetic field and sum field energies
+      sum1 = 0.0d0
+      sum2 = 0.0d0
+      if (kstrt.gt.nxh) go to 40
+! calculate the electromagnetic fields
+! mode numbers 0 < kx < nx/2 and 0 < ky < ny/2
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(j,k,k1,dkx,dkx2,dky,aft,t2,t,s,c,sc,afs,at1,zt1,zt2,zt3, &
+!$OMP& zt4,zt5,zt6,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum1,sum2)
+      do 20 j = 1, kxps
+      dkx = dnx*real(j + joff)
+      dkx2 = dkx*dkx
+      ws = 0.0d0
+      wp = 0.0d0
+      if ((j+joff).gt.0) then
+!dir$ ivdep
+         do 10 k = 2, nyh
+         k1 = ny2 - k
+         dky = dny*real(k - 1)
+         aft = affp*aimag(ffc(k,j))*ci
+         t2 = sqrt(dky*dky + dkx2)
+         t = t2*cdth
+         t2 = 1.0/t2
+         s = t + t
+         c = cos(s)
+         s = sin(s)*t2
+         t = tan(t)*t2
+         afs = s*aft
+         sc = s*cc
+         aft = aft*t
+         s = s*ci
+! update fields for ky > 0
+! calculate iB
+         zt1 = cmplx(-aimag(bxy(3,k,j)),real(bxy(3,k,j)))
+         zt2 = cmplx(-aimag(bxy(2,k,j)),real(bxy(2,k,j)))
+         zt3 = cmplx(-aimag(bxy(1,k,j)),real(bxy(1,k,j)))
+! update electric field
+         zt4 = c*exy(1,k,j) + sc*(dky*zt1) - afs*cu(1,k,j)
+         zt5 = c*exy(2,k,j) - sc*(dkx*zt1) - afs*cu(2,k,j)
+         zt6 = c*exy(3,k,j) + sc*(dkx*zt2 - dky*zt3) - afs*cu(3,k,j)
+! calculate iE
+         zt1 = cmplx(-aimag(exy(3,k,j)),real(exy(3,k,j)))
+         zt2 = cmplx(-aimag(exy(2,k,j)),real(exy(2,k,j)))
+         zt3 = cmplx(-aimag(exy(1,k,j)),real(exy(1,k,j)))
+! store electric field and calculate energy
+         exy(1,k,j) = zt4
+         exy(2,k,j) = zt5
+         exy(3,k,j) = zt6
+         at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5) + zt6*conjg(zt6))
+         ws = ws + dble(at1)
+! calculate ijperp
+         zt7 = cmplx(-aimag(cu(3,k,j)),real(cu(3,k,j)))
+         zt8 = cmplx(-aimag(cu(2,k,j)),real(cu(2,k,j)))
+         zt9 = cmplx(-aimag(cu(1,k,j)),real(cu(1,k,j)))
+! update magnetic field 
+         zt4 = c*bxy(1,k,j) - s*dky*(zt1 - aft*zt7)
+         zt5 = c*bxy(2,k,j) + s*dkx*(zt1 - aft*zt7)
+         zt6 = c*bxy(3,k,j) - s*(dkx*(zt2 - aft*zt8) -                  &
+     &dky*(zt3 - aft*zt9))
+! store magnetic field and calculate energy
+         bxy(1,k,j) = zt4
+         bxy(2,k,j) = zt5
+         bxy(3,k,j) = zt6
+         at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5) + zt6*conjg(zt6))
+         wp = wp + dble(at1)
+! update fields for ky < 0
+! calculate iB
+         zt1 = cmplx(-aimag(bxy(3,k1,j)),real(bxy(3,k1,j)))
+         zt2 = cmplx(-aimag(bxy(2,k1,j)),real(bxy(2,k1,j)))
+         zt3 = cmplx(-aimag(bxy(1,k1,j)),real(bxy(1,k1,j)))
+! update electric field
+         zt4 = c*exy(1,k1,j) - sc*(dky*zt1) - afs*cu(1,k1,j)
+         zt5 = c*exy(2,k1,j) - sc*(dkx*zt1) - afs*cu(2,k1,j)
+         zt6 = c*exy(3,k1,j) + sc*(dkx*zt2 + dky*zt3) - afs*cu(3,k1,j)
+! calculate iE
+         zt1 = cmplx(-aimag(exy(3,k1,j)),real(exy(3,k1,j)))
+         zt2 = cmplx(-aimag(exy(2,k1,j)),real(exy(2,k1,j)))
+         zt3 = cmplx(-aimag(exy(1,k1,j)),real(exy(1,k1,j)))
+! store electric field and calculate energy
+         exy(1,k1,j) = zt4
+         exy(2,k1,j) = zt5
+         exy(3,k1,j) = zt6
+         at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5) + zt6*conjg(zt6))
+         ws = ws + dble(at1)
+! calculate ijperp
+         zt7 = cmplx(-aimag(cu(3,k1,j)),real(cu(3,k1,j)))
+         zt8 = cmplx(-aimag(cu(2,k1,j)),real(cu(2,k1,j)))
+         zt9 = cmplx(-aimag(cu(1,k1,j)),real(cu(1,k1,j)))
+! update magnetic field 
+         zt4 = c*bxy(1,k1,j) + s*dky*(zt1 - aft*zt7)
+         zt5 = c*bxy(2,k1,j) + s*dkx*(zt1 - aft*zt7)
+         zt6 = c*bxy(3,k1,j) - s*(dkx*(zt2 - aft*zt8) +                 &
+     &dky*(zt3 - aft*zt9))
+! store magnetic field and calculate energy
+         bxy(1,k1,j) = zt4
+         bxy(2,k1,j) = zt5
+         bxy(3,k1,j) = zt6
+         at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5) + zt6*conjg(zt6))
+         wp = wp + dble(at1)
+   10    continue
+! mode numbers ky = 0, ny/2
+         k1 = nyh + 1
+         aft = affp*aimag(ffc(1,j))*ci
+         t2 = sqrt(dkx2)
+         t = t2*cdth
+         t2 = 1.0/t2
+         s = t + t
+         c = cos(s)
+         s = sin(s)*t2
+         t = tan(t)*t2
+         afs = s*aft
+         sc = s*cc
+         aft = aft*t
+         s = s*ci
+! calculate iB
+         zt1 = cmplx(-aimag(bxy(3,1,j)),real(bxy(3,1,j)))
+         zt2 = cmplx(-aimag(bxy(2,1,j)),real(bxy(2,1,j)))
+! update electric field
+         zt5 = c*exy(2,1,j) - sc*(dkx*zt1) - afs*cu(2,1,j)
+         zt6 = c*exy(3,1,j) + sc*(dkx*zt2) - afs*cu(3,1,j)
+! calculate iE
+         zt1 = cmplx(-aimag(exy(3,1,j)),real(exy(3,1,j)))
+         zt2 = cmplx(-aimag(exy(2,1,j)),real(exy(2,1,j)))
+! store electric field and calculate energy
+         exy(1,1,j) = zero
+         exy(2,1,j) = zt5
+         exy(3,1,j) = zt6
+         at1 = anorm*(zt5*conjg(zt5) + zt6*conjg(zt6))
+         ws = ws + dble(at1)
+! calculate ijperp
+         zt7 = cmplx(-aimag(cu(3,1,j)),real(cu(3,1,j)))
+         zt8 = cmplx(-aimag(cu(2,1,j)),real(cu(2,1,j)))
+! update magnetic field 
+         zt5 = c*bxy(2,1,j) + s*dkx*(zt1 - aft*zt7)
+         zt6 = c*bxy(3,1,j) - s*dkx*(zt2 - aft*zt8)
+! store magnetic field and calculate energy
+         bxy(1,1,j) = zero
+         bxy(2,1,j) = zt5
+         bxy(3,1,j) = zt6
+         at1 = anorm*(zt5*conjg(zt5) + zt6*conjg(zt6))
+         wp = wp + dble(at1)
+         exy(1,k1,j) = zero
+         exy(2,k1,j) = zero
+         exy(3,k1,j) = zero
+         bxy(1,k1,j) = zero
+         bxy(2,k1,j) = zero
+         bxy(3,k1,j) = zero
+      endif
+      sum1 = sum1 + ws
+      sum2 = sum2 + wp
+   20 continue
+!$OMP END PARALLEL DO
+      ws = 0.0d0
+      wp = 0.0d0
+! mode numbers kx = 0, nx/2
+      if (ks.eq.0) then
+!dir$ ivdep
+         do 30 k = 2, nyh
+         k1 = ny2 - k
+         dky = dny*real(k - 1)
+         aft = affp*aimag(ffc(k,1))*ci
+         t2 = sqrt(dky*dky)
+         t = t2*cdth
+         t2 = 1.0/t2
+         s = t + t
+         c = cos(s)
+         s = sin(s)*t2
+         t = tan(t)*t2
+         afs = s*aft
+         sc = s*cc
+         aft = aft*t
+         s = s*ci
+! update fields for ky > 0
+! calculate iB
+         zt1 = cmplx(-aimag(bxy(3,k,1)),real(bxy(3,k,1)))
+         zt3 = cmplx(-aimag(bxy(1,k,1)),real(bxy(1,k,1)))
+! update electric field
+         zt4 = c*exy(1,k,1) + sc*(dky*zt1) - afs*cu(1,k,1)
+         zt6 = c*exy(3,k,1) - sc*(dky*zt3) - afs*cu(3,k,1)
+! calculate iE
+         zt1 = cmplx(-aimag(exy(3,k,1)),real(exy(3,k,1)))
+         zt3 = cmplx(-aimag(exy(1,k,1)),real(exy(1,k,1)))
+! store electric field and calculate energy
+         exy(1,k,1) = zt4
+         exy(2,k,1) = zero
+         exy(3,k,1) = zt6
+         at1 = anorm*(zt4*conjg(zt4) + zt6*conjg(zt6))
+         ws = ws + dble(at1)
+! calculate ijperp
+         zt7 = cmplx(-aimag(cu(3,k,1)),real(cu(3,k,1)))
+         zt9 = cmplx(-aimag(cu(1,k,1)),real(cu(1,k,1)))
+! update magnetic field 
+         zt4 = c*bxy(1,k,1) - s*dky*(zt1 - aft*zt7)
+         zt6 = c*bxy(3,k,1) + s*dky*(zt3 - aft*zt9)
+! store magnetic field and calculate energy
+         bxy(1,k,1) = zt4
+         bxy(2,k,1) = zero
+         bxy(3,k,1) = zt6
+         at1 = anorm*(zt4*conjg(zt4) + zt6*conjg(zt6))
+         wp = wp + dble(at1)
+         bxy(1,k1,1) = zero
+         bxy(2,k1,1) = zero
+         bxy(3,k1,1) = zero
+         exy(1,k1,1) = zero
+         exy(2,k1,1) = zero
+         exy(3,k1,1) = zero
+   30    continue
+         k1 = nyh + 1
+         bxy(1,1,1) = zero
+         bxy(2,1,1) = zero
+         bxy(3,1,1) = zero
+         exy(1,1,1) = zero
+         exy(2,1,1) = zero
+         exy(3,1,1) = zero
+         bxy(1,k1,1) = zero
+         bxy(2,k1,1) = zero
+         bxy(3,k1,1) = zero
+         exy(1,k1,1) = zero
+         exy(2,k1,1) = zero
+         exy(3,k1,1) = zero
+      endif
+      sum1 = sum1 + ws
+      sum2 = sum2 + wp
+   40 continue
+      wf = real(nx)*real(ny)*sum1
+      wm = real(nx)*real(ny)*(cc*cc)*sum2
       return
       end
 !-----------------------------------------------------------------------
@@ -1469,7 +1776,7 @@
 ! ax/ay = half-width of particle in x/y direction
 ! affp = normalization constant = nx*ny/np, where np=number of particles
 ! wp0 = normalized total plasma frequency squared
-! ci = reciprical of velocity of light
+! ci = reciprocal of velocity of light
 ! transverse electric field energy is also calculated, using
 ! wf = nx*ny*sum((affp/((kx**2+ky**2)*ci*ci)**2)
 !    |dcu(kx,ky)*s(kx,ky)|**2)
@@ -2409,7 +2716,7 @@
 ! az(kx,ky) = (sqrt(-1)*(kx*by(kx,ky)-ky*bx(kx,ky))
 !                       - affp*ci2*cuz(kx,ky)*s(kx,ky))/(kx*kx+ky*ky)
 ! where kx = 2pi*j/nx, ky = 2pi*k/ny, ci2 = ci*ci
-! and s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)
+! and s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)/2)
 ! j,k = fourier mode numbers, except for
 ! ax(kx=pi) = ay(kx=pi) = az(kx=pi) = 0,
 ! ax(ky=pi) = ay(ky=pi) = az(ky=pi) = 0,
@@ -2419,10 +2726,10 @@
 ! potential,
 ! bxy(i,k,j) = i-th component of complex magnetic field,
 ! aimag(ffc(k,j)) = finite-size particle shape factor s,
-! s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)
+! s(kx,ky) = exp(-((kx*ax)**2+(ky*ay)**2)/2)
 ! all for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
 ! affp = normalization constant = nx*ny/np, where np=number of particles
-! ci = reciprical of velocity of light
+! ci = reciprocal of velocity of light
 ! nx/ny = system length in x/y direction
 ! kstrt = starting data block number
 ! nyv = second dimension of field arrays, must be >= ny
@@ -2548,8 +2855,7 @@
 ! for fourier mode (jj-1,k-1), where jj = j + kxp*(kstart - 1)
 ! ci = reciprocal of velocity of light
 ! magnetic field energy is also calculated, using
-! wm = nx*ny*nz*sum((affp/(kx**2+ky**2+kz**2))*ci*ci
-!    |cu(kx,ky,kz)*s(kx,ky,kz)|**2)
+! wm = nx*ny*sum((affp/(kx**2+ky**2))*ci*ci*|cu(kx,ky)*s(kx,ky)|**2)
 ! where affp = normalization constant = nx*ny/np,
 ! where np=number of particles
 ! this expression is valid only if the current is divergence-free
@@ -2673,10 +2979,10 @@
 ! real(ffe(k,j)) = potential green's function g
 ! for fourier mode (jj-1,k-1), where jj = j + kxp*(kstrt - 1)
 ! affp = normalization constant = nx*ny/np, where np=number of particles
-! ci = reciprical of velocity of light
+! ci = reciprocal of velocity of light
 ! transverse electric field energy is also calculated, using
 ! wf = nx*ny*sum((affp/((kx**2+ky**2)*ci*ci)**2)
-!    |dcu(kx,ky)*s(kx,ky)|**2)
+                 |dcu(kx,ky)*s(kx,ky)|**2)
 ! this expression is valid only if the derivative of current is
 ! divergence-free
 ! nx/ny = system length in x/y direction

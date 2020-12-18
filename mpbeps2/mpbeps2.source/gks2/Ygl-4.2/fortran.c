@@ -8,6 +8,12 @@ static const char vcid[] = "$Id: fortran.c,v 4.2 2007-05-08 13:23:57+02 fred Exp
 
 #include "header.h" /* for COVERSLEEP & string.h */
 
+Display *getXdpy(void);
+Window getXwid(void);
+Window getXdid(void);
+GC getXgc(void);
+Int32 winX(Display *dpy, Window win);
+
 #ifndef YGL_PRE
 # define YGL_PRE(x) x
 #endif

@@ -56,7 +56,7 @@
 !          for a gaussian density profile with no background density
 ! written by Viktor K. Decyk, UCLA
 ! copyright 2016, regents of the university of california
-! update: march 23, 2018
+! update: november 1, 2020
 !-----------------------------------------------------------------------
       subroutine NEXTRAN3(nextrand,ndim,np)
 ! for 2d code, this subroutine skips over nextrand groups of random
@@ -488,6 +488,7 @@
 ! for 3d code, this subroutine calculates initial particle co-ordinates
 ! and momenta with uniform density and maxwell-juttner distribution with
 ! drift for relativistic particles and distributed data.
+! algorithm is only approximate, valid when gamma of distribution < 4
 ! f(p) = exp(-(gamma-1)*(m0c**2)/kT), where gamma = sqrt(1+(p/m0c)**2)
 ! since (gamma-1)*(m0c**2) = (p**2/m0)/(gamma+1), we can write
 ! f(p) = exp(-pt**2/2), where pt**2 = p**2/((gamma+1)/2)*m0*kT
@@ -1255,6 +1256,7 @@
 ! for 3d code, this subroutine calculates initial particle velocities
 ! momentum with maxwell-juttner distribution with drift
 ! for relativistic particles and distributed data.
+! algorithm is only approximate, valid when gamma of distribution < 4
 ! f(p) = exp(-(gamma-1)*(m0c**2)/kT), where gamma = sqrt(1+(p/m0c)**2)
 ! since (gamma-1)*(m0c**2) = (p**2/m0)/(gamma+1), we can write
 ! f(p) = exp(-pt**2/2), where pt**2 = p**2/((gamma+1)/2)*m0*kT

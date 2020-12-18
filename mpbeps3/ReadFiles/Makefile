@@ -99,34 +99,47 @@ LEGACY =
 
 # Linkage rules
 
-all : preadf3 pvreadf3 pflreadf3 pfvreadf3 ptreadf3 psreadf3
+all : diag3 freaders
+
+freaders : preadf3 pvreadf3 pflreadf3 pfvreadf3 ptreadf3 psreadf3
+
+diag3 : diag3.o modpreadf3.o libcmfield3.o nulllib3.o
+	$(FC90) $(OPTS90) $(LOPTS) -o diag3 \
+    diag3.o input3mod.o cmfield3.o libcmfield3_h.o modpreadf3.o libcmfield3.o \
+    nulllib3.o
 
 preadf3 : preadf3.o libcmfield3.o nulllib3.o
 	$(FC90) $(OPTS90) $(LOPTS) -o preadf3 \
-    preadf3.o input3mod.o cmfield3.o libcmfield3_h.o libcmfield3.o nulllib3.o
+    preadf3.o input3mod.o cmfield3.o libcmfield3_h.o modpreadf3.o libcmfield3.o \
+    nulllib3.o
 
 pvreadf3 : pvreadf3.o libcmfield3.o nulllib3.o
 	$(FC90) $(OPTS90) $(LOPTS) -o pvreadf3 \
-    pvreadf3.o input3mod.o cmfield3.o libcmfield3_h.o libcmfield3.o nulllib3.o
+    pvreadf3.o input3mod.o cmfield3.o libcmfield3_h.o modpreadf3.o libcmfield3.o \
+    nulllib3.o
 
 pflreadf3 : pflreadf3.o libcmfield3.o nulllib3.o
 	$(FC90) $(OPTS90) $(LOPTS) -o pflreadf3 \
-    pflreadf3.o input3mod.o cmfield3.o libcmfield3_h.o libcmfield3.o nulllib3.o
+    pflreadf3.o input3mod.o cmfield3.o libcmfield3_h.o modpreadf3.o libcmfield3.o \
+    nulllib3.o
 
 pfvreadf3 : pfvreadf3.o libcmfield3.o nulllib3.o
 	$(FC90) $(OPTS90) $(LOPTS) -o pfvreadf3 \
-    pfvreadf3.o input3mod.o cmfield3.o libcmfield3_h.o libcmfield3.o nulllib3.o
+    pfvreadf3.o input3mod.o cmfield3.o libcmfield3_h.o modpreadf3.o libcmfield3.o \
+    nulllib3.o
 
 ptreadf3 : ptreadf3.o libcmfield3.o nulllib3.o
 	$(FC90) $(OPTS90) $(LOPTS) -o ptreadf3 \
-    ptreadf3.o input3mod.o cmfield3.o libcmfield3_h.o libcmfield3.o nulllib3.o
+    ptreadf3.o input3mod.o cmfield3.o libcmfield3_h.o modpreadf3.o libcmfield3.o \
+    nulllib3.o
 
 psreadf3 : psreadf3.o libcmfield3.o nulllib3.o
 	$(FC90) $(OPTS90) $(LOPTS) -o psreadf3 \
-    psreadf3.o input3mod.o cmfield3.o libcmfield3_h.o libcmfield3.o nulllib3.o
+    psreadf3.o input3mod.o cmfield3.o libcmfield3_h.o modpreadf3.o libcmfield3.o \
+    nulllib3.o
 
 list:
-	echo preadf3 pvreadf3 pflreadf3 pfvreadf3 ptreadf3 psreadf3 python \
+	echo diag3 preadf3 pvreadf3 pflreadf3 pfvreadf3 ptreadf3 psreadf3 python \
 	     clean clobber
 
 # Python
@@ -142,32 +155,38 @@ python : libcmfield3.so
 input3mod.o : input3mod.f90
 	$(FC90) $(OPTS90) -o input3mod.o -c input3mod.f90
 
-preadf3.o : preadf3.f90 input3mod.o cmfield3.o
-	$(FC90) $(OPTS90) -o preadf3.o -c preadf3.f90
-
-pvreadf3.o : pvreadf3.f90 input3mod.o cmfield3.o
-	$(FC90) $(OPTS90) -o pvreadf3.o -c pvreadf3.f90
-
-pflreadf3.o : pflreadf3.f90 input3mod.o cmfield3.o
-	$(FC90) $(OPTS90) -o pflreadf3.o -c pflreadf3.f90
-
-pfvreadf3.o : pfvreadf3.f90 input3mod.o cmfield3.o
-	$(FC90) $(OPTS90) -o pfvreadf3.o -c pfvreadf3.f90
-
-ptreadf3.o : ptreadf3.f90 input3mod.o cmfield3.o
-	$(FC90) $(OPTS90) -o ptreadf3.o -c ptreadf3.f90
-
-psreadf3.o : psreadf3.f90 input3mod.o cmfield3.o
-	$(FC90) $(OPTS90) -o psreadf3.o -c psreadf3.f90
-
-libcmfield3.o : libcmfield3.f
-	$(FC90) $(OPTS90) -o libcmfield3.o -c libcmfield3.f
+cmfield3.o : cmfield3.f90 libcmfield3_h.o input3mod.o
+	$(FC90) $(OPTS90) -o cmfield3.o -c cmfield3.f90
 
 libcmfield3_h.o : libcmfield3_h.f90
 	$(FC90) $(OPTS90) -o libcmfield3_h.o -c libcmfield3_h.f90
 
-cmfield3.o : cmfield3.f90 libcmfield3_h.o input3mod.o
-	$(FC90) $(OPTS90) -o cmfield3.o -c cmfield3.f90
+modpreadf3.o : modpreadf3.f90 input3mod.o cmfield3.o
+	$(FC90) $(OPTS90) -o modpreadf3.o -c modpreadf3.f90
+
+diag3.o : diag3.f90 modpreadf3.o
+	$(FC90) $(OPTS90) -o diag3.o -c diag3.f90
+
+preadf3.o : preadf3.f90 modpreadf3.o input3mod.o cmfield3.o
+	$(FC90) $(OPTS90) -o preadf3.o -c preadf3.f90
+
+pvreadf3.o : pvreadf3.f90 modpreadf3.o input3mod.o cmfield3.o
+	$(FC90) $(OPTS90) -o pvreadf3.o -c pvreadf3.f90
+
+pflreadf3.o : pflreadf3.f90 modpreadf3.o input3mod.o cmfield3.o
+	$(FC90) $(OPTS90) -o pflreadf3.o -c pflreadf3.f90
+
+pfvreadf3.o : pfvreadf3.f90 modpreadf3.o input3mod.o cmfield3.o
+	$(FC90) $(OPTS90) -o pfvreadf3.o -c pfvreadf3.f90
+
+ptreadf3.o : ptreadf3.f90 modpreadf3.o input3mod.o cmfield3.o
+	$(FC90) $(OPTS90) -o ptreadf3.o -c ptreadf3.f90
+
+psreadf3.o : psreadf3.f90 modpreadf3.o input3mod.o cmfield3.o
+	$(FC90) $(OPTS90) -o psreadf3.o -c psreadf3.f90
+
+libcmfield3.o : libcmfield3.f
+	$(FC90) $(OPTS90) -o libcmfield3.o -c libcmfield3.f
 
 nulllib3.o : nulllib3.f90
 	$(FC90) $(OPTS90) -o nulllib3.o -c nulllib3.f90
@@ -184,6 +203,9 @@ libcmfield3.so : input3mod.f90 libcmfield3_h.o cmfield3.f90 pymcmfield3.o \
          nulllib3.o
 
 cpexecs : cpreadf3 cpvreadf3 cpflreadf3 cpfvreadf3 cptreadf3 cpsreadf3
+
+cpdiag3 : diag3
+	cp diag3 ../
 
 cpreadf3 : preadf3
 	cp preadf3 ../
@@ -207,7 +229,7 @@ clean :
 	rm -f *.o *.mod
 
 clobber: clean
-	rm -f preadf3 pvreadf3 pflreadf3 pfvreadf3 ptreadf3 psreadf3 *.so
+	rm -f diag3 preadf3 pvreadf3 pflreadf3 pfvreadf3 ptreadf3 psreadf3 *.so
 
 #Python
 cpyexecs : cpyreadf3 cpyvreadf3 cpyflreadf3 cpyfvreadf3 cpytreadf3 \

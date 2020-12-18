@@ -7,5 +7,5 @@
  TEND =  10000.000, DT =   0.200
  VTX =   1.000, VTY =   1.000, VTZ = 1.000
  VX0 =   0.000, VY0 =   0.000, VZ0 =   0.000
- MZF = 0, NEXTRAND = 0
+ NEXTRAND = 0
  /

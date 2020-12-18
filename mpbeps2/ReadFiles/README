@@ -17,9 +17,12 @@ acknowledgement is requested.
 The makefile is setup to use gfortran with Linux.  It should also work
 with MacOS X.
 
-Six Fortran executables can be created, called preadf2, pvreadf2,
-pflreadf2, pfvreadf2, ptreadf2, and psreadf2, to read scalar, vector,
-fluid, velocity trajectory or phase space data.
+A Fortran program can be created called diag2 to read scalar, vector,
+fluid, velocity, trajectory or phase space data.  The program diag2
+calls lower level procedures called preadf2, pvreadf2, pflreadf2,
+pfvreadf2, ptreadf2 and psreadf2, each of which reads one of six types
+of data.  It is also possible to create executable versions of the these
+low procedures directly.
 
 To compile the programs, execute:
 
@@ -29,8 +32,8 @@ To compile just one, execute:
 
 make program_name
 
-where program_name is either: preadf2, pvreadf2, pflreadf2, pfvreadf2,
-ptreadf2 or psreadf2
+where program_name is either: diag2, preadf2, pvreadf2, pflreadf2,
+pfvreadf2, ptreadf2 or psreadf2
 
 To execute, type the name of the executable:
 
@@ -62,11 +65,20 @@ compression.  For example, on the Macintosh, the program Preview will
 convert and compress the large Postscript files to pdf and allow one to
 easily move through this file.
 
-There are also 6 Python scripts available.  They require a dynamic
-library, libcmfield2.
+There are also 6 Python scripts available.  They require dynamic
+libraries, libcmfield2.so and fgraf.so
 
 To compile this library, execute:
 
 make python
 
+If X11 is available, one can also compile with X11 graphics by
+executing:
+
+make -f gmake python
+
 This currently only works in single precision.
+
+To delete all the libraries and executables, execute:
+
+make clobber

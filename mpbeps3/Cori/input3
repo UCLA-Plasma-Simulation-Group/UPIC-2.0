@@ -1,0 +1,17 @@
+ &input3
+ IDRUN = 1
+!INDX =   7, INDY =   7, INDZ =   7
+!NPX =  384, NPY =  384, NPZ =  384
+!INDX =   8, INDY =   8, INDZ =   8
+!NPX =  768, NPY =  768, NPZ =  768
+!INDX =   9, INDY =   9, INDZ =   9
+!NPX =  1536, NPY =  1536, NPZ =  1536
+ INDX =   10, INDY =   10, INDZ =   10
+ NPX =  3072, NPY =  3072, NPZ =  3072
+!NTW = 99
+ NTW = 284
+!TEND =  10.000, DT =   0.100
+ TEND =  10.000, DT =   0.035
+ CI = 0.1, RELATIVITY = 1
+ POPT = 2
+ /

@@ -7,7 +7,10 @@
 ! VMIPPBPOISP332 solves 3d poisson's equation for unsmoothed magnetic
 !               field
 ! VMPPMAXWEL32 solves 3d maxwell's equation for unsmoothed transverse
-!              electric and magnetic fields
+!              electric and magnetic fields using verlet algorithm
+! VMPPAMAXWEL32 solves 3d maxwell's equation for unsmoothed transverse
+!               electric and magnetic fields using analytic algorithm
+!               due to Irving Haber
 ! MPPEMFIELD32 adds and smooths or copies and smooths complex vector
 !              fields in fourier space
 ! MPADDCUEI32 adds electron and ion current densities
@@ -49,7 +52,7 @@
 ! SET_PCVZERO3 zeros out transverse field array.
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: may 10, 2018
+! update: december 12, 2020
 !-----------------------------------------------------------------------
       subroutine VMPPOIS332(q,fxyz,isign,ffc,ax,ay,az,affp,we,nx,ny,nz, &
      &kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
@@ -1005,9 +1008,9 @@
 ! ci = reciprical of velocity of light
 ! dt = time interval between successive calculations
 ! transverse electric field energy is also calculated, using
-! wf = nx*ny*nz**sum((1/affp)*|exyz(kx,ky,kz)|**2)
+! wf = nx*ny*nz*sum((1/affp)*|exyz(kx,ky,kz)|**2)
 ! magnetic field energy is also calculated, using
-! wm = nx*ny*nz**sum((c2/affp)*|bxyz(kx,ky,kz)|**2)
+! wm = nx*ny*nz*sum((c2/affp)*|bxyz(kx,ky,kz)|**2)
 ! nx/ny/nz = system length in x/y/z direction
 ! kstrt = starting data block number
 ! nvpy/nvpz = number of real or virtual processors in y/z
@@ -1560,6 +1563,715 @@
   120 continue      
       wf = real(nx)*real(ny)*real(nz)*sum1
       wm = real(nx)*real(ny)*real(nz)*c2*sum2
+      return
+      end
+!-----------------------------------------------------------------------
+      subroutine VMPPAMAXWEL32(exyz,bxyz,cu,ffc,affp,ci,dt,wf,wm,nx,ny, &
+     &nz,kstrt,nvpy,nvpz,nzv,kxyp,kyzp,nzhd)
+! this subroutine solves 3d maxwell's equation in fourier space for
+! transverse electric and magnetic fields with periodic boundary
+! conditions, using an analytic scheme due to Irving Haber
+! for distributed data with 2D spatial decomposition
+! with OpenMP
+! input: all, output: wf, wm, exyz, bxyz
+! approximate flop count is:
+! 680*nxc*nyc*nzc + 153*(nxc*nyc + nxc*nzc + nyc*nzc)
+! plus nxc*nyc*nzc divides, square roots, sines, cosines, and tangents
+! where nxc = (nx/2-1)/nvpy, nyc = (ny/2-1)/nvpz, nzc = nz - 1, and
+! nvpy/nvpz = number of procs in y/z
+! equations being solved are:
+! (c*Bn)/dt = -ick X En and
+! En/dt = ick X (c*Bn) - JTn+1/2
+! Note that the normalization of the E and B fields differ:
+! B is normalized to the dimensionless cyclotron frequency.
+! solutions are given by:
+! En+1 = C*En + iS*(k X (c*Bn)) - S*JTn+1/2/c
+! c*Bn+1 = C*(c*Bn) - iS*(k X En)/c + iS*T*(k X JTn+1/2)
+! where En = input exyz, En+1 = output exyz
+! Bn = input bxyz, Bn+1 = output bxyz, JTn+1/2 =  affp*cu*s(kx,ky,kz)
+! C = cos(k*c*dt),  S = sin(k*c*dt)/k, T = tan(k*c*dt/2)/kc
+! kx = 2pi*j/nx, ky = 2pi*k/ny, kz = 2pi*l/nz,
+! k = sqrt(kx*kx + ky*ky + kz*kz), c = 1.0/ci
+! and s(kx,ky,kz) = exp(-((kx*ax)**2+(ky*ay)**2+(kz*az)**2)/2)
+! j,k,l = fourier mode numbers, except for
+! ex(kx=pi) = ey(kx=pi) = ez(kx=pi) = 0,
+! ex(ky=pi) = ey(ky=pi) = ex(ky=pi) = 0,
+! ex(kz=pi) = ey(kz=pi) = ez(kz=pi) = 0,
+! ex(kx=0,ky=0,kz=0) = ey(kx=0,ky=0,kz=0) = ez(kx=0,ky=0,kz=0) = 0.
+! and similarly for bx, by, bz.
+! exyz(i,l,j,k) = i component of complex transverse electric field
+! bxyz(i,l,j,k) = i component of complex magnetic field
+! cu(i,l,j,k) = i component of complex current density
+! all for fourier mode jj-1,kk-1,l-1, where jj = j + kxyp*js and
+! kk = k + kyzp*ks, and MPI rank idproc = js + nvpy*ks
+! aimag(ffc(l,j,k)) = finite-size particle shape factor s,
+! s(kx,ky,kz) = exp(-((kx*ax)**2+(ky*ay)**2+(kz*az)**2)/2)
+! affp = normalization constant = nx*ny*nz/np,
+! where np=number of particles
+! ci = reciprical of velocity of light
+! dt = time interval between successive calculations
+! transverse electric field energy is also calculated, using
+! wf = nx*ny*nz*sum((1/affp)*|exyz(kx,ky,kz)|**2)
+! magnetic field energy is also calculated, using
+! wm = nx*ny*nz*sum((c2/affp)*|bxyz(kx,ky,kz)|**2)
+! nx/ny/nz = system length in x/y/z direction
+! kstrt = starting data block number
+! nvpy/nvpz = number of real or virtual processors in y/z
+! nzv = first dimension of field arrays, must be >= nz
+! kxyp/kyzp = number of complex grids in each field partition in
+! x/y direction
+! nzhd = first dimension of form factor array, must be >= nzh
+      implicit none
+      integer nx, ny, nz, kstrt, nvpy, nvpz, nzv, kxyp, kyzp, nzhd
+      real affp, ci, dt, wf, wm
+      complex exyz, bxyz, cu, ffc
+      dimension exyz(3,nzv,kxyp,kyzp), bxyz(3,nzv,kxyp,kyzp)
+      dimension cu(3,nzv,kxyp,kyzp)
+      dimension ffc(nzhd,kxyp,kyzp)
+! local data
+      integer j, k, l, nxh, nyh, nzh, nz2, js, ks, joff, koff
+      integer kxyps, kyzps, k1, l1, kk
+      real dnx, dny, dnz, dth, cc, cdth, anorm, dkx, dky, dkz
+      real dkx2, dky2, t2, t, c, s, sc, afs, aft
+      complex zero, zt1, zt2, zt3, zt4, zt5, zt6, zt7, zt8, zt9
+      real at1
+      double precision wp, ws, sum1, sum2, sum3, sum4
+      if (ci.le.0.0) return
+      nxh = nx/2
+      nyh = max(1,ny/2)
+      nzh = max(1,nz/2)
+      nz2 = nz + 2
+      dnx = 6.28318530717959/real(nx)
+      dny = 6.28318530717959/real(ny)
+      dnz = 6.28318530717959/real(nz)
+      zero = cmplx(0.0,0.0)
+! find processor id and offsets in y/z
+! js/ks = processor co-ordinates in y/z => idproc = js + nvpy*ks
+      ks = (kstrt - 1)/nvpy
+      js = kstrt - nvpy*ks - 1
+      joff = kxyp*js
+      kxyps = min(kxyp,max(0,nxh-joff))
+      joff = joff - 1
+      koff = kyzp*ks
+      kyzps = min(kyzp,max(0,ny-koff))
+      koff = koff - 1
+      dth = 0.5*dt
+      cc = 1.0/ci
+      cdth = cc*dth
+      anorm = 1.0/affp
+! update electromagnetic field and sum field energies
+      sum1 = 0.0d0
+      sum2 = 0.0d0
+! calculate the electromagnetic fields
+      if (kstrt.gt.(nvpy*nvpz)) go to 120
+! mode numbers 0 < kx < nx/2, 0 < ky < ny/2, and 0 < kz < nz/2
+!$OMP PARALLEL
+!$OMP DO PRIVATE(j,k,l,kk,k1,l1,dky,dkx,dky2,dkx2,dkz,aft,t2,t,s,c,afs, &
+!$OMP& sc,at1,zt1,zt2,zt3,zt4,zt5,zt6,zt7,zt8,zt9,ws,wp)                &
+!$OMP& REDUCTION(+:sum1,sum2) 
+      do 20 kk = 1, kyzps*kxyps
+      k = (kk - 1)/kxyps
+      j = kk - kxyps*k
+      k = k + 1
+      k1 = k + koff
+      ws = 0.0d0
+      wp = 0.0d0
+      if ((k1.gt.0).and.(k1.ne.nyh)) then
+         if (k1.gt.nyh) k1 = k1 - ny
+         dky = dny*real(k1)
+         dkx = dnx*real(j + joff)
+         dky2 = dky*dky
+         dkx2 = dkx*dkx
+         if ((j+joff).gt.0) then
+!dir$ ivdep
+            do 10 l = 2, nzh
+            l1 = nz2 - l
+            dkz = dnz*real(l - 1)
+            aft = affp*aimag(ffc(l,j,k))*ci
+            t2 = sqrt(dkz*dkz + dkx2 + dky2)
+            t = t2*cdth
+            t2 = 1.0/t2
+            s = t + t
+            c = cos(s)
+            s = sin(s)*t2
+            t = tan(t)*t2
+            afs = s*aft
+            sc = s*cc
+            aft = aft*t
+            s = s*ci
+! update fields for ky > 0, kz > 0
+! calculate iB
+            zt1 = cmplx(-aimag(bxyz(3,l,j,k)),real(bxyz(3,l,j,k)))
+            zt2 = cmplx(-aimag(bxyz(2,l,j,k)),real(bxyz(2,l,j,k)))
+            zt3 = cmplx(-aimag(bxyz(1,l,j,k)),real(bxyz(1,l,j,k)))
+! update electric field
+            zt4 = c*exyz(1,l,j,k) + sc*(dky*zt1 - dkz*zt2)              &
+     &          - afs*cu(1,l,j,k)
+            zt5 = c*exyz(2,l,j,k) + sc*(dkz*zt3 - dkx*zt1)              &
+     &          - afs*cu(2,l,j,k)
+            zt6 = c*exyz(3,l,j,k) + sc*(dkx*zt2 - dky*zt3)              &
+     &          - afs*cu(3,l,j,k)
+! calculate iE
+            zt1 = cmplx(-aimag(exyz(3,l,j,k)),real(exyz(3,l,j,k)))
+            zt2 = cmplx(-aimag(exyz(2,l,j,k)),real(exyz(2,l,j,k)))
+            zt3 = cmplx(-aimag(exyz(1,l,j,k)),real(exyz(1,l,j,k)))
+! store electric field and calculate energy
+            exyz(1,l,j,k) = zt4
+            exyz(2,l,j,k) = zt5
+            exyz(3,l,j,k) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            ws = ws + dble(at1)
+! calculate ijperp
+            zt7 = cmplx(-aimag(cu(3,l,j,k)),real(cu(3,l,j,k)))
+            zt8 = cmplx(-aimag(cu(2,l,j,k)),real(cu(2,l,j,k)))
+            zt9 = cmplx(-aimag(cu(1,l,j,k)),real(cu(1,l,j,k)))
+! update magnetic field
+            zt4 = c*bxyz(1,l,j,k) - s*(dky*(zt1 - aft*zt7)              &
+     &          - dkz*(zt2 - aft*zt8))
+            zt5 = c*bxyz(2,l,j,k) + s*(dkx*(zt1 - aft*zt7)              &
+     &          - dkz*(zt3 - aft*zt9))
+            zt6 = c*bxyz(3,l,j,k) - s*(dkx*(zt2 - aft*zt8)              &
+     &          - dky*(zt3 - aft*zt9))
+! store magnetic field and calculate energy
+            bxyz(1,l,j,k) = zt4
+            bxyz(2,l,j,k) = zt5
+            bxyz(3,l,j,k) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            wp = wp + dble(at1)
+! update fields for ky > 0, kz < 0
+! calculate iB
+            zt1 = cmplx(-aimag(bxyz(3,l1,j,k)),real(bxyz(3,l1,j,k)))
+            zt2 = cmplx(-aimag(bxyz(2,l1,j,k)),real(bxyz(2,l1,j,k)))
+            zt3 = cmplx(-aimag(bxyz(1,l1,j,k)),real(bxyz(1,l1,j,k)))
+! update electric field
+            zt4 = c*exyz(1,l1,j,k) + sc*(dky*zt1 + dkz*zt2)             &
+     &          - afs*cu(1,l1,j,k)
+            zt5 = c*exyz(2,l1,j,k) - sc*(dkz*zt3 + dkx*zt1)             &
+     &          - afs*cu(2,l1,j,k)
+            zt6 = c*exyz(3,l1,j,k) + sc*(dkx*zt2 - dky*zt3)             &
+     &          - afs*cu(3,l1,j,k)
+! calculate iE
+            zt1 = cmplx(-aimag(exyz(3,l1,j,k)),real(exyz(3,l1,j,k)))
+            zt2 = cmplx(-aimag(exyz(2,l1,j,k)),real(exyz(2,l1,j,k)))
+            zt3 = cmplx(-aimag(exyz(1,l1,j,k)),real(exyz(1,l1,j,k)))
+! store electric field and calculate energy
+            exyz(1,l1,j,k) = zt4
+            exyz(2,l1,j,k) = zt5
+            exyz(3,l1,j,k) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            ws = ws + dble(at1)
+! calculate ijperp
+            zt7 = cmplx(-aimag(cu(3,l1,j,k)),real(cu(3,l1,j,k)))
+            zt8 = cmplx(-aimag(cu(2,l1,j,k)),real(cu(2,l1,j,k)))
+            zt9 = cmplx(-aimag(cu(1,l1,j,k)),real(cu(1,l1,j,k)))
+! update magnetic field
+            zt4 = c*bxyz(1,l1,j,k) - s*(dky*(zt1 - aft*zt7)             &
+     &          + dkz*(zt2 - aft*zt8))
+            zt5 = c*bxyz(2,l1,j,k) + s*(dkx*(zt1 - aft*zt7)             &
+     &          + dkz*(zt3 - aft*zt9))
+            zt6 = c*bxyz(3,l1,j,k) - s*(dkx*(zt2 - aft*zt8)             &
+     &          - dky*(zt3 - aft*zt9))
+! store magnetic field and calculate energy
+            bxyz(1,l1,j,k) = zt4
+            bxyz(2,l1,j,k) = zt5
+            bxyz(3,l1,j,k) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            wp = wp + dble(at1)
+   10       continue
+! mode numbers kz = 0, nz/2
+            l1 = nzh + 1
+            aft = affp*aimag(ffc(1,j,k))*ci
+            t2 = sqrt(dkx2+dky2)
+            t = t2*cdth
+            t2 = 1.0/t2
+            s = t + t
+            c = cos(s)
+            s = sin(s)*t2
+            t = tan(t)*t2
+            afs = s*aft
+            sc = s*cc
+            aft = aft*t
+            s = s*ci
+! calculate iB
+            zt1 = cmplx(-aimag(bxyz(3,1,j,k)),real(bxyz(3,1,j,k)))
+            zt2 = cmplx(-aimag(bxyz(2,1,j,k)),real(bxyz(2,1,j,k)))
+            zt3 = cmplx(-aimag(bxyz(1,1,j,k)),real(bxyz(1,1,j,k)))
+! update electric field
+            zt4 = c*exyz(1,1,j,k) + sc*(dky*zt1) - afs*cu(1,1,j,k)
+            zt5 = c*exyz(2,1,j,k) - sc*(dkx*zt1) - afs*cu(2,1,j,k)
+            zt6 = c*exyz(3,1,j,k) + sc*(dkx*zt2 - dky*zt3)              &
+     &          - afs*cu(3,1,j,k)
+! calculate iE
+            zt1 = cmplx(-aimag(exyz(3,1,j,k)),real(exyz(3,1,j,k)))
+            zt2 = cmplx(-aimag(exyz(2,1,j,k)),real(exyz(2,1,j,k)))
+            zt3 = cmplx(-aimag(exyz(1,1,j,k)),real(exyz(1,1,j,k)))
+! store electric field and calculate energy
+            exyz(1,1,j,k) = zt4
+            exyz(2,1,j,k) = zt5
+            exyz(3,1,j,k) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            ws = ws + dble(at1)
+! calculate ijperp
+            zt7 = cmplx(-aimag(cu(3,1,j,k)),real(cu(3,1,j,k)))
+            zt8 = cmplx(-aimag(cu(2,1,j,k)),real(cu(2,1,j,k)))
+            zt9 = cmplx(-aimag(cu(1,1,j,k)),real(cu(1,1,j,k)))
+! update magnetic field
+            zt4 = c*bxyz(1,1,j,k) - s*dky*(zt1 - aft*zt7)
+            zt5 = c*bxyz(2,1,j,k) + s*dkx*(zt1 - aft*zt7)
+            zt6 = c*bxyz(3,1,j,k) - s*(dkx*(zt2 - aft*zt8)              &
+     &          - dky*(zt3 - aft*zt9))
+! store magnetic field and calculate energy
+            bxyz(1,1,j,k) = zt4
+            bxyz(2,1,j,k) = zt5
+            bxyz(3,1,j,k) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            wp = wp + dble(at1)
+            bxyz(1,l1,j,k) = zero
+            bxyz(2,l1,j,k) = zero
+            bxyz(3,l1,j,k) = zero
+            exyz(1,l1,j,k) = zero
+            exyz(2,l1,j,k) = zero
+            exyz(3,l1,j,k) = zero
+         endif
+      endif
+      sum1 = sum1 + ws
+      sum2 = sum2 + wp
+   20 continue
+!$OMP END DO
+!$OMP END PARALLEL
+! mode numbers kx = 0, nx/2
+      sum3 = 0.0d0
+      sum4 = 0.0d0
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(k,l,k1,l1,dky,dky2,dkz,aft,t2,t,s,c,afs,sc,at1,zt1,zt2,  &
+!$OMP& zt3,zt4,zt5,zt6,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum3,sum4)
+      do 50 k = 1, kyzps
+      k1 = k + koff
+      if ((k1.gt.0).and.(k1.ne.nyh)) then
+         if (k1.gt.nyh) k1 = k1 - ny
+         dky = dny*real(k1)
+         dky2 = dky*dky
+         ws = 0.0d0
+         wp = 0.0d0
+         if (js.eq.0) then
+! keep kx = 0
+            if (k1.gt.0) then
+!dir$ ivdep
+               do 30 l = 2, nzh
+               l1 = nz2 - l
+               dkz = dnz*real(l - 1)
+               aft = affp*aimag(ffc(l,1,k))*ci
+               t2 = sqrt(dkz*dkz + dky2)
+               t = t2*cdth
+               t2 = 1.0/t2
+               s = t + t
+               c = cos(s)
+               s = sin(s)*t2
+               t = tan(t)*t2
+               afs = s*aft
+               sc = s*cc
+               aft = aft*t
+               s = s*ci
+! update fields for kz > 0
+! calculate iB
+               zt1 = cmplx(-aimag(bxyz(3,l,1,k)),real(bxyz(3,l,1,k)))
+               zt2 = cmplx(-aimag(bxyz(2,l,1,k)),real(bxyz(2,l,1,k)))
+               zt3 = cmplx(-aimag(bxyz(1,l,1,k)),real(bxyz(1,l,1,k)))
+! update electric field
+               zt4 = c*exyz(1,l,1,k) + sc*(dky*zt1 - dkz*zt2)           &
+     &          - afs*cu(1,l,1,k)
+               zt5 = c*exyz(2,l,1,k) + sc*(dkz*zt3) - afs*cu(2,l,1,k)
+               zt6 = c*exyz(3,l,1,k) - sc*(dky*zt3) - afs*cu(3,l,1,k)
+! calculate iE
+               zt1 = cmplx(-aimag(exyz(3,l,1,k)),real(exyz(3,l,1,k)))
+               zt2 = cmplx(-aimag(exyz(2,l,1,k)),real(exyz(2,l,1,k)))
+               zt3 = cmplx(-aimag(exyz(1,l,1,k)),real(exyz(1,l,1,k)))
+! store electric field and calculate energy
+               exyz(1,l,1,k) = zt4
+               exyz(2,l,1,k) = zt5
+               exyz(3,l,1,k) = zt6
+               at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)             &
+     &             + zt6*conjg(zt6))
+               ws = ws + dble(at1)
+! calculate ijperp
+               zt7 = cmplx(-aimag(cu(3,l,1,k)),real(cu(3,l,1,k)))
+               zt8 = cmplx(-aimag(cu(2,l,1,k)),real(cu(2,l,1,k)))
+               zt9 = cmplx(-aimag(cu(1,l,1,k)),real(cu(1,l,1,k)))
+! update magnetic field
+               zt4 = c*bxyz(1,l,1,k) - s*(dky*(zt1 - aft*zt7)            &
+     &          - dkz*(zt2 - aft*zt8))
+               zt5 = c*bxyz(2,l,1,k) - s*dkz*(zt3 - aft*zt9)
+               zt6 = c*bxyz(3,l,1,k) + s*dky*(zt3 - aft*zt9)
+! store magnetic field and calculate energy
+               bxyz(1,l,1,k) = zt4
+               bxyz(2,l,1,k) = zt5
+               bxyz(3,l,1,k) = zt6
+               at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)              &
+     &             + zt6*conjg(zt6))
+               wp = wp + dble(at1)
+! update fields for  kz < 0
+! calculate iB
+               zt1 = cmplx(-aimag(bxyz(3,l1,1,k)),real(bxyz(3,l1,1,k)))
+               zt2 = cmplx(-aimag(bxyz(2,l1,1,k)),real(bxyz(2,l1,1,k)))
+               zt3 = cmplx(-aimag(bxyz(1,l1,1,k)),real(bxyz(1,l1,1,k)))
+! update electric field
+               zt4 = c*exyz(1,l1,1,k) + sc*(dky*zt1 + dkz*zt2)          &
+     &             - afs*cu(1,l1,1,k)
+               zt5 = c*exyz(2,l1,1,k) - sc*(dkz*zt3) - afs*cu(2,l1,1,k)
+               zt6 = c*exyz(3,l1,1,k) - sc*(dky*zt3) - afs*cu(3,l1,1,k)
+! calculate iE
+               zt1 = cmplx(-aimag(exyz(3,l1,1,k)),real(exyz(3,l1,1,k)))
+               zt2 = cmplx(-aimag(exyz(2,l1,1,k)),real(exyz(2,l1,1,k)))
+               zt3 = cmplx(-aimag(exyz(1,l1,1,k)),real(exyz(1,l1,1,k)))
+! store electric field and calculate energy
+               exyz(1,l1,1,k) = zt4
+               exyz(2,l1,1,k) = zt5
+               exyz(3,l1,1,k) = zt6
+               at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)             &
+     &             + zt6*conjg(zt6))
+               ws = ws + dble(at1)
+! calculate ijperp
+               zt7 = cmplx(-aimag(cu(3,l1,1,k)),real(cu(3,l1,1,k)))
+               zt8 = cmplx(-aimag(cu(2,l1,1,k)),real(cu(2,l1,1,k)))
+               zt9 = cmplx(-aimag(cu(1,l1,1,k)),real(cu(1,l1,1,k)))
+! update magnetic field
+               zt4 = c*bxyz(1,l1,1,k) - s*(dky*(zt1 - aft*zt7)          &
+     &             + dkz*(zt2 - aft*zt8))
+               zt5 = c*bxyz(2,l1,1,k) + s*dkz*(zt3 - aft*zt9)
+               zt6 = c*bxyz(3,l1,1,k) + s*dky*(zt3 - aft*zt9)
+! store magnetic field and calculate energy
+               bxyz(1,l1,1,k) = zt4
+               bxyz(2,l1,1,k) = zt5
+               bxyz(3,l1,1,k) = zt6
+               at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)             &
+     &          + zt6*conjg(zt6))
+               wp = wp + dble(at1)
+   30          continue
+! mode numbers kz = 0, nz/2
+               l1 = nzh + 1
+               aft = affp*aimag(ffc(1,1,k))*ci
+               t = dky*cdth
+               t2 = 1.0/dky
+               s = t + t
+               c = cos(s)
+               s = sin(s)*t2
+               t = tan(t)*t2
+               afs = s*aft
+               sc = s*cc
+               aft = aft*t
+               s = s*ci
+! calculate iB
+               zt1 = cmplx(-aimag(bxyz(3,1,1,k)),real(bxyz(3,1,1,k)))
+               zt3 = cmplx(-aimag(bxyz(1,1,1,k)),real(bxyz(1,1,1,k)))
+! update electric field
+               zt4 = c*exyz(1,1,1,k) + sc*(dky*zt1) - afs*cu(1,1,1,k)
+               zt6 = c*exyz(3,1,1,k) - sc*(dky*zt3) - afs*cu(3,1,1,k)
+! calculate iE
+               zt1 = cmplx(-aimag(exyz(3,1,1,k)),real(exyz(3,1,1,k)))
+               zt3 = cmplx(-aimag(exyz(1,1,1,k)),real(exyz(1,1,1,k)))
+! store electric field and calculate energy
+               exyz(1,1,1,k) = zt4
+               exyz(2,1,1,k) = zero
+               exyz(3,1,1,k) = zt6
+               at1 = anorm*(zt4*conjg(zt4) + zt6*conjg(zt6))
+               ws = ws + dble(at1)
+! calculate ijperp
+               zt7 = cmplx(-aimag(cu(3,1,1,k)),real(cu(3,1,1,k)))
+               zt9 = cmplx(-aimag(cu(1,1,1,k)),real(cu(1,1,1,k)))
+! update magnetic field
+               zt4 = c*bxyz(1,1,1,k) - s*dky*(zt1 - aft*zt7)
+               zt6 = c*bxyz(3,1,1,k) + s*dky*(zt3 - aft*zt9)
+! store magnetic field and calculate energy
+               bxyz(1,1,1,k) = zt4
+               bxyz(2,1,1,k) = zero
+               bxyz(3,1,1,k) = zt6
+               at1 = anorm*(zt4*conjg(zt4) + zt6*conjg(zt6))
+               wp = wp + dble(at1)
+               bxyz(1,l1,1,k) = zero
+               bxyz(2,l1,1,k) = zero
+               bxyz(3,l1,1,k) = zero
+               exyz(1,l1,1,k) = zero
+               exyz(2,l1,1,k) = zero
+               exyz(3,l1,1,k) = zero
+! throw away kx = nx/2
+            else
+               do 40 l = 1, nz
+               bxyz(1,l,1,k) = zero
+               bxyz(2,l,1,k) = zero
+               bxyz(3,l,1,k) = zero
+               exyz(1,l,1,k) = zero
+               exyz(2,l,1,k) = zero
+               exyz(3,l,1,k) = zero
+   40          continue
+            endif
+         endif
+         sum3 = sum3 + ws
+         sum4 = sum4 + wp
+      endif
+   50 continue
+!$OMP END PARALLEL DO
+      sum1 = sum1 + sum3
+      sum2 = sum2 + sum4
+! mode numbers ky = 0, ny/2
+      sum3 = 0.0d0
+      sum4 = 0.0d0
+! keep ky = 0
+      if (ks.eq.0) then
+!$OMP PARALLEL DO                                                       &
+!$OMP& PRIVATE(j,l,k1,l1,dkx,dkx2,dkz,aft,t2,t,s,c,afs,sc,at1,zt1,zt2,  &
+!$OMP& zt3,zt4,zt5,zt6,zt7,zt8,zt9,ws,wp) REDUCTION(+:sum3,sum4)
+         do 70 j = 1, kxyps
+         dkx = dnx*real(j + joff)
+         dkx2 = dkx*dkx
+         ws = 0.0d0
+         wp = 0.0d0
+         if ((j+joff).gt.0) then
+!dir$ ivdep
+            do 60 l = 2, nzh
+            l1 = nz2 - l
+            dkz = dnz*real(l - 1)
+            aft = affp*aimag(ffc(l,j,1))*ci
+            t2 = sqrt(dkz*dkz + dkx2)
+            t = t2*cdth
+            t2 = 1.0/t2
+            s = t + t
+            c = cos(s)
+            s = sin(s)*t2
+            t = tan(t)*t2
+            afs = s*aft
+            sc = s*cc
+            aft = aft*t
+            s = s*ci
+! update fields for kz > 0
+! calculate iB
+            zt1 = cmplx(-aimag(bxyz(3,l,j,1)),real(bxyz(3,l,j,1)))
+            zt2 = cmplx(-aimag(bxyz(2,l,j,1)),real(bxyz(2,l,j,1)))
+            zt3 = cmplx(-aimag(bxyz(1,l,j,1)),real(bxyz(1,l,j,1)))
+! update electric field
+            zt4 = c*exyz(1,l,j,1) - sc*(dkz*zt2) - afs*cu(1,l,j,1)
+            zt5 = c*exyz(2,l,j,1) + sc*(dkz*zt3 - dkx*zt1)              &
+     &          - afs*cu(2,l,j,1)
+            zt6 = c*exyz(3,l,j,1) + sc*(dkx*zt2) - afs*cu(3,l,j,1)
+! calculate iE
+            zt1 = cmplx(-aimag(exyz(3,l,j,1)),real(exyz(3,l,j,1)))
+            zt2 = cmplx(-aimag(exyz(2,l,j,1)),real(exyz(2,l,j,1)))
+            zt3 = cmplx(-aimag(exyz(1,l,j,1)),real(exyz(1,l,j,1)))
+! store electric field and calculate energy
+            exyz(1,l,j,1) = zt4
+            exyz(2,l,j,1) = zt5
+            exyz(3,l,j,1) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            ws = ws + dble(at1)
+! calculate ijperp
+            zt7 = cmplx(-aimag(cu(3,l,j,1)),real(cu(3,l,j,1)))
+            zt8 = cmplx(-aimag(cu(2,l,j,1)),real(cu(2,l,j,1)))
+            zt9 = cmplx(-aimag(cu(1,l,j,1)),real(cu(1,l,j,1)))
+! update magnetic field
+            zt4 = c*bxyz(1,l,j,1) + s*dkz*(zt2 - aft*zt8)
+            zt5 = c*bxyz(2,l,j,1) + s*(dkx*(zt1 - aft*zt7)              &
+     &          - dkz*(zt3 - aft*zt9))
+            zt6 = c*bxyz(3,l,j,1) - s*dkx*(zt2 - aft*zt8)
+! store magnetic field and calculate energy
+            bxyz(1,l,j,1) = zt4
+            bxyz(2,l,j,1) = zt5
+            bxyz(3,l,j,1) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            wp = wp + dble(at1)
+! update fields for kz < 0
+! calculate iB
+            zt1 = cmplx(-aimag(bxyz(3,l1,j,1)),real(bxyz(3,l1,j,1)))
+            zt2 = cmplx(-aimag(bxyz(2,l1,j,1)),real(bxyz(2,l1,j,1)))
+            zt3 = cmplx(-aimag(bxyz(1,l1,j,1)),real(bxyz(1,l1,j,1)))
+! update electric field
+            zt4 = c*exyz(1,l1,j,1) + sc*(dkz*zt2) - afs*cu(1,l1,j,1)
+            zt5 = c*exyz(2,l1,j,1) - sc*(dkz*zt3 + dkx*zt1)             &
+     &          - afs*cu(2,l1,j,1)
+            zt6 = c*exyz(3,l1,j,1) + sc*(dkx*zt2) - afs*cu(3,l1,j,1)
+! calculate iE
+            zt1 = cmplx(-aimag(exyz(3,l1,j,1)),real(exyz(3,l1,j,1)))
+            zt2 = cmplx(-aimag(exyz(2,l1,j,1)),real(exyz(2,l1,j,1)))
+            zt3 = cmplx(-aimag(exyz(1,l1,j,1)),real(exyz(1,l1,j,1)))
+! store electric field and calculate energy
+            exyz(1,l1,j,1) = zt4
+            exyz(2,l1,j,1) = zt5
+            exyz(3,l1,j,1) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            ws = ws + dble(at1)
+! calculate ijperp
+            zt7 = cmplx(-aimag(cu(3,l1,j,1)),real(cu(3,l1,j,1)))
+            zt8 = cmplx(-aimag(cu(2,l1,j,1)),real(cu(2,l1,j,1)))
+            zt9 = cmplx(-aimag(cu(1,l1,j,1)),real(cu(1,l1,j,1)))
+! update magnetic field
+            zt4 = c*bxyz(1,l1,j,1) - s*dkz*(zt2 - aft*zt8)
+            zt5 = c*bxyz(2,l1,j,1) + s*(dkx*(zt1 - aft*zt7)             &
+     &          + dkz*(zt3 - aft*zt9))
+            zt6 = c*bxyz(3,l1,j,1) - s*dkx*(zt2 - aft*zt8)
+! store magnetic field and calculate energy
+            bxyz(1,l1,j,1) = zt4
+            bxyz(2,l1,j,1) = zt5
+            bxyz(3,l1,j,1) = zt6
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5)                &
+     &          + zt6*conjg(zt6))
+            wp = wp + dble(at1)
+   60       continue
+! mode numbers kz = 0, nz/2
+            l1 = nzh + 1
+            aft = affp*aimag(ffc(1,j,1))*ci
+            t = dkx*cdth
+            t2 = 1.0/dkx
+            s = t + t
+            c = cos(s)
+            s = sin(s)*t2
+            t = tan(t)*t2
+            afs = s*aft
+            sc = s*cc
+            aft = aft*t
+            s = s*ci
+! calculate iB
+            zt1 = cmplx(-aimag(bxyz(3,1,j,1)),real(bxyz(3,1,j,1)))
+            zt2 = cmplx(-aimag(bxyz(2,1,j,1)),real(bxyz(2,1,j,1)))
+! update electric field
+            zt5 = c*exyz(2,1,j,1) - sc*(dkx*zt1) - afs*cu(2,1,j,1)
+            zt6 = c*exyz(3,1,j,1) + sc*(dkx*zt2) - afs*cu(3,1,j,1)
+! calculate iE
+            zt1 = cmplx(-aimag(exyz(3,1,j,1)),real(exyz(3,1,j,1)))
+            zt2 = cmplx(-aimag(exyz(2,1,j,1)),real(exyz(2,1,j,1)))
+! store electric field and calculate energy
+            exyz(1,1,j,1) = zero
+            exyz(2,1,j,1) = zt5
+            exyz(3,1,j,1) = zt6
+            at1 = anorm*(zt5*conjg(zt5) + zt6*conjg(zt6))
+            ws = ws + dble(at1)
+! calculate ijperp
+            zt7 = cmplx(-aimag(cu(3,1,j,1)),real(cu(3,1,j,1)))
+            zt8 = cmplx(-aimag(cu(2,1,j,1)),real(cu(2,1,j,1)))
+! update magnetic field
+            zt5 = c*bxyz(2,1,j,1) + s*dkx*(zt1 - aft*zt7)
+            zt6 = c*bxyz(3,1,j,1) - s*dkx*(zt2 - aft*zt8)
+! store magnetic field and calculate energy
+            bxyz(1,1,j,1) = zero
+            bxyz(2,1,j,1) = zt5
+            bxyz(3,1,j,1) = zt6
+            at1 = anorm*(zt5*conjg(zt5) + zt6*conjg(zt6))
+            wp = wp + dble(at1)
+            bxyz(1,l1,j,1) = zero
+            bxyz(2,l1,j,1) = zero
+            bxyz(3,l1,j,1) = zero
+            exyz(1,l1,j,1) = zero
+            exyz(2,l1,j,1) = zero
+            exyz(3,l1,j,1) = zero
+         endif
+         sum3 = sum3 + ws
+         sum4 = sum4 + wp
+   70    continue
+!$OMP END PARALLEL DO
+         ws = 0.0d0
+         wp = 0.0d0
+! mode numbers kx = 0, nx/2
+         if (js.eq.0) then
+!dir$ ivdep
+            do 80 l = 2, nzh
+            l1 = nz2 - l
+            dkz = dnz*real(l - 1)
+            aft = affp*aimag(ffc(l,1,1))*ci
+            t = dkz*cdth
+            t2 = 1.0/dkz
+            s = t + t
+            c = cos(s)
+            s = sin(s)*t2
+            t = tan(t)*t2
+            afs = s*aft
+            sc = s*cc
+            aft = aft*t
+            s = s*ci
+! calculate iB
+            zt2 = cmplx(-aimag(bxyz(2,l,1,1)),real(bxyz(2,l,1,1)))
+            zt3 = cmplx(-aimag(bxyz(1,l,1,1)),real(bxyz(1,l,1,1)))
+! update electric field
+            zt4 = c*exyz(1,l,1,1) - sc*(dkz*zt2) - afs*cu(1,l,1,1)
+            zt5 = c*exyz(2,l,1,1) + sc*(dkz*zt3) - afs*cu(2,l,1,1)
+! calculate iE
+            zt2 = cmplx(-aimag(exyz(2,l,1,1)),real(exyz(2,l,1,1)))
+            zt3 = cmplx(-aimag(exyz(1,l,1,1)),real(exyz(1,l,1,1)))
+! store electric field and calculate energy
+            exyz(1,l,1,1) = zt4
+            exyz(2,l,1,1) = zt5
+            exyz(3,l,1,1) = zero
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5))
+            ws = ws + dble(at1)
+! calculate ijperp
+            zt8 = cmplx(-aimag(cu(2,l,1,1)),real(cu(2,l,1,1)))
+            zt9 = cmplx(-aimag(cu(1,l,1,1)),real(cu(1,l,1,1)))
+! update magnetic field
+            zt4 = c*bxyz(1,l,1,1) + s*dkz*(zt2 - aft*zt8)
+            zt5 = c*bxyz(2,l,1,1) - s*dkz*(zt3 - aft*zt9)
+! store magnetic field and calculate energy
+            bxyz(1,l,1,1) = zt4
+            bxyz(2,l,1,1) = zt5
+            bxyz(3,l,1,1) = zero
+            at1 = anorm*(zt4*conjg(zt4) + zt5*conjg(zt5))
+            wp = wp + dble(at1)
+   80       continue
+! mode numbers kz = 0, nz/2
+            l1 = nzh + 1
+            bxyz(1,1,1,1) = zero
+            bxyz(2,1,1,1) = zero
+            bxyz(3,1,1,1) = zero
+            exyz(1,1,1,1) = zero
+            exyz(2,1,1,1) = zero
+            exyz(3,1,1,1) = zero
+            bxyz(1,l1,1,1) = zero
+            bxyz(2,l1,1,1) = zero
+            bxyz(3,l1,1,1) = zero
+            exyz(1,l1,1,1) = zero
+            exyz(2,l1,1,1) = zero
+            exyz(3,l1,1,1) = zero
+         endif
+         sum3 = sum3 + ws
+         sum4 = sum4 + wp
+      endif
+! throw away ky = ny/2
+      k1 = nyh/kyzp
+      if (ks.eq.k1) then
+         k1 = nyh - kyzp*k1 + 1
+         do 100 j = 1, kxyps
+         if ((j+joff).gt.0) then
+            do 90 l = 1, nz
+            bxyz(1,l,j,k1) = zero
+            bxyz(2,l,j,k1) = zero
+            bxyz(3,l,j,k1) = zero
+            exyz(1,l,j,k1) = zero
+            exyz(2,l,j,k1) = zero
+            exyz(3,l,j,k1) = zero
+   90       continue
+         endif
+  100    continue
+! mode numbers kx = 0, nx/2
+         if (js.eq.0) then
+            do 110 l = 1, nz
+            bxyz(1,l,1,k1) = zero
+            bxyz(2,l,1,k1) = zero
+            bxyz(3,l,1,k1) = zero
+            exyz(1,l,1,k1) = zero
+            exyz(2,l,1,k1) = zero
+            exyz(3,l,1,k1) = zero
+  110       continue
+         endif
+      endif
+      sum1 = sum1 + sum3
+      sum2 = sum2 + sum4
+  120 continue      
+      wf = real(nx)*real(ny)*real(nz)*sum1
+      wm = real(nx)*real(ny)*real(nz)*(cc*cc)*sum2
       return
       end
 !-----------------------------------------------------------------------

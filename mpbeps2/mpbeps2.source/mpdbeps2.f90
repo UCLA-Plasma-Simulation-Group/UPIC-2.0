@@ -984,9 +984,9 @@
 ! estimate maximum ion velocity or momentum
                ws = 0.0
                if (npxyi.gt.0.0d0) then
-                   ws = 4.0*vtxi+abs(vxi0)
-                   ws = max(ws,4.0*vtyi+abs(vyi0))
-                   ws = max(ws,4.0*vtzi+abs(vzi0))
+                  ws = 4.0*vtxi+abs(vxi0)
+                  ws = max(ws,4.0*vtyi+abs(vyi0))
+                  ws = max(ws,4.0*vtzi+abs(vzi0))
                endif
                if (npxybi.gt.0.0d0) then
                   ws = max(ws,4.0*vtdxi+abs(vdxi))
@@ -1129,6 +1129,7 @@
                ws = max(ws,4.0*vtdz+abs(vdz))
             endif
             allocate(fvs(nmv21+1,ndim,nsxb,nyb+1))
+            fvs = 0.0
             fvs(nmv21+1,:,1,1) = 1.25*ws
 ! open file for electron phase space data:
 ! updates nserec and possibly iuse
@@ -1158,6 +1159,7 @@
                   ws = max(ws,4.0*vtdzi+abs(vdzi))
                endif
                allocate(fvsi(nmv21+1,ndim,nsxb,nyb+1))
+               fvsi = 0.0
                fvsi(nmv21+1,:,1,1) = 1.25*ws
 ! open file for ion phase space data:
 ! updates nsirec and possibly iusi

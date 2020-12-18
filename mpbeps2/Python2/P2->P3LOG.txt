@@ -1,0 +1,11 @@
+!-----------------------------------------------------------------------
+Python2->3 Log
+add: from __future__ import print_function
+modify: print " " -> print (" ")
+modify: print >> iuot, " -> print(" ",file=iuot)
+nxyzh = int(max(nx,ny,nz)/2)
+bug: nypmx = numpy.empty((1),int_type,'F')
+in3.fpname[:] = fpname ->
+   in3.fpname = fpname.ljust(in3.fpname.dtype.itemsize)
+xrange -> range
+input -> input = raw_input

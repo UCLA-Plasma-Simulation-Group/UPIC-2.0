@@ -5,12 +5,21 @@
 #FC90 = gfortran -fopenmp
 #CC = gcc
 
+#PFC = f2py --fcompiler=gnu95
+#PCC = f2py --compiler=unix
+
 #OPTS90 = -O3
 #OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8
 #OPTS90 = -O3 -fcheck=bounds -fdefault-real-8 -fdefault-double-8 -Wall -std=f95
 
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
+
+#Python
+#PYOPTS90 = $(OPTS90) -fPIC
+#PYCCOPTS = $(CCOPTS) -fPIC
+#export CFLAGS = -O3 -fopenmp
+#export CFLAGS = -O3 -fopenmp -Wall
 
 #LOPTS = -lgomp
 #LEGACY =
@@ -63,7 +72,6 @@ CCOPTS = -O3 -std=c99
 #Python
 PYOPTS90 = $(OPTS90) -fPIC
 PYCCOPTS = $(CCOPTS) -fPIC
-
 #export CFLAGS = -O3 -fopenmp
 #export CFLAGS = -O3 -fopenmp -Wall
 
@@ -127,50 +135,57 @@ GPYOBJS = pymnullgks1.o pymnullgks2.o
 
 # Linkage rules
 
-all : preadf2 pvreadf2 pflreadf2 pfvreadf2 ptreadf2 psreadf2
+all : diag2 freaders
+
+freaders : preadf2 pvreadf2 pflreadf2 pfvreadf2 ptreadf2 psreadf2
+
+diag2 : diag2.o modpreadf2.o libcmfield2.o nulllib2.o $(GOBJS)
+	$(FC90) $(OPTS90) $(LOPTS) -o diag2 \
+    diag2.o input2mod.o cmfield2.o libcmfield2_h.o modpreadf2.o libcmfield2.o \
+    nulllib2.o $(GOBJS) $(LGOPTS)
 
 preadf2 : preadf2.o libcmfield2.o nulllib2.o $(GOBJS)
 	$(FC90) $(OPTS90) $(LOPTS) -o preadf2 \
-    preadf2.o input2mod.o cmfield2.o libcmfield2_h.o libcmfield2.o \
+    preadf2.o input2mod.o cmfield2.o libcmfield2_h.o modpreadf2.o libcmfield2.o \
     nulllib2.o $(GOBJS) $(LGOPTS)
 
 pvreadf2 : pvreadf2.o libcmfield2.o nulllib2.o $(GOBJS)
 	$(FC90) $(OPTS90) $(LOPTS) -o pvreadf2 \
-    pvreadf2.o input2mod.o cmfield2.o libcmfield2_h.o libcmfield2.o \
+    pvreadf2.o input2mod.o cmfield2.o libcmfield2_h.o modpreadf2.o libcmfield2.o \
     nulllib2.o $(GOBJS) $(LGOPTS)
 
 pflreadf2 : pflreadf2.o libcmfield2.o nulllib2.o $(GOBJS)
 	$(FC90) $(OPTS90) $(LOPTS) -o pflreadf2 \
-    pflreadf2.o input2mod.o cmfield2.o libcmfield2_h.o libcmfield2.o \
+    pflreadf2.o input2mod.o cmfield2.o libcmfield2_h.o modpreadf2.o libcmfield2.o \
     nulllib2.o $(GOBJS) $(LGOPTS)
 
 pfvreadf2 : pfvreadf2.o libcmfield2.o nulllib2.o $(GOBJS)
 	$(FC90) $(OPTS90) $(LOPTS) -o pfvreadf2 \
-    pfvreadf2.o input2mod.o cmfield2.o libcmfield2_h.o libcmfield2.o \
+    pfvreadf2.o input2mod.o cmfield2.o libcmfield2_h.o modpreadf2.o libcmfield2.o \
     nulllib2.o $(GOBJS) $(LGOPTS)
 
 ptreadf2 : ptreadf2.o libcmfield2.o nulllib2.o $(GOBJS)
 	$(FC90) $(OPTS90) $(LOPTS) -o ptreadf2 \
-    ptreadf2.o input2mod.o cmfield2.o libcmfield2_h.o libcmfield2.o \
+    ptreadf2.o input2mod.o cmfield2.o libcmfield2_h.o modpreadf2.o libcmfield2.o \
     nulllib2.o $(GOBJS) $(LGOPTS)
 
 psreadf2 : psreadf2.o libcmfield2.o nulllib2.o $(GOBJS)
 	$(FC90) $(OPTS90) $(LOPTS) -o psreadf2 \
-    psreadf2.o input2mod.o cmfield2.o libcmfield2_h.o libcmfield2.o \
+    psreadf2.o input2mod.o cmfield2.o libcmfield2_h.o modpreadf2.o libcmfield2.o \
     nulllib2.o $(GOBJS) $(LGOPTS)
 
 pcreadf2 : pcreadf2.o libcmfield2.o nulllib2.o $(GOBJS)
 	$(FC90) $(OPTS90) $(LOPTS) -o pcreadf2 \
-    pcreadf2.o input2mod.o cmfield2.o libcmfield2_h.o libcmfield2.o \
+    pcreadf2.o input2mod.o cmfield2.o libcmfield2_h.o modpreadf2.o libcmfield2.o \
     nulllib2.o $(GOBJS) $(LGOPTS)
 
 pcvreadf2 : pcvreadf2.o libcmfield2.o nulllib2.o $(GOBJS)
 	$(FC90) $(OPTS90) $(LOPTS) -o pcvreadf2 \
-    pcvreadf2.o input2mod.o cmfield2.o libcmfield2_h.o libcmfield2.o \
+    pcvreadf2.o input2mod.o cmfield2.o libcmfield2_h.o modpreadf2.o libcmfield2.o \
     nulllib2.o $(GOBJS) $(LGOPTS)
     
 list:
-	echo preadf2 pvreadf2 pflreadf2 pfvreadf2 ptreadf2 psreadf2 python \
+	echo diag2 preadf2 pvreadf2 pflreadf2 pfvreadf2 ptreadf2 psreadf2 python \
 	     clean clobber
 
 # Python
@@ -185,6 +200,18 @@ python : libcmfield2.so fgraf.so
 
 input2mod.o : input2mod.f90
 	$(FC90) $(OPTS90) -o input2mod.o -c input2mod.f90
+
+cmfield2.o : cmfield2.f90 libcmfield2_h.o input2mod.o
+	$(FC90) $(OPTS90) -o cmfield2.o -c cmfield2.f90
+
+libcmfield2_h.o : libcmfield2_h.f90
+	$(FC90) $(OPTS90) -o libcmfield2_h.o -c libcmfield2_h.f90
+
+modpreadf2.o : modpreadf2.f90 input2mod.o cmfield2.o modgraf2.o modgraf1.o
+	$(FC90) $(OPTS90) -o modpreadf2.o -c modpreadf2.f90
+
+diag2.o : diag2.f90 modpreadf2.o
+	$(FC90) $(OPTS90) -o diag2.o -c diag2.f90
 
 preadf2.o : preadf2.f90 input2mod.o cmfield2.o modgraf2.o
 	$(FC90) $(OPTS90) -o preadf2.o -c preadf2.f90
@@ -212,12 +239,6 @@ pcvreadf2.o : pcvreadf2.f90 input2mod.o cmfield2.o modgraf2.o
 
 libcmfield2.o : libcmfield2.f
 	$(FC90) $(OPTS90) -o libcmfield2.o -c libcmfield2.f
-
-libcmfield2_h.o : libcmfield2_h.f90
-	$(FC90) $(OPTS90) -o libcmfield2_h.o -c libcmfield2_h.f90
-
-cmfield2.o : cmfield2.f90 libcmfield2_h.o input2mod.o
-	$(FC90) $(OPTS90) -o cmfield2.o -c cmfield2.f90
 
 nulllib2.o : nulllib2.f90
 	$(FC90) $(OPTS90) -o nulllib2.o -c nulllib2.f90
@@ -306,6 +327,9 @@ fgraf.so : libgraf2_h.o $(GMODSRC) $(GPYOBJS)
 
 cpexecs : cpreadf2 cpvreadf2 cpflreadf2 cpfvreadf2 cptreadf2 cpsreadf2
 
+cpdiag2 : diag2
+	cp diag2 ../
+
 cpreadf2 : preadf2
 	cp preadf2 ../
 
@@ -334,7 +358,7 @@ clean :
 	rm -f *.o *.mod sgks2/Ygl-4.2/*.o
 
 clobber: clean
-	rm -f preadf2 pvreadf2 pflreadf2 pfvreadf2 ptreadf2 psreadf2 \
+	rm -f diag2 preadf2 pvreadf2 pflreadf2 pfvreadf2 ptreadf2 psreadf2 \
 	      pcreadf2 pcvreadf2 *.so sgks2/Ygl-4.2/*.a
 
 #Python

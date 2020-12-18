@@ -1118,6 +1118,7 @@
                ws = max(ws,4.0*vtdz+abs(vdz))
             endif
             allocate(fvs(nmv21+1,ndim,nsxb,nyb+1))
+            fvs = 0.0
             fvs(nmv21+1,:,1,1) = 1.25*ws
 ! open file for electron phase space data:
 ! updates nserec and possibly iuse
@@ -1147,6 +1148,7 @@
                   ws = max(ws,4.0*vtdzi+abs(vdzi))
                endif
                allocate(fvsi(nmv21+1,ndim,nsxb,nyb+1))
+               fvsi = 0.0
                fvsi(nmv21+1,:,1,1) = 1.25*ws
 ! open file for ion phase space data:
 ! updates nsirec and possibly iusi
@@ -1172,7 +1174,7 @@
 !
       if (dt > 0.45*ci) then
          if (kstrt==1) then
-            write (*,*) 'Warning: Courant condition may be exceeded!'
+            write (*,*) 'Info: Courant condition may be exceeded!'
          endif
       endif
 !
@@ -1634,8 +1636,12 @@
          dth = 0.5*dt
 ! update electromagnetic fields
       else
-         call mpmaxwel2(exyz,bxyz,cut,ffc,affp,ci,dt,wf,wb,tfield,nx,ny,&
-     &kstrt)
+! finite-difference solver
+!        call mpmaxwel2(exyz,bxyz,cut,ffc,affp,ci,dt,wf,wb,tfield,nx,ny,&
+!    &kstrt)
+! analytic solver
+         call mpamaxwel2(exyz,bxyz,cut,ffc,affp,ci,dt,wf,wb,tfield,nx,ny&
+     &,kstrt)
       endif
 !
 ! calculate longitudinal force/charge in fourier space with OpenMP:
@@ -1985,7 +1991,7 @@
             if ((ndt==1).or.(ndt==2)) then
 ! reorder tagged particles
                if ((nst==1).or.(nst==2)) then
-! determines list of tagged pareticles leaving this node: updates iholep
+! determines list of tagged particles leaving this node: updates iholep
                   call mpfholes2(partt,tedges,numtp,iholep,ndim,2)
 ! iholep overflow
                   if (iholep(1) < 0) then

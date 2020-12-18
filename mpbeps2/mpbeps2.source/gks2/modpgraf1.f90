@@ -19,7 +19,7 @@
 !           calls DISPR
 ! written by viktor k. decyk, ucla
 ! copyright 2000, regents of the university of california
-! update: february 24, 2018
+! update: november 23, 2020
 !
 !     use libgraf1_h
       use plibgks2, only: PDSYNC
@@ -106,8 +106,9 @@
             vmin = -vmax
          endif
          if (kstrt==1) then
-            call DISPR(fv,lbl,vmin,vmax,isc,ist,mks,nmv21,nmvf,idimv,chr&
-     &,chrs,irc)
+!-----------------------------------------------------------------------
+            call DISPR(fv(1,1),lbl,vmin,vmax,isc,ist,mks,nmv21,nmvf,    &
+     &idimv,chr,chrs,irc)
          endif
          call PDSYNC(irc)
          if (kstrt==1) then
@@ -160,7 +161,7 @@
       emax = 2.0*fe(nmv21+1,1)
       emin = 0.0
       if (kstrt==1) then
-         call DISPR(fe,lbl,emin,emax,isc,ist,mks,nmv21,nmvf,1,chr,      &
+         call DISPR(fe(1,1),lbl,emin,emax,isc,ist,mks,nmv21,nmvf,1,chr, &
      &chrs(1),irc)
       endif
       call PDSYNC(irc)
@@ -239,8 +240,8 @@
          vmax = max(fv(nmv21+1,1),fv(nmv21+1,2))
          vmin = -vmax
          if (kstrt==1) then
-            call DISPR(fv,lbl,vmin,vmax,isc,ist,mks,nmv21,nmvf,idimv,chr&
-     &,chrs,irc)
+            call DISPR(fv(1,1),lbl,vmin,vmax,isc,ist,mks,nmv21,nmvf,    &
+     &idimv,chr,chrs,irc)
          endif
          call PDSYNC(irc)
          if (kstrt==1) then

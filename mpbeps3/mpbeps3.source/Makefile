@@ -17,7 +17,7 @@
 #CCOPTS = -O3 -Wall -std=c99
 
 #LOPTS = -lgomp
-#LEGACY =
+#LEGACY = -std=legacy
 
 # Makefile Intel compiler with Mac OS X
 
@@ -37,7 +37,7 @@
 
 #FF03 = -Tf
 
-#LEGACY = -nofor_main
+#NOMAIN = -nofor_main
 
 # Makefile Intel compiler with Linux
 
@@ -60,7 +60,7 @@
 
 #FF03 = -Tf
 
-#LEGACY = -nofor_main
+#NOMAIN = -nofor_main
 
 # Makefile gfortran compiler with Linux
 
@@ -89,7 +89,7 @@ PYCCOPTS = $(CCOPTS) -fPIC
 #export CFLAGS = -O3 -fopenmp -Wall
 
 LOPTS = -lgomp
-LEGACY =
+LEGACY = -std=legacy
 
 # Makefile PGI compiler with Linux
 
@@ -107,7 +107,7 @@ LEGACY =
 #CCOPTS = -O3 -std=c99
 #CCOPTS = -O3 -Wall -std=c99
 
-#LEGACY = -Mnomain
+#NOMAIN = -Mnomain
 
 # Makefile Cray compiler with Linux
 
@@ -123,8 +123,6 @@ LEGACY =
 #OPTS90 = -O 3 -R b -s real64 -en
 
 #CCOPTS = -O 3 -h c99 -h conform
-
-#LEGACY =
 
 #
 
@@ -235,7 +233,7 @@ noMPI.o : noMPI.f
 	$(FC90) $(OPTS90) -o noMPI.o -c noMPI.f
 
 nmpplib3.o : mpplib3.f90 noMPImod.o
-	$(FC90) $(OPTS90) -o nmpplib3.o -c mpplib3.f90
+	$(FC90) $(OPTS90) $(LEGACY) -o nmpplib3.o -c mpplib3.f90
 
 nmppmod3.o : mppmod3.f90 nmpplib3.o
 	$(FC90) $(OPTS90) -o nmppmod3.o -c mppmod3.f90
@@ -248,7 +246,7 @@ omplib.o : omplib.f90
 	$(FC90) $(OPTS90) -o omplib.o -c omplib.f90
 
 mpplib3.o : mpplib3.f90
-	$(MPIFC) $(OPTS90) -o mpplib3.o -c mpplib3.f90
+	$(MPIFC) $(OPTS90) $(LEGACY) -o mpplib3.o -c mpplib3.f90
 
 mppmod3.o : mppmod3.f90 mpplib3.o
 	$(FC90) $(OPTS90) -o mppmod3.o -c mppmod3.f90
@@ -290,7 +288,7 @@ libmpgard3.o : libmpgard3.f
 	$(FC90) $(OPTS90) -o libmpgard3.o -c libmpgard3.f
 
 libvmpfft3.o : libvmpfft3.f
-	$(FC90) $(OPTS90) -o libvmpfft3.o -c libvmpfft3.f
+	$(FC90) $(OPTS90) $(LEGACY) -o libvmpfft3.o -c libvmpfft3.f
 
 libmpfield3.o : libmpfield3.f
 	$(FC90) $(OPTS90) -o libmpfield3.o -c libmpfield3.f

@@ -73,6 +73,19 @@
       end interface
 !
       interface
+         subroutine VMPPAMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny, &
+     &kstrt,nyv,kxp,nyhd)
+         implicit none
+         integer, intent(in) :: nx, ny, kstrt, nyv, kxp, nyhd
+         real, intent(in) :: affp, ci, dt
+         real, intent(inout) :: wf, wm
+         complex, dimension(3,nyv,kxp), intent(inout) :: exy, bxy
+         complex, dimension(3,nyv,kxp), intent(in)  :: cu
+         complex, dimension(nyhd,kxp), intent(in) :: ffc
+         end subroutine
+      end interface
+!
+      interface
          subroutine MPPEMFIELD2(fxy,exy,ffc,isign,nx,ny,kstrt,nyv,kxp,  &
      &nyhd)
          implicit none

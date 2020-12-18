@@ -1,4 +1,5 @@
 #-----------------------------------------------------------------------
+from __future__ import print_function
 """
 High Level library for 3D Darwin OpenMP PIC code
 
@@ -9,7 +10,7 @@ bread_drestart13: read in basic restart file for darwin code
 
 written by Viktor K. Decyk and Joshua Kelly, UCLA
 copyright 2016-2018, regents of the university of california
-update: june 27, 2018
+update: October 4, 2020
 """
 
 import numpy
@@ -61,13 +62,13 @@ def bread_drestart3(cus,wpm,q2m0,iur):
    i4[:] = numpy.fromfile(iur,int_type,4)
    it = i4[0]; iu = i4[1]; iv = i4[2]; iw = i4[3]
    if (it != ndim):
-      print "cus restart error, size(cus,0)=", it, ndim
+      print ("cus restart error, size(cus,0)=", it, ndim)
    elif (iu != nxv):
-      print "cus restart error, size(cus,1)=", iu, nxv
+      print ("cus restart error, size(cus,1)=", iu, nxv)
    elif (iv != nypmx):
-      print "cus restart error, size(cus,2)=", iv, nypmx
+      print ("cus restart error, size(cus,2)=", iv, nypmx)
    elif (iw != nzpmx):
-      print "cus restart error, size(cus,3)=", iw, nzpmx
+      print ("cus restart error, size(cus,3)=", iw, nzpmx)
 # read in field array
    il = it*iu*iv*iw
    if (il > 0):

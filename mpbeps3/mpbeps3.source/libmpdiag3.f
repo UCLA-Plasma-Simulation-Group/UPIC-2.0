@@ -50,7 +50,7 @@
 ! PCPYTRAJ2 copies tagged particles in partt to array part
 ! written by viktor k. decyk, ucla
 ! copyright 2017, regents of the university of california
-! update: march 21, 2018
+! update: november 9, 2018
 !-----------------------------------------------------------------------
       subroutine PPVDIST32(ppart,kpic,fv,sfv,fvm,nvp,idimp,nppmx,mxyzp1,&
      &nmv,nmvf)
@@ -294,7 +294,7 @@
       real ci, wk
       real ppart, fv, sfv
       dimension ppart(idimp,nppmx,mxyzp1)
-      dimension fv(nmvf,3), sfv(nmvf,3,mxyzp1)
+      dimension fv(nmvf,1), sfv(nmvf,3,mxyzp1)
       integer kpic
       dimension kpic(mxyzp1)
 ! local data
@@ -386,7 +386,7 @@
       real omx, omy, omz
       real ppart, fv, sfv, fvm
       dimension ppart(idimp,nppmx,mxyzp1)
-      dimension fv(nmvf,3), sfv(nmvf,3,mxyzp1), fvm(3,3)
+      dimension fv(nmvf,2), sfv(nmvf,3,mxyzp1), fvm(3,3)
       integer kpic
       dimension kpic(mxyzp1)
 ! local data
@@ -521,7 +521,6 @@
    50 continue
       fv(j,1) = sum1
       fv(j,2) = sum2
-      fv(j,3) = 0.0
    60 continue
       sum5(1) = sumvx
       sum5(2) = sumvz

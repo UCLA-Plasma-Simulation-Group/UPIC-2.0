@@ -16,8 +16,12 @@
 !           field
 !           calls VMIPPBPOISP23
 ! mpmaxwel2 solves 2-1/2d maxwell's equation for unsmoothed transverse
-!           electric and magnetic fields
+!           electric and magnetic fields using verlet algorithm
 !           calls VMPPMAXWEL2
+! mpamaxwel2 solves 2-1/2d maxwell's equation for unsmoothed transverse
+!            electric and magnetic fields using analytic algorithm due to
+!            irving haber
+!            calls VMPPAMAXWEL2
 ! mpemfield2 adds and smooths or copies and smooths complex vector
 !            fields in fourier space
 !            calls MPPEMFIELD2
@@ -88,7 +92,7 @@
 !                calls SET_PCVZERO2
 ! written by viktor k. decyk, ucla
 ! copyright 2016, regents of the university of california
-! update: august 1, 2018
+! update: december 6, 2020
 !
       use libmpfield2_h
       implicit none
@@ -244,6 +248,35 @@
       call dtimer(dtime,itime,-1)
 ! call low level procedure
       call VMPPMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny,kstrt,nyv, &
+     &kxp,nyhd)
+! record time
+      call dtimer(dtime,itime,1)
+      tfield = tfield + real(dtime)
+      end subroutine
+!
+!-----------------------------------------------------------------------
+      subroutine mpamaxwel2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,tfield,nx,ny&
+     &,kstrt)
+! solves 2-1/2d maxwell's equation for unsmoothed transverse electric
+! and magnetic fields using analytic algorithm due to irving haber
+      implicit none
+      integer, intent(in) :: nx, ny, kstrt
+      real, intent(in) :: affp, ci, dt
+      real, intent(inout) :: wf, wm, tfield
+      complex, dimension(:,:,:), intent(inout) :: exy, bxy
+      complex, dimension(:,:,:), intent(in)  :: cu
+      complex, dimension(:,:), intent(in) :: ffc
+! local data
+      integer :: nyv, kxp, nyhd
+      integer, dimension(4) :: itime
+      double precision :: dtime
+! extract dimensions
+      nyv = size(cu,2); kxp = size(cu,3)
+      nyhd = size(ffc,1)
+! initialize timer
+      call dtimer(dtime,itime,-1)
+! call low level procedure
+      call VMPPAMAXWEL2(exy,bxy,cu,ffc,affp,ci,dt,wf,wm,nx,ny,kstrt,nyv,&
      &kxp,nyhd)
 ! record time
       call dtimer(dtime,itime,1)
