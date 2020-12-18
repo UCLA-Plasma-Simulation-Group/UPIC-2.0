@@ -2,9 +2,9 @@
 2D MPI/OpenMP and 3D OpenMP Particle-in-Cell (PIC) codes  
 BEPS2 and BEPS3  
 by Viktor K. Decyk, UCLA  
-Copyright 1994-2018, Regents of the University of California
+Copyright 1994-2020, Regents of the University of California
 
-These codes are part of the UPIC 2.0.4 Framework.  The primary purpose
+These codes are part of the UPIC 2.0.4.1 Framework.  The primary purpose
 of this framework is to provide trusted components for building and
 customizing parallel Particle-in-Cell codes for plasma simulation.
 The framework provides libraries as well as reference
