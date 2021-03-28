@@ -1,0 +1,10 @@
+ &input1
+ IDRUN = 12
+ INDX =   9, NPX =   184320, NPXB = 184320
+ NTW = 1, NTV = 1, NTS = 1
+ NTP = 1, MODESXP = 41
+ TEND = 20.000, DT =   0.100
+ VTX =   1.000, VX0 =   -3.000
+ VTDX = 1.0, VDX = 3.0
+ NPLOT = 3
+ /

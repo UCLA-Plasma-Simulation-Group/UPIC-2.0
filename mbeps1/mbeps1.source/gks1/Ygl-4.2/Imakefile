@@ -1,0 +1,222 @@
+XCOMM
+XCOMM    Ygl: Run GL programs with standard X11 routines.
+XCOMM    (C) Fred Hucht 1993-2007
+XCOMM    EMail: fred(AT)thp.Uni-Duisburg.de
+XCOMM
+XCOMM    $Id: Imakefile,v 4.5 2007-05-08 11:00:41+02 fred Exp $
+
+XCOMM  Set UseX11 to 1 if you want X11 bindings (faster, but only 2d)
+#define UseX11    1
+
+XCOMM  Set UseOpenGL to 1 if you want OpenGL bindings
+XCOMM  (might be slower than X11, but also 3d)
+#define UseOpenGL 1
+
+XCOMM  Set Has_GLX_SGI_video_sync to 0 if you get link errors like
+XCOMM  "ld: 0711-317 ERROR: Undefined symbol: .glXGetVideoSyncSGI"
+XCOMM  (e.g. under AIX 4.3)
+#define Has_GLX_SGI_video_sync 1
+
+XCOMM  Set DoubleBuffer to 1 if your system has the include file
+XCOMM  <X11/extensions/Xdbe.h> and the library libXext.a
+XCOMM  This should be true for X11R6.1. Only nessesary with UseX11 == 1
+#define DoubleBuffer 1
+
+XCOMM  Set MultiBuffer to 1 if your system has the include file
+XCOMM  <X11/extensions/multibuf.h> and the library libXext.a
+XCOMM  This should be true for X11R5. Only nessesary with UseX11 == 1
+#define MultiBuffer 1
+
+XCOMM  Set FortranBindings to 1 to include FORTRAN bindings into
+XCOMM  the Ygl library.
+#define FortranBindings 1
+
+XCOMM  Set UseGlobalColormap to 1 to use experimental colormap handling.
+XCOMM  You must have the include file <X11/Xmu/StdCmap.h> and libXmu.a
+#define UseGlobalColormaps 0
+
+XCOMM  Set YglPrefix to 1 to prepend "ygl_" to all function names
+#define YglPrefix 0
+
+XCOMM  ******* The following stuff is obsolete! ***************
+XCOMM  Set UseMesa to 1 if you want OpenGL bindings using Mesa.
+XCOMM  Don\'t define both UseOpenGL and UseMesa!
+XCOMM  If you installed Mesa with the OpenGL names (libGL.a etc.)
+XCOMM  set UseOpenGL to 1.
+XCOMM  You may have to change the path to the Mesa lib below...
+#define UseMesa   0 /* NOT SUPPORTED YET... */
+#if UseMesa
+OGL		=	-I/usr/local/Mesa/include -DOGL
+OGLIB		=	-L/usr/local/Mesa/lib -lMesaGL -lMesaGLU
+#endif
+
+XCOMM ***************** End of configuable part ********************
+
+SOYGLREV = 4.2
+
+#if !defined(DoSharedLib) && (defined(AIXArchitecture) || defined(RsArchitecture))
+# define DoSharedLib 1
+# undef  DoNormalLib
+# define DoNormalLib 0
+#endif
+
+#if defined(HPArchitecture) && !HasGcc2
+#undef CCOPTIONS
+CCOPTIONS       =       -Ae +ESlit
+/* CCOPTIONS	=	-Aa -D_HPUX_SOURCE */
+#endif
+
+#ifdef MacIIArchitecture
+XCOMM A/UX must have prefix due to naming conflict
+#define YglForcePrefix 1
+CCOPTIONS	=	-D_AUX_SOURCE
+#endif
+
+#if UseOpenGL && UseMesa
+#error UseOpenGL and UseMesa are exclusive!!!
+#endif
+
+#if UseOpenGL
+OGL		=	-DOGL
+OGLIB		=	-lGL -lGLU
+#endif
+
+#if UseX11
+X11		=	-DX11
+
+#if Has_GLX_SGI_video_sync
+GSvs		=	-DGSvs
+#endif
+
+#if DoubleBuffer
+DOUBLEBUF	=	-DDOUBLEBUF
+#endif
+
+#if MultiBuffer
+MULTIBUF	=	-DMULTIBUF
+#endif
+
+#if DoubleBuffer || MultiBuffer
+DMBUFLIB 	= 	-lXext
+#endif
+
+#if UseGlobalColormaps
+HASXMU		=	-DHASXMU
+THEXMULIB	=	-lXmu
+#endif
+#endif /* UseX11 */
+
+#if YglPrefix
+YGL_PREFIX 	= 	-DYGL_PREFIX
+YGL_PREFIX_HDR	=	X11/Yglprefix.h
+TARGET		= 	Yglp
+#else
+TARGET		= 	Ygl
+#endif
+
+#if YglForcePrefix /* A/UX */
+YGL_PREFIX 	= 	-DYGL_PREFIX
+YGL_PREFIX_HDR	=	X11/Yglprefix.h
+#endif
+
+DEFINES 	= 	$(OGL) $(X11) $(GSvs) $(DOUBLEBUF) $(MULTIBUF) $(HASXMU) $(YGL_PREFIX)
+
+#if FortranBindings
+FSRC 		= 	fortran.c
+FOBJ 		= 	fortran.o
+FHDR 		= 	X11/Yfgl.h
+#endif
+
+SRCS = ygl.c draw.c misc.c font.c queue.c color.c menu.c gl2ppm.c 3d.c $(FSRC)
+OBJS = ygl.o draw.o misc.o font.o queue.o color.o menu.o gl2ppm.o 3d.o $(FOBJ)
+
+INCLUDES 	= 	-I.
+XLIBS		= 	$(OGLIB) $(DMBUFLIB) $(THEXMULIB) -lX11
+HEADERS 	= 	X11/Ygl.h X11/Ygltypes.h $(FHDR) $(YGL_PREFIX_HDR)
+INCDIR		=	$(INCROOT)/X11
+
+REQUIREDLIBS	=	-L$(USRLIBDIR) $(XLIBS)
+
+#if defined(AIXArchitecture) || defined(RsArchitecture)
+CC              =       xlc -qinfo
+#endif
+
+#if ProjectX > 5
+XCOMM This stuff and more contributed by Larry Schwimmer <rosebud@cyclone.Stanford.EDU>
+# undef BuildIncludesTop
+# define BuildIncludesTop(x)
+# define LibName $(TARGET)
+# define SoRev SOYGLREV
+# ifndef DoSharedLib
+#  define DoSharedLib HasSharedLibraries
+# endif
+# ifndef DoNormalLib
+#  define DoNormalLib (!DoSharedLib || ForceNormalLib)
+# endif
+# include <Library.tmpl>
+
+#else /* ProjectX > 5 */
+
+# if DoSharedLib
+SharedLibraryTarget ($(TARGET),ShlibRev,$(OBJS),.,.)
+InstallSharedLibrary($(TARGET),ShlibRev,$(USRLIBDIR))
+# endif /* DoSharedLib */
+# if DoNormalLib
+NormalLibraryTarget($(TARGET),$(OBJS))
+InstallLibrary($(TARGET),$(USRLIBDIR))
+# endif /* DoNormalLib */
+
+INSTALLFLAGS = $(INSTINCFLAGS)
+
+InstallMultiple($(HEADERS),$(INCDIR))
+
+#endif /* ProjectX > 5 */
+
+DependTarget()
+
+$(YGL_PREFIX_HDR):	makeYglprefix X11/Ygl.h
+	./makeYglprefix > $@
+
+X11/Ygltypes.h:		makeYgltypes
+	./makeYgltypes > $@
+
+makeYgltypes:		makeYgltypes.c
+	$(CC) $(CFLAGS) -o makeYgltypes makeYgltypes.c
+
+usleep.i:	header.h
+	$(RM) usleep_tst.c
+	$(LN) header.h usleep_tst.c
+	$(CC) $(CFLAGS) -E usleep_tst.c > usleep.i
+	$(RM) usleep_tst.c
+
+usleep.h:	usleep.i
+	sed -nf makeusleep.sed usleep.i > usleep.h
+
+misc.o:		usleep.h
+
+#if UseOpenGL || UseMesa
+XCOMM For directory examples
+THREE_D_TARGETS = lmbind
+#endif
+
+#define IHaveSubdirs
+#define PassCDebugFlags 'THREE_D_TARGETS=$(THREE_D_TARGETS)'
+SUBDIRS = examples
+MakeSubdirs($(SUBDIRS))
+DependSubdirs($(SUBDIRS))
+
+includes::	X11/Ygltypes.h $(YGL_PREFIX_HDR) usleep.h
+
+$(OBJS):	X11/Ygltypes.h $(YGL_PREFIX_HDR)
+
+etags::
+	etags $(SRCS) header.h config.h X11/Ygl.h
+
+clean::
+	$(RM) a.out makeYgltypes usleep.h usleep.i
+	cd X11 ; $(RM) Yglprefix.h Ygltypes.h *~ ; cd ..
+
+#if ProjectX < 6
+lint::
+	$(LINT) -MA $(ALLDEFINES) $(LINTOPTS) -Nn10000 -Nd10000 $(SRCS)
+#endif

@@ -1,0 +1,11 @@
+ &input1
+ IDRUN = 11
+ INDX =   4, NPX =   18432, NPXB = 0
+ NTW = 1, NTP = 5, NTV = 5, NTS = 5
+ TEND = 100.000, DT =   0.200
+ QME =  -1.000,  VTX =   1.00, VX0 =   0.000
+ VTDX =   1.00, VDX =   0.000
+ MODESXP = 1
+ TREVERSE = 0
+ ER0 = 0.5, AMODEX=1, FREQ = 1.0, TRMP = 0.0, TOFF = 1.0
+ /

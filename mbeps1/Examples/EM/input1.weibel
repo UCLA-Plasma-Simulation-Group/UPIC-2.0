@@ -1,0 +1,15 @@
+ &input1
+ IDRUN = 21
+ INDX =   9, NPX =   18432, NPXB = 0
+ NTW = 1, NTV = 5
+ NTP = 0, MODESXP = 41
+ TEND = 100.000, DT =   0.0250, CI = 0.1
+ VTX =   1.000, VTY =   2.000, VTZ = 1.000
+ VX0 =   0.000, VY0 =   0.000, VZ0 =   0.000
+ MODESXP = 41
+ NPLOT = 3
+ /
+ &input1b
+ NTA = 5, MODESXA = 41, NDA = 2
+ NTB = 5
+ /

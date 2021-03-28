@@ -1,0 +1,28 @@
+ &input1
+ IDRUN = 30
+ INDX =   9, NPX =   184320, NPXB = 0
+ NTW = 1, NTV = 1
+ NTP = 1, NDP = 2, MODESXP = 41
+ NTDE = 1
+ TEND = 1000.000, DT =   0.200, CI = 0.1
+ VTX =   1.000, VTY =   1.000, VTZ = 1.000
+ VX0 =   0.000, VY0 =   0.000, VZ0 =   0.000
+ ER0 = 0.05, AMODEX = 8, FREQ - 0.16, TRMP = 10.0, TOFF = 50.0
+ MOVION = 1
+!NPLOT = 4
+ /
+ &input1b
+ NTA = 1, MODESXA = 41, NDA = 2
+ NTET = 1, MODESXET = 41, NDET = 3
+ NTB = 1
+ OMX = 0.33, OMY = 0.0, OMZ = 0.0
+ /
+ &input1d
+ NDC = 1
+ /
+ &ions1
+ NPXI = 184320, NPXBI = 0
+ NTDI = 1, NDDI = 3, MODESXDI = 41
+ QMI =  1.000,  RMASS = 16.0
+ RTEMPXI =   100.000, VXI0 =   0.000
+ /

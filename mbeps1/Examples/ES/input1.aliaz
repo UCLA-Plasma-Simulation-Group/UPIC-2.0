@@ -1,0 +1,22 @@
+ &input1
+ IDRUN = 40
+ INDX =   5, NPX =   4096, NPXB = 0
+ NTW = 0, NTS = 1, NDS = 1
+ NTP = 1
+ TEND = 0.200, DT =   0.200
+ VTX =   1.000, VX0 =   0.000
+ NDPROF = 2
+!AMPDX = 0.5, SCALEDX = 1.273, SHIFTDX = 16.0  ! mode 4
+!AMPDX = 0.5, SCALEDX = 0.6366, SHIFTDX = 16.0 ! mode 8
+!AMPDX = 0.5, SCALEDX = 0.3638, SHIFTDX = 16.0 ! mode 14
+!AMPDX = 0.5, SCALEDX = 0.3183, SHIFTDX = 16.0 ! mode 16
+!AMPDX = 0.5, SCALEDX = 0.2996, SHIFTDX = 16.0 ! mode 18
+!AMPDX = 0.5, SCALEDX = 0.2122, SHIFTDX = 16.0 ! mode 24
+ AMPDX = 0.5, SCALEDX = 0.1698, SHIFTDX = 16.0 ! mode 30
+!AMPDX = 0.5, SCALEDX = 0.1498, SHIFTDX = 16.0 ! mode 34
+ NPLOT = 2
+ MOVION = 1
+ /
+ &ions1
+ NPXI = 4096, NPXBI = 0
+ /

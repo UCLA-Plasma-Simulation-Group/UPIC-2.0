@@ -32,21 +32,25 @@ Please also feel free to send an email to this address if you would like assista
 Directions for compiling and executing the codes are available in the README files of each subfolder.
 
 A Software License for use of these codes are in the documents:  
+mbeps1/Documents/License(CommercialReservation)  
 mpbeps2/Documents/License(CommercialReservation)  
 mpbeps3/Documents/License(CommercialReservation)
 
 Descriptions of the design of these codes and their components are in the
 documents:  
+mbeps1/Documents/BEPS1Design.pdf  
 mpbeps2/Documents/BEPS2Design.pdf  
 mpbeps3/Documents/BEPS3Design.pdf
 
 Description of the current capabilities of these codes and their
 components are in the documents:  
+mbeps1/Documents/BEPS1Overview.pdf  
 mpbeps2/Documents/BEPS2Overview.pdf  
 mpbeps3/Documents/BEPS3Overview.pdf
 
 Details about the mathematical equations and units used in these codes are
 given in the documents:  
+mbeps1/Documents/UPICModels.pdf  
 mpbeps2/Documents/UPICModels.pdf  
 mpbeps3/Documents/UPICModels.pdf
 

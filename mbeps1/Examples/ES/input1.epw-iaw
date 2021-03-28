@@ -1,0 +1,17 @@
+ &input1
+ IDRUN = 16
+ INDX =   8, NPX =   184320, NPXB = 0
+ NTW = 1, NTP = 1, NTS = 0
+ TEND = 600.000, DT =   0.100
+ QME =  -1.000,  VTX =   2.000, VX0 =   0.0
+ NDP = 1, MODESXP = 41
+ ER0 = 0.1, AMODEX=4, FREQ = 1.052, TRMP = 0.0, TOFF = 25.0
+ MOVION = 1
+!NPLOT = 4
+ /
+ &ions1
+ NPXI = 184320, NPXBI = 0
+ NTDI = 1, NDDI = 1, MODESXDI = 41
+ QMI =  1.000,  RMASS = 100.0
+ RTEMPXI =   100.000, VXI0 =   0.000
+ /

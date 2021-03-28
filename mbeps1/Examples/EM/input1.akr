@@ -1,0 +1,17 @@
+ &input1
+ IDRUN = 20
+ INDX =   8, NPX =   25600, NPXB = 0
+ NTW = 1
+ TEND = 100.000, DT =   0.0250, CI = 0.1
+ VTX =   0.500, VTY =   0.500, VTZ = 0.500
+ VX0 =   4.000, VY0 =   0.000, VZ0 =   0.000
+ RELATIVITY = 1
+ NVDIST = 3
+ NTS = 5, NSXV = 0, NSVV = 1
+!NPLOT = 3
+ /
+ &input1b
+ OMX = 0.0, OMY = 0.0, OMZ = 7.5
+!OMX = 2.565, OMY = 0.0, OMZ = 7.048
+ NTET = 5, MODESXET = 41, NDET = 3
+ /

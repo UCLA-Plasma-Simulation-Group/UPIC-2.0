@@ -1,0 +1,960 @@
+<!--- $Id: Changes.html,v 1.7 2007-05-11 20:37:08+02 fred Exp fred $ --->
+<HTML>
+<HEAD>
+<BASE HREF="http://www.thp.Uni-Duisburg.de/Ygl/Changes.html">
+
+<TITLE> Ygl Version 4.2 Changes History </TITLE>
+</HEAD>
+
+<BODY>
+<H1> <IMG SRC="Smile.gif" ALIGN=MIDDLE ALT="Logo">
+<A HREF="ReadMe.html">Ygl</A> Version 4.2 Changes History </H1>
+
+<H4>
+<FONT SIZE=4>&copy;</FONT>opyright 1993-2007 by
+<A HREF="/~fred/">Fred Hucht (fred(AT)thp.Uni-Duisburg.de)</A>
+</H4>
+<P>
+
+<H2>Changes from Version 4.2d -&gt; 4.2e:</H2>
+
+(V 4.2e released 11. May 2007)
+
+<UL>
+
+<LI> Fixed broken irisgl/fdevice.h, updated examples/smile_{f77|xlf}.f
+
+<LI> Removed obsolete library glwidget. This library can be found
+     <a href="ftp://ftp.thp.uni-duisburg.de/pub/source/X11/glwidget.tar.gz">here</a>.
+
+</UL>
+
+<H2>Changes from Version 4.2c -&gt; 4.2d:</H2>
+
+(V 4.2d released 7. May 2007)
+
+<UL>
+
+<LI> Renamed directory gl to irisgl due to incompatibilities with case
+insensitive filesystems
+
+</UL>
+
+<H2>Changes from Version 4.1f -&gt; 4.2c:</H2>
+
+(V 4.2c released 1. May 2007)
+
+<UL>
+
+<LI> Added picking & naming stuff
+
+<LI> Added blendfunction()
+
+<LI> Many fixes, especially in colormap mode under OpenGL bindings
+
+</UL>
+
+<H2>Changes from Version 4.1e -&gt; 4.1f:</H2>
+
+(V 4.1f released 8. Feb 2005)
+
+<UL>
+
+<LI> Added gsync() (only works with OpenGL bindings).
+
+<LI> Added {XY}MAXSCREEN macro
+
+<LI> Removed poly*() from Ygl.h, as they are not implemented yet.
+
+</UL>
+
+<H2>Changes from Version 4.1b -&gt; 4.1e:</H2>
+
+(V 4.1e released 3. Feb 2005)
+
+<UL>
+
+<LI> 3D support is on now by default, as OpenGL is assumed to be
+     installed. If not, please set UseOpenGL 0 in Imakefile.
+
+<LI> Updated the <A HREF="ReadMe.html">ReadMe</A> file to include the
+     3D routines.
+
+<LI> Several minor bug fixes which were reported over the years...
+
+</UL>
+
+<H2>Changes from Version 4.0x -&gt; 4.1b:</H2>
+
+(V 4.1b released 2. May 2002)
+
+<UL>
+<LI> Workaround to let OpenGL bindings work both on X servers with 
+     PseudoColor/TrueColor (e.g. AIX) and on X servers with only
+     TrueColor visuals (e.g. XFree).
+
+<LI> Added method to dynamically determine the declaration of
+     <TT>usleep()</TT>. Hope this works in all cases...
+
+<LI> Added missing FORTRAN bindings for new 3D routines.
+
+<LI> Fixed many bugs...
+
+</UL>
+
+<H2>Changes from Version 3.2 -&gt; 4.0x:</H2>
+
+(V 4.0 not released yet)
+
+<UL>
+<LI> Added 3D using OpenGL. Note that one must compile Ygl with OpenGL
+     support (see Imakefile) and set the environment variable
+     <B>YGL_OGL</B> to 1 to use these bindings. 
+
+<LI> rectf's are now the same size as rect's. rectf's were 1 Pixel
+     larger in both directions, as GL also had this feature on most cards.
+
+<LI> Fixed bug in <TT>viewport()</TT> (Thanks to Oliver Bedford
+     &lt;a2270269@athena.rrz.uni-koeln.de&gt;).
+
+</UL>
+
+<H2>Changes from Version 3.1 -&gt; 3.2:</H2>
+
+(V 3.2 not released yet)
+
+<UL>
+<LI> Fixed bug in FORTRAN header Yfgl.h, device <TT>WINCLO</TT> clashed
+     with routine <TT>winclo()</TT>. Renamed device <TT>WINCLO</TT> to
+     <TT>WINCLOSE</TT>. 
+
+<LI> Fixed two bugs in <TT>getbutton()</TT>: <TT>getbutton(0)</TT> failed
+     to return -1, <TT>getbutton()</TT> of <TT>qdevice()</TT>ed keys
+     failed. 
+
+<LI> Fixed bug in <TT>winconstraints()</TT> that also affected
+     startup: Sometimes Ygl freezed in <TT>winopen()</TT> and one had
+     to move the window to continue. Ygl then waited for a
+     ConfigureNotify event that wasn't generated.
+
+<LI> Added support for the DoubleBuffer extension. This extension is
+     new in X11R6.1 and replaces the MultiBuffer extension. Set
+     DoubleBuffer to 1 in Imakefile to compile Ygl with this
+     extension. 
+
+<LI> Fixed bug in mkprefix.
+
+<LI> Added functions <TT>deflinestyle()</TT>, <TT>setlinestyle()</TT>,
+     <TT>getlstyle()</TT>, <TT>lsrepeat()</TT>, <TT>getlsrepeat()</TT>.
+
+<LI> Fixed bug in popup menu code that occured when the cmap visual
+     differed from the default visual (as on XServers with a 12 bit
+     PseudoColor visual).
+
+<LI> Setting the environment variables <B>YGL_CV</B> or <B>YGL_RV</B>
+     to -1 now forces Ygl to use the XServers default visual instead
+     of the best visual for colormap/RGB mode.
+
+<!--- <LI> Workaround bug in twm window manager that caused twm to core dump when Ygl used subwindows. --->
+
+</UL>
+
+<H2>Changes from Version 3.0.3 -&gt; 3.1:</H2>
+
+(V 3.1 released 6. May 1996)
+
+<UL>
+<LI> Changed Macros <TT>XR()</TT> and <TT>YR()</TT>, added rounding
+     when converting <TT>float</TT> to <TT>int</TT> coordinates.
+
+<LI> Fixed bug in <TT>viewport()</TT> that could cause the clipping
+     region to be wrong.
+
+<LI> Added routine <TT>logicop()</TT>.
+
+<LI> Fixed some bugs in the FORTRAN bindings: Device routines
+     (<TT>TIE()</TT>, <TT>QDEVIC()</TT>, <TT>UNQDEV()</TT>,
+     <TT>QENTER()</TT>) now require <TT>INTEGER*4</TT> parameters as
+     stated in the manpages. <TT>READPI()</TT>, <TT>WRITEP()</TT> now
+     accept <TT>INTEGER*2</TT> color indices. (Thanks to Luca
+     Formaggia &lt;forma@crs4.it&gt; for the bug report.)
+
+<LI> Added routine <TT>getmatrix()</TT>.
+
+<LI> Fixed bug in <TT>change_gc()</TT> and <TT>viewport()</TT>: Text
+     was not clipped. 
+
+<LI> Changed <TT>frontbuffer()</TT> to be ignored when not in
+     doublebuffer mode. 
+
+<LI> Changed <TT>qreset()</TT> to not remove saved mouse/key events.
+
+<LI> Didn't fix <TT>getcpos()</TT> to return position relative to
+     window, not to screen. This is a bug in GL, it is emulated in Ygl
+     :-((( 
+
+<LI> Fixed <TT>getorigin()</TT> to return coordinates relative to screen.
+
+<LI> Fixed bug in ygl.c that caused windows not to get a
+     <TT>REDRAW</TT> event after a window move.
+
+<LI> Added CMap/RGBmode checks to several color routines.
+
+<LI> Fixed bug in <TT>gl2ppm()</TT> that caused <TT>gl2ppm()</TT> to
+     scramble colors when in doublebuffered RGBmode.
+
+<LI> Fixed <TT>REDRAW</TT> events when in RGB mode (Expose events seem
+     not to propagate...). Due to problems with RGB mode windows Ygl
+     returned to the good old way of handling RGB windows,
+     i.e. <TT>gconfig()</TT> closes the cmap/RGB window and opens a
+     RGB/cmap window at the same position.
+
+<LI> Fixed bug in popupmenu colors when using private colormap.
+
+<LI> The changes history is in html format now (as you can see 8-).
+</UL>
+
+<H2>Changes from Version 3.0.2 -&gt; 3.0.3:</H2>
+
+(V 3.0.3 released 13. Dec 1995)
+
+<UL>
+<LI> Fixed bug in <TT>mapcolor()</TT> that may cause segmentation fault.
+
+<LI> Ygl now ignores <TT>MappingNotify</TT> Events and doesn't report
+     errors.
+
+<LI> Ygl windows now have white background (again). The transparent
+     windows were too confusing (I think).
+
+<LI> Fixed bug in <TT>freepup()</TT> that may cause segmentation
+     faults. Changed <TT>newpup()</TT> to recycle menu-IDs after
+     <TT>freepup()</TT>. 
+
+<LI> Changed declaration of <TT>usleep()</TT> to be compatible with AIX 4.1.
+
+<LI> Changed Imakefiles to use <TT>NullParameter</TT> instead of nothing.
+</UL>
+
+<H2>Changes from Version 3.0.1 -&gt; 3.0.2:</H2>
+
+(V 3.0.2 released 13. Nov 1995)
+
+<UL>
+<LI> Added <TT>noborder()</TT> as dummy function.
+
+<LI> Added support for <TT>readsource(SRC_FRONT)</TT>, needed in
+     doublebuffer-mode to read pixels from the front window. Changed
+     <TT>gl2ppm()</TT> to read from the front buffer.
+
+<LI> Fixed bug in <TT>newpup()</TT> that may cause a segmentation fault in
+     menus without <TT>%F</TT> callback.
+
+<LI> <TT>getbutton()</TT> now can handle keyboard keys,
+     eg. <TT>getbutton(AKEY)</TT> returns <TT>1</TT> when the key
+     <TT>A</TT> is pressed at the moment when <TT>getbutton()</TT>
+     is called. Note that it is better and faster to use the queue
+     (<TT>qtest()</TT>/<TT>qread()</TT>) when you want to know if a
+     key was pressed.
+</UL>
+
+<H2>Changes from Version 3.0.0 -&gt; 3.0.1:</H2>
+
+(V 3.0.1 released 23. Oct 1995)
+
+<UL>
+<LI> <TT>gl2ppm()</TT> now corrects the brightness of RGB windows.
+
+<LI> Added menu.o to Makefile.std.
+
+<LI> Added <TT>viewport()</TT> and <TT>getviewport()</TT>.
+
+<LI> Added vertex drawing routines: <TT>bgnpoint()</TT>,
+     <TT>endpoint()</TT>, <TT>bgnline()</TT>, 
+     <TT>endline()</TT>, <TT>bgnclosedline()</TT>,
+     <TT>endclosedline()</TT>, <TT>bgnpolygon()</TT>, 
+     <TT>endpolygon()</TT>, <TT>v2s()</TT>, <TT>v2i()</TT>,
+     <TT>v2f()</TT>, <TT>v2d()</TT>. Note that it's not 
+     possible to change drawing attributes (color, ...) in the inner
+     of a vertex pipeline in Ygl...
+
+<LI> Added <TT>rpmv2()</TT>.
+
+<LI> Added <TT>dopup()</TT> to FORTRAN bindings (forgot it in 3.0.0...).
+
+<LI> Added <TT>readpixels()</TT>, <TT>writepixels()</TT>,
+     <TT>readRGB()</TT>, <TT>writeRGB()</TT>. 
+</UL>
+
+<H2>Changes from Version 2.9.5 -&gt; 3.0.0:</H2>
+
+(V 3.0.0 released 23. Aug 1995)
+
+<UL>
+<LI> Added dithering to RGBmode. Dithering is controlled by the
+     environment variable <B>YGL_DITHERSIZE</B> or shorter
+     <B>YGL_DSZ.</B> With this 
+     variable you can specify the size of the dither matrix. The
+     default value is 4, leading to a 4x4 dither matrix. Valid values
+     range from 0 to 6. On a normal 8 bit TrueColor visual ({3,3,2}
+     bits {red,green,blue}) you obtain 113x113x49 = 625681 different
+     "colors" with <B>YGL_DSZ=4</B>, leading to an effective screen
+     depth of approx. 19 bits. The other values and the effective
+     screendepths are:
+<PRE>
+       |  8 bit (3-3-2)  | 12 bit (4-4-4)  |  16 bit (6-5-5)
+YGL_DSZ| # colors (bits) | # colors (bits) |  # colors (bits)
+-------------------------------------------------------------
+  0,1  |      256 ( 8  ) |     4096 (12  ) |     65536 (16  )
+   2   |    10933 (13.4) |   226981 (17.8) |   3953125 (21.9)
+   3   |   114688 (16.8) |  2515456 (21.3) |  44531200 (25.4)
+   4   |   625681 (19.3) | 13997521 (23.7) | 249232081 (27.9)
+   5   |  2354176 (21.2) | 53157376 (25.7) | 949029376 (29.8)
+   6   |  6976981 (22.7) |158340421 (27.2) |2831006341 (31.4)
+</PRE>
+<LI> Note that dithering costs speed. You may set <B>YGL_DSZ=0</B> to
+     disable dithering. If you are lucky and have a 24 bit TrueColor
+     visual, <B>YGL_DSZ</B> is automatically set to zero. Affected
+     routines:
+     <TT>RGBcolor()</TT>, <TT>gRGBcolor()</TT>,
+     <TT>cpack()</TT>, <TT>c3s()</TT>, <TT>c3i()</TT>,
+     <TT>c3f()</TT>.
+     See examples/rgbtest.c for an example. 
+
+<LI> Added menu stuff. New functions: <TT>defpup()</TT>,
+     <TT>newpup()</TT>, <TT>addtopup()</TT>, 
+     <TT>dopup()</TT>, <TT>freepup()</TT>, <TT>setpup()</TT>. See
+     examples/popup.c for details.  
+
+<LI> Added C++ support to Ygl.h.
+
+<LI> Fixed bugs in FORTRAN bindings. Unfortunately some of the FORTRAN
+     names are not truncated to 6 chars due to nameing conflicts,
+     SH*T. FORTRAN bindings must be lowercase...
+<PRE>
+ double_  -&gt; doublebuffer_
+ gRGBcol_ -&gt; grgbcol_
+ RGBcol_  -&gt; rgbcol_
+ RGBmod_  -&gt; rgbmod_
+ loadXf_  -&gt; loadxf_
+ getXdpy_ -&gt; getxdpy_
+ getXwid_ -&gt; getxwid_
+ getXgc_  -&gt; getxgc_
+</PRE>
+
+<LI> Fixed bug in <TT>gl2ppm()</TT> that caused it to fail under newer
+     versions of AIX32.
+
+<LI> <TT>getXwid()</TT> returned <TT>Window*</TT> instead of
+     <TT>Window</TT>, <TT>getXgc()</TT> returned <TT>GC*</TT> instead
+     of <TT>GC</TT>. Fixed.
+
+<LI> Added <TT>winX()</TT> to FORTRAN bindings.
+
+<LI> Fixed cooperation of FORTRAN bindings and <B>YGL_PREFIX</B>.
+
+<LI> Changed behaviour of <TT>prefposition()</TT> and
+     <TT>winposition()</TT>. The given 
+     values now describe the position of the drawing area, not the
+     position of the window incl. window manager decorations.
+
+<LI> A RGBmode window is now a child of the initially created colormap
+     mode window. This simplified changing to RGBmode. Ygl now uses
+     the property <TT>WM_COLORMAP_WINDOWS</TT> to tell the window
+     manager which colormaps are to be installed. This also fixed a
+     bug when a subwindow of a cmap window was a RGB window. To toggle
+     the colormaps is this case, use the window manager function 
+     <TT>f.colormap</TT> in twm or <TT>f.next_cmap</TT> in mwm (see
+     your window manager manual for details). 
+
+<LI> Added the function <TT>getXdid()</TT>. <TT>getXdid()</TT> returns
+     the window id of the drawable. This id differs from
+     <TT>getXwin()</TT> when using RGBmode or doublebuffering.
+</UL>
+
+<H2>Changes from Version 2.9.2 -&gt; 2.9.5:</H2>
+
+(V 2.9.5 released 4. Jan 1995)
+
+<UL>
+<LI> Fixed <TT>gconfig()</TT> to save doublebuffer state when
+     switching cmode and RGBmode. 
+
+<LI> Function added: <TT>winX()</TT>
+
+<LI> Note that <TT>winX(Display *dpy, Window win)</TT> has some
+     limitations: 
+
+<UL>
+<LI> <TT>dpy</TT> will be ignored. Ygl always uses the environment
+     variable <TT>DISPLAY</TT>. 
+
+<LI> Changing the visual of a window with <TT>cmode()</TT> or
+     <TT>RGBmode()</TT> (<TT>RGBmode()</TT>;<TT>gconfig()</TT>;) will
+     change the X11 WindowID of the window. So after the code
+<PRE>
+  ...
+  xwin = XCreateWindow(...);
+  winX(dpy, xwin);
+  RGBmode();
+  gconfig();
+     ...
+</PRE>
+     xwin is not valid anymore. You must get the new windowid with
+<PRE>
+  xwin = getXwid();
+</PRE>
+
+</UL>
+
+<LI> New environment variable <B>YGL_PARENTWID</B> or
+     <B>YGL_PWID</B> introduced. See the ReadMe file for further
+     details. 
+
+<LI> Ygl was distributed in terms of the GNU GENERAL PUBLIC
+     LICENSE. Since version 2.9.5, Ygl is distributed in terms of the
+     GNU LIBRARY GENERAL PUBLIC LICENSE. See the file LICENSE for
+     further details. 
+
+<LI> Ygl has no private XErrorHandler anymore, as the default error
+     handler gives more information and it's O.K. to <TT>exit()</TT>
+     when a X error occures. 
+</UL>
+
+<H2>Changes from Version 2.9 -&gt; 2.9.2:</H2>
+
+(V 2.9.2 not released)
+
+<UL>
+<LI> <TT>swapbuffers()</TT> didn't explicitely flush the X pipeline,
+     so sometimes a <TT>swapbuffers()</TT> didn't have an immediate
+     effect. 
+
+<LI> Bug in <TT>winopen()</TT> fixed that caused Ygl not to work with
+     <B>VisualID=0x0</B>.
+
+<LI> Some calls to <TT>[rcm]alloc()</TT> were not checked for out of
+     memory. Fixed. 
+</UL>
+
+<H2>Changes from Version 2.8.1 -&gt; 2.9:</H2>
+
+(V 2.9 not released)
+
+<UL>
+<LI> Added noop routine <TT>foreground()</TT>.
+
+<LI> Individual key devices introduced in Version 2.8 now reports both
+     <TT>KeyPress</TT> and <TT>KeyRelease</TT> events. See
+     examples/lines.c for an example. 
+
+<LI> Changed <TT>qread()</TT> to report only one <TT>REDRAW</TT> event
+     after a window resize and window moves. This is done by
+     interpreting both <TT>Expose</TT> and <TT>ConfigureNotify</TT>
+     events as generators for <TT>REDRAW</TT> events.
+
+<LI> Moved header Ygl.h, Yfgl.h and Yglprefix.h to X11 directory.
+</UL>
+
+<H2>Changes from Version 2.8 -&gt; 2.8.1:</H2>
+
+(V 2.8.1 released 8. Oct 1994)
+
+<UL>
+<LI> Fixed several bugs in FORTRAN bindings.
+
+<LI> Added header file config.h.
+
+<LI> Changed <TT>gversion()</TT> to return <TT>-1</TT> if display
+     can't be opened (see example contrib/tools/xmap.c).
+<LI> 
+</UL>
+
+<H2>Changes from Version 2.7 -&gt; 2.8:</H2>
+
+(V 2.8 not released)
+
+<UL>
+<LI> Function added: <TT>getgdesc()</TT>.
+
+<LI> Added support for individual key devices, eg. <TT>F1KEY</TT>,
+     <TT>UPARROWKEY</TT> and so on. This was done on public request.
+
+<LI> Replaced <TT>XPointer</TT> with <TT>char*</TT>. <TT>XPointer</TT>
+     isn't defined in X11R4.
+
+<LI> Added some explicit type converters at calls to <TT>[cm]alloc</TT>.
+
+<LI> Changed <TT>qdevice()</TT> and <TT>unqdevice()</TT> to return
+     error when called before <TT>winopen()</TT>.
+
+<LI> Rewrote <TT>qtest()</TT> and <TT>qread()</TT>. Now both use one
+     function. Hope not to have introduced too much bugs :-)
+
+<LI> When routines are called before <TT>winopen()</TT> or
+     <TT>ginit()</TT> or after <TT>gexit()</TT> that don't work at
+     this point, the error message now includes the function name. 
+
+<LI> Fixed <TT>winset()</TT> and <TT>winclose()</TT> to handle invalid
+     window ids correctly.
+
+<LI> Fixed <TT>[cl ]rectread()</TT> to work when a window is completely
+     visible again after it was not completely visible.
+
+<LI> Changed <TT>gl2ppm()</TT> to report broken pipes (invalid shell
+     commands and so on).
+
+<LI> Included FORTRAN bindings for all Ygl functions. The FORTRAN
+     versions of all functions have an underscore appended, so the
+     FORTRAN compiler must append a <TT>_</TT> to all names. f2c does
+     this, xlf (under AIX 3.2) requires the option
+     <TT>-qextname</TT>. See smile_f77.f for an example program. Set
+     <TT>FortranBindings</TT> to 0 in Imakefile or change
+     Makefile.std if you don't want these bindings. FORTRAN bindings
+     are not tested because I have no programs.f to test. If you find
+     bugs, feel free to report them to me.
+
+<LI> Small change to colormap handling to reduce technicolor effects
+     when using a private colormap (<B>YGL_PCM=1</B>) on displays
+     not capable of more than one colormap at a time: Now the default
+     colormap is copied to the private colormap and all entries in the
+     private colormap count from the end of the colormap. So a
+     <TT>mapcolor(i,r,g,b)</TT> changes colorcell <TT>255-i</TT> (in 8
+     bit deep visuals) instead of cell i to reduce overlapping of
+     private colorcells and cells already in use by other applications.
+
+<LI> Extended selection of cmapmode visuals. Now cmapmode can also run
+     on TrueColor and DirectColor visuals. This is for XServers that
+     only have True/DirectColor visuals.
+</UL>
+
+<H2>Changes from Version 2.6 -&gt; 2.7:</H2>
+
+(V 2.7 released 22. Jun 1994)
+
+<UL>
+<LI> Functions added:
+	<TT>getmcolors()</TT>,
+	<TT>getdisplaymode()</TT>,
+	<TT>setbell()</TT>,
+	<TT>ringbell()</TT>,
+	<TT>gl2ppm()</TT>,
+	<TT>frontbuffer()</TT>,
+	<TT>backbuffer()</TT> 
+
+<LI> Changed filtering of <TT>Expose</TT> events. Now even more
+     <TT>Expose</TT> events for a window are filtered to minimize
+     redraws.
+
+<LI> XMULIB in Imakefile is also used in ibmLib.tmpl :-(. Changed to
+     THEXMULIB. 
+
+<LI> Simplified code for handling of <TT>tie()</TT>s.
+
+<LI> <TT>gl2ppm()</TT> is a subroutine that will write out the active
+     [Y]gl window to a PPM file or pipe it through a shell
+     command. Usage: 
+<PRE>
+ int <TT>gl2ppm(char</TT> *filename);
+</PRE>
+     <TT>popen()</TT> is used instead of <TT>fopen()</TT> when
+     <TT>filename[0] == '|'</TT>. For an example, see examples/lines.c.
+
+<LI> <TT>WINCLOSE</TT> device changed to <TT>WINQUIT</TT> due to
+     incompatibility with SGI's GL. Please change <TT>WINCLOSE</TT> to
+     <TT>WINQUIT</TT> in your source code.
+
+<LI> A <TT>REDRAW</TT> event is sent when a window is moved. This is not
+     nessesary for redrawing but for getting the new origin of the
+     window. Unfortunally SGI's GL has no unique event for window
+     moves (<TT>ConfigureNotifyEvent</TT>)...
+</UL>
+
+<H2>Changes from Version 2.5 -&gt; 2.6:</H2>
+
+(V 2.6 released 3. May 1994)
+
+<UL>
+<LI> <TT>getcpos()</TT> was wrong when using
+     <TT>ortho2()</TT>. Fixed.
+
+<LI> <TT>charstr()'s</TT> update of character position was wrong when
+     using <TT>ortho2</TT>. Fixed. 
+
+<LI> <TT>loadXfont()</TT> crashed when compiled with some non-ansi
+     compilers due to <TT>realloc(NULL, ...)</TT>. Changed.
+
+<LI> <TT>qdevice()/unqdevice()</TT> couldn't change device list while
+     a mouse button was pressed due to active pointer grabs. Changed.
+
+<LI> <TT>linewidth()</TT> now only changes GCs when
+     <TT>linewidth()</TT> has changed.
+
+<LI> Several minor speedups.
+
+<LI> <TT>ortho2()</TT> now detects empty [xy]-ranges.
+
+<LI> Spurious errors "Ygl: X Error: BadColor (invalid Colormap
+     parameter) on 0x2000002" showed up when quitting programs with
+     private colormap (eg. example/colormap). Fixed.
+</UL>
+
+<H2>Changes from Version 2.4 -&gt; 2.5:</H2>
+
+(V 2.5 released 28. Apr 1994)
+
+<UL>
+<LI> The following functions are added:
+	<TT>tie()</TT>,
+	<TT>winpop()</TT>,
+	<TT>winpush()</TT>,
+	<TT>getlwidth()</TT>,
+	<TT>swinopen()</TT>,
+	<TT>getfont()</TT>,
+	<TT>getfontencoding()</TT>,
+	<TT>getcpos()</TT>,
+	<TT>winconstraints()</TT>,
+	<TT>noport()</TT>.
+
+<LI> Minor Changes to <TT>qreset()</TT>, <TT>qread()</TT>, and
+     [I]makefiles.
+
+<LI> Bug fixed that might cause <TT>getcolor()</TT> to return the
+     wrong color when using multiple windows.
+
+<LI> Bugs fixed that caused <TT>linewidth()</TT> and fonts not to be
+     per window. 
+
+<LI> Bug fixed that caused <TT>prefposition()</TT> to measure from top
+     left corner instead of bottom left corner.
+
+<LI> <TT>getmcolor()</TT> returned the X color, not the Ygl
+     color. Fixed. 
+
+<LI> The <TT>rect*()</TT> and <TT>sbox*()</TT> routines now draw rects
+     inclusive the edges, i.e. <TT>rectf(1,1,2,2)</TT> is a 2x2 rect,
+     not a 1x1 rect as before. Old versions of IBMs GL draw 1x1 rects,
+     but this seems to have been fixed...
+
+<LI> Three new environment variables <B>YGL_SINGLEGC</B>,
+     <B>YGL_CMAPVISUAL</B> and <B>YGL_RGBVISUAL</B> has been
+     added. See the ReadMe file for a description.
+
+<LI> <TT>REDRAW</TT> events are now queued by default.
+
+<LI> Changed example/rgb.c to demonstrate usage of <TT>tie()</TT> and
+     renamed it to rgbtest.c.
+
+<LI> Changed example/lines.c to demonstrate usage of
+     <TT>swinopen()</TT>. 
+
+<LI> Header file Ygl.h is now installed automatically when using
+     imake. 
+
+<LI> New define in Imakefile to use (experimental) support for global
+     standard colormaps (see xstdcmap(1)). 
+
+<LI> The ReadMe file is in html format now. Use Mosaic or emacs
+     w3-mode (or other www viewer) to read. The latest version of this
+     ReadMe is available at the World Wide Web: <BR>
+
+     <A HREF="http://WWW.thp.Uni-Duisburg.DE/Ygl/ReadMe.html">
+     http://WWW.thp.Uni-Duisburg.DE/Ygl/ReadMe.html.</A>
+</UL>
+
+<H2>Changes from Version 2.3 -&gt; 2.4:</H2>
+
+(V 2.4 released 1. Feb 1994)
+
+<UL>
+<LI> The following functions are added:
+	<TT>rectcopy()</TT>,
+	<TT>cpack()</TT>,
+	<TT>c3s()</TT>,
+	<TT>c3i()</TT>,
+	<TT>c3f()</TT>,
+	<TT>linewidth()</TT>,
+	<TT>rect{read|write}()</TT>,
+	<TT>getXgc()</TT>,
+	<TT>crect{read|write}()</TT>.
+
+<LI> <TT>getXgc()</TT> is not included in standard GL. It returns a
+     pointer to the graphics context just like <TT>getXdpy()</TT>
+     returns a pointer to the display. You can for example use it to
+     draw lines etc. XORed with the background: 
+
+<PRE>
+  #include <X11/X.h>
+  ...
+  XSetFunction(getXdpy(), getXgc(), GXxor);
+</PRE>
+
+<LI> <TT>crect{read|write}()</TT> are also not in standard GL. They
+     work the same as <TT>lrect{read|write}()</TT>, they only
+     {read|write} the data to a <TT>char</TT> array instead of
+     <TT>Int32</TT> array. This is to speed up Colormap mode operations. 
+
+<LI> Bug in timer handling fixed which caused flushtimes >= 1 second
+     to be ignored.
+
+<LI> Small bugs in <TT>lrect{read|write}()</TT> fixed.
+
+<LI> All <TT>rect*()</TT> and <TT>sbox*()</TT> routines now draw
+     rectangles even when x2 &lt; x1 or y2 &lt; y1,
+     i.e. <TT>rect(10,10,20,20)</TT> is the same as 
+     <TT>rect(20,20,10,10)</TT>. <TT>circ*()</TT> and <TT>arc*()</TT>
+     routines now interpret negative radii as zero. 
+
+<LI> <TT>doublebuffer()</TT> and <TT>singlebuffer()</TT> are now
+     available in the library even when not compiled with -DMULTIBUF.
+     
+<LI> A new example program "smile.f" illustrates how to call Ygl
+     routines from Fortran under AIX.
+</UL>
+
+<H2>Changes from Version 2.2 -&gt; 2.3:</H2>
+
+(V 2.3 released 12. Jan 1994)
+
+<UL>
+<LI> The following functions are added:
+	<TT>lrectread()</TT>,
+	<TT>lrectwrite()</TT>,
+	<TT>readsource()</TT>.
+
+<LI> <TT>lrectread()</TT> returns the same array as the GL version.
+
+<LI> DirectColor visuals are supported, too, now.
+</UL>
+
+<H2>Changes from Version 2.1 -&gt; 2.2:</H2>
+
+(V 2.2 released 9. Jan 1994)
+
+<UL>
+<LI> You don't need to recompile the X-Server anymore to use
+     doublebuffering under AIX 3.2.5 (AIXWindows 1.2.3). You simply
+     have to add the option <TT>-x mbx</TT> to the X-Servers command
+     line on startup. Additionaly, the multibuffer routines under AIX
+     are in libXext.a now (as they should...).
+
+<LI> Bug in <TT>qread()</TT> (Alt/Ctrl keys were reported as normal
+     keys) fixed. 
+
+<LI> Bug in <TT>qtest()</TT> that eventually caused unknown events to
+     block the queue fixed.
+
+<LI> The following function is added: <TT>ortho2()</TT>.
+</UL>
+
+<H2>Changes from Version 2.0 -&gt; 2.1:</H2>
+
+(V 2.1 released 25. Oct 1993)
+
+<UL>
+<LI> Name of library changed to Ygl due to a nameing conflict with
+     SUNs XGL library.
+
+<LI> All environment vars now starts with <B>YGL_</B>. The old names
+     remains valid for compatibility reasons.
+
+<LI> <TT>Xgl_Prefix</TT> -&gt; <TT>Ygl_Prefix</TT> and all names are
+     prepended with <TT>ygl_</TT>. Change file mkprefix to get the old
+     <TT>xgl_</TT> prefix.
+
+<LI> gversion returns <TT>Ygl:X11-x.y.z</TT> (not
+     <TT>Xgl:X11-x.y.z</TT>).
+
+<LI> Example programs and {Im|M}akefiles revisited.
+
+<LI> <TT>Button{Press|Release}</TT> events are only received when
+     nessesary now.
+
+<LI> Bugs in <TT>rdr()</TT> and <TT>arc()/arcf()</TT> fixed. They
+     didn't work as expected... 
+
+<LI> Bug in <TT>charstr()</TT> to RGB windows fixed (core dumped).
+
+<LI> Bug in <TT>winclose()</TT> fixed.
+
+<LI> Support for StaticGray visual added. Ygl now runs on Monochrome
+     servers (again) (eg. XFree under Linux). 
+
+<LI> Colormaps are now only installed when the server has room for
+     them. This avoids the colormap switches on startup.
+
+<LI> The following function is added: <TT>gRGBcolor()</TT>.
+</UL>
+
+<H2>Changes from Version 1.3 -&gt; 2.0:</H2>
+
+(V 2.0 released 21. Oct 1993)
+
+<UL>
+<LI> BackingStore support added. Set <TT>XGL_BACKINGSTORE=1</TT>.
+
+<LI> RGBmode and support for other visual types is added. Xgl can run
+     in a per window RGB mode, if the X-Server has a TrueColor
+     visual. Xgl will always select the appropiate visual for the
+     desired mode, independent of the default visual, ie:
+<PRE>
+ Colormap mode <-> PseudoColor or GrayScale visual
+ RGB mode      <-> TrueColor visual
+</PRE>
+
+<LI> Short names for environment variables added:
+<PRE>
+ XGL_FT  for XGL_FLUSHTIME
+ XGL_PCM for XGL_PRIVATECOLORMAP
+ XGL_BS  for XGL_BACKINGSTORE
+</PRE>
+
+<LI> The following functions are added:
+	<TT>winmove()</TT>,
+	<TT>winposition()</TT>,
+	<TT>ginit()</TT>,
+	<TT>RGBmode()</TT>,
+	<TT>RGBcolor()</TT>,
+	<TT>cmode</TT>.
+
+<LI>Two routines <TT>arcx()</TT> and <TT>arcxf()</TT> that are not
+     part of standard GL are contributed by
+     michael@thp.Uni-Duisburg.DE. With this routines you can draw
+     outlined and filled _elliptic_ arcs. 
+
+<LI> All drawing functions are implemented with floating-point
+     arguments, i.e.:
+	<TT>pnt2()</TT>,
+	<TT>move2()</TT>,
+	<TT>draw2()</TT>,
+	<TT>rmv2()</TT>,
+	<TT>rdr2()</TT>,
+	<TT>arc()</TT>,
+	<TT>arcf()</TT>,
+	<TT>circ()</TT>,
+	<TT>circf()</TT>,
+	<TT>rect()</TT>,
+	<TT>rectf()</TT>,
+	<TT>sbox()</TT>,
+	<TT>sboxf()</TT>,
+	<TT>pmv2()</TT>,
+	<TT>pdr2()</TT>,
+	<TT>rpdr2()</TT>,
+	<TT>poly2()</TT>,
+	<TT>polf2()</TT>,
+	<TT>cmov2()</TT>.
+
+<LI> A bug in <TT>prefposition()</TT> is fixed that caused
+     <TT>prefposition()</TT> to not work... 
+
+<LI> All routines that talk to the X-Server now check for correct
+     initialisation. This may slow down Xgl a very little bit. You can
+     undefine <TT>CHECKDISPLAY</TT> in header.h get the old method
+     (which is also used by GL :-).
+
+<LI> You can set <TT>Xgl_Prefix</TT> to 1 in Imakefile and do a
+<PRE>
+# xmkmf -a;make clean;make
+</PRE>
+     to compile a library named libXglp.a where all function names are
+     prepended with <TT>xgl_</TT>. This is to avoid name conflicts if
+     you want to use Xgl in other projects as the Turbo Pascal for
+     Unix emulator by Michael Staats (michael@thp.Uni-Duisburg.DE).
+</UL>
+
+<H2>Changes from Version 1.1.1 -&gt; 1.3:</H2>
+
+(V 1.3 released 24. Aug 1993)
+
+<UL>
+<LI> The following functions are added:
+	<TT>rmv2s()</TT>,
+	<TT>rmv2i()</TT>,
+	<TT>rdr2i()</TT>,
+	<TT>rdr2s()</TT>,
+	<TT>winclose()</TT>,
+	<TT>strwidth()</TT>,
+	<TT>getheight()</TT>,
+	<TT>getdescender()</TT>.
+
+<LI> The <TT>qtest()</TT> and <TT>qread()</TT> routines can now
+     distinguish between <TT>LEFTMOUSE</TT>, <TT>MIDDLEMOUSE</TT> and
+     <TT>RIGHTMOUSE</TT> and support <TT>MOUSEX</TT> and
+     <TT>MOUSEY</TT> events. 
+
+<LI> Setting <TT>XGL_FLUSHTIME</TT> to <TT>-1</TT> will put the
+     XServer into synchronous mode (see <TT>XSynchonize)</TT>. This
+     mode seems to be veeeryyy slooow, but is good for debugging... 
+</UL>
+
+<H2>Changes from Version 1.1 -&gt; 1.1.1:</H2>
+
+(V 1.1.1 not released)
+
+<UL>
+<LI> A bug in <TT>qread()</TT> is fixed that caused too much
+     <TT>Expose</TT> events (<TT>REDRAW</TT>) to be filtered out. XGL
+     filters out all <TT>Expose</TT> events that are directly followed
+     by another <TT>Expose</TT> event for the same window. In versions
+     prior to 1.1.1, <TT>qread()</TT> filtered out ALL <TT>Expose</TT>
+     events that were followed by another <TT>Expose</TT> event, even
+     for another window :-(
+</UL>
+
+<H2>Changes from Version 1.0.1 -&gt; 1.1:</H2>
+
+(V 1.1 released 15 Jul 1993)
+
+<UL>
+<LI> The function <TT>getorigin()</TT> returned the position of the
+     upper left corner in X11 coordinates rather than the position of
+     the lower left corner in GL coordinates.
+
+<LI> The function "<TT>gflush()</TT>" is no longer supported. Use
+     <TT>sleep(0)</TT> to flush the graphics pipeline instead.
+
+<LI> XGL supports doublebuffering via the "Multi-Buffering" server
+     extension. This extension is new in X11R5 and is included in the
+     lpp X11dev.src under AIX 3.2. To use doublebuffering you have to
+     link the "Multi-Buffering" extension into your X-Server (AIXlers,
+     see /usr/lpp/X11/Xamples/README, "Linking the Sample Extensions
+     into the Server"). The related GL routines are
+     <TT>doubleduffer</TT>, <TT>swapbuffer()</TT> and
+     <TT>singlebuffer()</TT>.
+
+<LI> The following functions are added:
+	<TT>getmcolor()</TT>,
+	<TT>getcolor()</TT>,
+	<TT>gconfig()</TT>,
+	<TT>singlebuffer()</TT>,
+	<TT>swapbuffers()</TT>,
+	<TT>doublebuffer()</TT>,
+	<TT>getvaluator()</TT>,
+	<TT>getbutton()</TT>,
+	<TT>concave()</TT>,
+	<TT>poly2i()</TT>,
+	<TT>poly2s()</TT>,
+	<TT>polf2i()</TT>,
+	<TT>polf2s()</TT>.
+</UL>
+
+<H2>Changes from Version 1.0 -&gt; 1.0.1:</H2>
+
+(V 1.0.1 released 7 Jul 1993)
+
+<UL>
+<LI> The refresh time and the use of the colormap is now controlled
+     via two environment variables (<TT>XGL_PRIVATECOLORMAP</TT> and
+     <TT>XGL_FLUSHTIME</TT>) and no longer through external variables
+     due to problems with shared libraries. 
+
+<LI> libXgl.a is now a shared library under AIX and the linker option
+     -lX11 can be omitted.
+</UL>
+
+<H2>Initial Version 1.0:</H2>
+
+(V 1.0 released 5 Jul 1993)
+
+</BODY>
+</HTML>

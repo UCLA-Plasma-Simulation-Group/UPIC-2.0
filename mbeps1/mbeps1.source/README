@@ -1,0 +1,60 @@
+1D OpenMP Particle-in-Cell (PIC) BEPS1 codes
+by Viktor K. Decyk
+copyright 1994-2017, regents of the university of california
+
+These codes are part of a set of 1d PIC codes for educational use.  They
+are designed for Linux using OpenMP but will also compile for Mac OS X.
+OpenMP is used for parallelization.  A description of the design of
+these codes and its components is in the document:
+../Documents/EduBEPS1.pdf
+
+A Software License for use of this code is in the document:
+License(CommercialReservation)
+
+The makefile is setup to use gcc and gfortran with Linux.  It should
+also work with MacOS X.
+
+There are 3 Fortran codes for electrostatic, electromagnetic, and darwin
+models, called mbeps1, mbbeps1, and mdbeps1, respectively.  To compile
+all of them, execute:
+
+make
+
+To compile just one, execute:
+
+make program_name
+
+where program_name is either: mbeps1, mbbeps1, or mdbeps1
+
+To execute, type the name of the executable:
+
+./program_name
+
+The Fortran version can be compiled to run with double precision by
+changing the Makefile (for gfortran, set the compiler options to:
+OPTS90 = -O3 -fdefault-real-8 -fdefault-double-8)
+
+There are also 3 Python scripts available.  They require 3 dynamic
+libraries, libmpush1.so, libmbpush1.so, and libmdpush1.so, respectively.
+
+To compile these libraries, execute:
+
+make python
+
+They currently only work in single precision.
+
+There is a simple built-in graphics library available which is normally
+used for debugging.  It is shut off by default, but is available for
+either Textronix or X11 devices.
+
+To turn it on for Fortran, search for the string: Fortran Graphics in
+the Makefile, and comment out the symbol GOBJS for No graphics and
+uncomment it either for Tektronix or X11.  To turn it on for Python,
+search for the string: Python Graphics in the Makefile, and comment out
+the symbols GMODSRC GPYOBJS for No graphics and uncomment them either
+for Tektronix or X11.  The X11 option requires that the symbol
+LGOPTS = gks1/Ygl-4.2/libYgl.a -L/usr/X11R6/lib -lX11.  To display from
+a remove server, you should login to the server with the command ssh -X.
+
+To run with Tektronix, open the window xterm -t before executing the
+codes.
